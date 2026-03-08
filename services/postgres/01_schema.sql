@@ -25,14 +25,14 @@ CREATE TABLE objects (
 
 CREATE TABLE chunks (
     id SERIAL PRIMARY KEY,
-    doc_id INT NOT NULL,
+    obj_id INT NOT NULL,
     chunk_number INT,
     chunk_text TEXT,
-    FOREIGN KEY (doc_id)
-        REFERENCES documents(id)
+    FOREIGN KEY (obj_id)
+        REFERENCES objects(id)
         ON DELETE CASCADE
 );
 
-CREATE INDEX idx_documents_s2_paper_id ON documents(s2_paper_id)
-CREATE INDEX idx_chunks_doc_id ON chunks(doc_id);
+CREATE INDEX idx_documents_has_pdf ON documents(pdf_url) WHERE pdf_url IS NOT NULL;
 CREATE INDEX idx_objects_doc_id ON objects(doc_id);
+CREATE INDEX idx_chunks_doc_id ON chunks(obj_id);

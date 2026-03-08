@@ -34,7 +34,7 @@ class DocumentTemplate(BaseModel):
             publication_date=d.get("publicationDate"),
             citation_count=d.get("citationCount"),
             influential_citation_count=d.get("influentialCitationCount"),
-            s2_paper_id=d.get("paperId"),
+            s2_paper_id=d["paperId"],
             s2_url=d.get("url"),
             pdf_url=pdf_url,
         )
