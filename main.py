@@ -1,6 +1,14 @@
-from services.data.fetcher import Fetcher
+import os
+from pathlib import Path
 
-fetcher = Fetcher()
+from services.data.fetcher import PdfFetcher, SemanticScholarFetcher
+
+# FIXME: Handle this properly e.g. at Docker Compose
+OBJECT_STORE_ROOT = os.environ.get("OBJECT_STORE_ROOT", "")
+Path(OBJECT_STORE_ROOT).mkdir(parents=True, exist_ok=True)
+
+fetcher = SemanticScholarFetcher()
+downloader = PdfFetcher(max_workers=8, store_root=OBJECT_STORE_ROOT)
 
 venues = [
     # Computer Vision
@@ -39,9 +47,11 @@ venues = [
     "Radiology: Artificial Intelligence",
 ]
 
-fetcher.fetch_batch(
-    venues=venues,
-    start_year=2022,
-    end_year=None,
-    query="",
-)
+# fetcher.request_batch(
+#     venues=venues,
+#     start_year=2022,
+#     end_year=None,
+#     query="",
+# )
+
+downloader.execute()
