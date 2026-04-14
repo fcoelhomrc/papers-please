@@ -7,7 +7,7 @@ storage:
 devices:
   chunker: cpu
   embedder: cpu
-  reranker: cuda  # query-time only, lives in the API process
+  reranker: cpu
 
 embedder:
   model: bge-small
