@@ -67,7 +67,7 @@ class PdfEmbedder(PostgresInterface):
                 vector_type="dense",
                 dimension=self._cfg["embed_size"],
                 metric="cosine",
-                spec=ServerlessSpec(cloud="aws", region="eu-south-2"),
+                spec=ServerlessSpec(cloud="aws", region="eu-west-1"),
             )
             logger.info(f"Created index {name!r}")
 
@@ -90,9 +90,8 @@ class PdfEmbedder(PostgresInterface):
             ).scalar_one()
 
     def pending(self, model_id: int) -> list[tuple[int, str, int | None]]:
-        already_embedded = (
-            select(ChunkEmbedding.chunk_id)
-            .where(ChunkEmbedding.model_id == model_id)
+        already_embedded = select(ChunkEmbedding.chunk_id).where(
+            ChunkEmbedding.model_id == model_id
         )
         stmt = (
             select(Chunk.id, Chunk.chunk_text, Chunk.page_num)
@@ -110,12 +109,17 @@ class PdfEmbedder(PostgresInterface):
             batch_size=self._cfg["batch_size"],
             show_progress_bar=False,
             normalize_embeddings=True,
+            convert_to_numpy=True,
         )
 
     def _upsert_vectors(self, batch: list[tuple[int, np.ndarray, int | None]]):
         index = self._pc.Index(self._cfg["index_name"])
         vectors = [
-            {"id": str(chunk_id), "values": vec.tolist(), "metadata": {"page_num": page}}
+            {
+                "id": str(chunk_id),
+                "values": vec.tolist(),
+                "metadata": {"page_num": page},
+            }
             for chunk_id, vec, page in batch
         ]
         index.upsert(vectors=vectors)
@@ -131,10 +135,10 @@ class PdfEmbedder(PostgresInterface):
             )
             session.commit()
 
-    def execute(self, recreate_index: bool = False):
+    def execute(self, recreate_index: bool = False, max_chunks: int = 1_000):
         self.ensure_index(recreate=recreate_index)
         model_id = self._upsert_model_record()
-        pending = self.pending(model_id)
+        pending = self.pending(model_id)[:max_chunks]
         if not pending:
             logger.info("Nothing to embed")
             return
