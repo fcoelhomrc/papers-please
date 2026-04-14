@@ -1,6 +1,11 @@
 import logging
+import time
+from contextlib import contextmanager
+from typing import Generator
 
 from pythonjsonlogger.json import JsonFormatter
+
+_logger = logging.getLogger("worker")
 
 
 def setup() -> None:
@@ -25,3 +30,12 @@ def setup() -> None:
         "uvicorn.access",
     ):
         logging.getLogger(name).setLevel(logging.WARNING)
+
+
+@contextmanager
+def timed(step: str, **extra) -> Generator[None, None, None]:
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        _logger.info(step, extra={"duration_s": round(time.perf_counter() - start, 2), **extra})

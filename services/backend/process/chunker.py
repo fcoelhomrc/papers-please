@@ -1,9 +1,10 @@
 import logging
-import os
 from pathlib import Path
 
 from docling.chunking import HybridChunker  # type: ignore
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import AcceleratorDevice, AcceleratorOptions, PdfPipelineOptions
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -12,22 +13,27 @@ from transformers import AutoTokenizer
 
 from db.connection import PostgresInterface
 from db.models import Chunk, Object
+from process.embedder import MODELS
 
 logger = logging.getLogger(__name__)
 
-EMBED_MODEL_ID = "BAAI/bge-small-en-v1.5"
-MAX_TOKENS = 512
 
 class PdfChunker(PostgresInterface):
     def __init__(self, store_root: str | None = None):
         from config import load
         super().__init__()
-        self.store_root = store_root or load().storage.root
+        config = load()
+        self.store_root = store_root or config.storage.root
+        device = AcceleratorDevice.CPU if config.devices.chunker == "cpu" else AcceleratorDevice.CUDA
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.accelerator_options = AcceleratorOptions(device=device)
         tokenizer = HuggingFaceTokenizer(
-            tokenizer=AutoTokenizer.from_pretrained(EMBED_MODEL_ID),
-            max_tokens=MAX_TOKENS,
+            tokenizer=AutoTokenizer.from_pretrained(MODELS[config.embedder.model]["hf_name"]),
+            max_tokens=config.embedder.max_tokens,
         )
-        self._converter = DocumentConverter()
+        self._converter = DocumentConverter(
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+        )
         self._chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True, repeat_table_header=True)
 
     def pending(self) -> list[tuple[int, str]]:
@@ -78,6 +84,9 @@ class PdfChunker(PostgresInterface):
             logger.error(f"Failed to chunk object {obj_id} ({path}): {e}")
             self._mark_failed(obj_id)
 
-    def execute(self):
-        for obj_id, path in self.pending():
+    def execute(self, limit: int | None = None):
+        pending = self.pending()
+        if limit:
+            pending = pending[:limit]
+        for obj_id, path in pending:
             self.process(obj_id, path)

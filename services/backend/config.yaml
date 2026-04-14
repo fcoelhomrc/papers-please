@@ -4,10 +4,24 @@ database:
 storage:
   root: data
 
+devices:
+  chunker: cpu
+  embedder: cpu
+  reranker: cuda  # query-time only, lives in the API process
+
 embedder:
   model: bge-small
+  max_tokens: 512
   max_chunks: 1000
 
 search:
   top_k: 10
   rerank_top_k: 5
+  reranker_model: cross-encoder/ms-marco-MiniLM-L-6-v2
+
+worker:
+  interval_s: 300
+  download_workers: 4
+  download_limit: 20
+  chunk_limit: 10
+  embed_limit: 500

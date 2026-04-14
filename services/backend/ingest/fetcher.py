@@ -141,8 +141,10 @@ class PdfFetcher(PostgresInterface):
             logger.error(f"Failed ({filename}): {e}")
             return False
 
-    def execute(self):
+    def execute(self, limit: int | None = None):
         pending = self.pending()
+        if limit:
+            pending = pending[:limit]
         if not pending:
             logger.info("Nothing to download")
             return

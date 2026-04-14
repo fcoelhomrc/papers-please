@@ -30,12 +30,10 @@ MODELS: dict[str, dict] = {
     },
 }
 
-RERANKER_MODEL_ID = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-
-
 class Reranker:
-    def __init__(self, model_id: str = RERANKER_MODEL_ID):
-        self._model = CrossEncoder(model_id)
+    def __init__(self, model_id: str | None = None, device: str = "cpu"):
+        from config import load
+        self._model = CrossEncoder(model_id or load().search.reranker_model, device=device)
 
     def rerank(
         self, query: str, chunks: list[dict], top_k: int | None = None
@@ -52,9 +50,10 @@ class PdfEmbedder(PostgresInterface):
         from config import load
 
         super().__init__()
-        cfg = MODELS[model_key or load().embedder.model]
+        config = load()
+        cfg = MODELS[model_key or config.embedder.model]
         self._cfg = cfg
-        self._encoder = SentenceTransformer(cfg["hf_name"])
+        self._encoder = SentenceTransformer(cfg["hf_name"], device=config.devices.embedder)
         self._pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
 
     def ensure_index(self, recreate: bool = False) -> None:

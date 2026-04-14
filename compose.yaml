@@ -35,6 +35,22 @@ services:
         condition: service_healthy
     command: uvicorn api:app --host 0.0.0.0 --port 8000
 
+  worker:
+    build:
+      context: .
+      dockerfile: services/backend/Dockerfile
+    volumes:
+      - papers_data:/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PINECONE_API_KEY: ${PINECONE_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python worker.py
+
   frontend:
     build:
       context: ./services/frontend

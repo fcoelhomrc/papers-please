@@ -1,4 +1,11 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class FetchRequest(BaseModel):
+    query: str = ""
+    venue: str | None = None
+    year: str | None = None
+    max_papers: int = Field(default=500, ge=1, le=5000)
 
 
 class ChunkResult(BaseModel):
