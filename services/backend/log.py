@@ -10,9 +10,7 @@ _logger = logging.getLogger("worker")
 
 def setup() -> None:
     handler = logging.StreamHandler()
-    handler.setFormatter(
-        JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
-    )
+    handler.setFormatter(JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
 
     root = logging.getLogger()
     root.setLevel(logging.INFO)
