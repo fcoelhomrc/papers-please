@@ -19,8 +19,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: services/backend/Dockerfile
+      context: ./services/backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
@@ -37,8 +37,8 @@ services:
 
   worker:
     build:
-      context: .
-      dockerfile: services/backend/Dockerfile
+      context: ./services/backend
+      dockerfile: Dockerfile
     volumes:
       - papers_data:/data
     environment:
