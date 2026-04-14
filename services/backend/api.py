@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+import log
 from config import load
 from db.models import Document
 from fastapi import Depends, FastAPI, Query
@@ -9,6 +10,8 @@ from search import SearchEngine
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+log.setup()
 
 _engine: SearchEngine | None = None
 
