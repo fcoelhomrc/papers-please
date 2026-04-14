@@ -18,13 +18,11 @@ logger = logging.getLogger(__name__)
 EMBED_MODEL_ID = "BAAI/bge-small-en-v1.5"
 MAX_TOKENS = 512
 
-OBJECT_STORE_ROOT = os.environ.get("OBJECT_STORE_ROOT", "data")
-
-
 class PdfChunker(PostgresInterface):
-    def __init__(self, store_root: str = OBJECT_STORE_ROOT):
+    def __init__(self, store_root: str | None = None):
+        from config import load
         super().__init__()
-        self.store_root = store_root
+        self.store_root = store_root or load().storage.root
         tokenizer = HuggingFaceTokenizer(
             tokenizer=AutoTokenizer.from_pretrained(EMBED_MODEL_ID),
             max_tokens=MAX_TOKENS,

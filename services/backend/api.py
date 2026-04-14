@@ -1,9 +1,12 @@
 from contextlib import asynccontextmanager
 
+from config import load
 from db.models import Document
 from fastapi import Depends, FastAPI, Query
+from process.embedder import MODELS, Reranker
 from schemas import DocumentOut, SearchResponse
 from search import SearchEngine
+from sentence_transformers import SentenceTransformer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,7 +16,11 @@ _engine: SearchEngine | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _engine
-    _engine = SearchEngine()
+    cfg = load()
+    model_key = cfg.embedder.model
+    encoder = SentenceTransformer(MODELS[model_key]["hf_name"])
+    reranker = Reranker()
+    _engine = SearchEngine(encoder=encoder, reranker=reranker, model_key=model_key)
     yield
 
 

@@ -49,9 +49,10 @@ class Reranker:
 
 
 class PdfEmbedder(PostgresInterface):
-    def __init__(self, model_key: str = "bge-small"):
+    def __init__(self, model_key: str | None = None):
+        from config import load
         super().__init__()
-        cfg = MODELS[model_key]
+        cfg = MODELS[model_key or load().embedder.model]
         self._cfg = cfg
         self._encoder = SentenceTransformer(cfg["hf_name"])
         self._pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
@@ -135,10 +136,12 @@ class PdfEmbedder(PostgresInterface):
             )
             session.commit()
 
-    def execute(self, recreate_index: bool = False, max_chunks: int = 1_000):
+    def execute(self, recreate_index: bool = False, max_chunks: int | None = None):
+        from config import load
         self.ensure_index(recreate=recreate_index)
         model_id = self._upsert_model_record()
-        pending = self.pending(model_id)[:max_chunks]
+        limit = max_chunks if max_chunks is not None else load().embedder.max_chunks
+        pending = self.pending(model_id)[:limit]
         if not pending:
             logger.info("Nothing to embed")
             return

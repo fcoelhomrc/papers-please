@@ -90,10 +90,11 @@ class SemanticScholarFetcher(PostgresInterface):
 
 
 class PdfFetcher(PostgresInterface):
-    def __init__(self, max_workers: int, store_root: str):
+    def __init__(self, max_workers: int, store_root: str | None = None):
+        from config import load
         super().__init__()
         self.max_workers = max_workers
-        self.store_root = Path(store_root)
+        self.store_root = Path(store_root or load().storage.root)
         self._tmp_dir = self.store_root / ".tmp"
 
     def pending(self) -> list[tuple[int, str, str]]:

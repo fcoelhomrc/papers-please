@@ -7,6 +7,7 @@ class ChunkResult(BaseModel):
     authors: list[str] | None
     year: int | None
     page_num: int | None
+    pdf_path: str
     text: str
     score: float
 

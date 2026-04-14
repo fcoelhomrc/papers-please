@@ -1,0 +1,13 @@
+database:
+  host: localhost
+
+storage:
+  root: data
+
+embedder:
+  model: bge-small
+  max_chunks: 1000
+
+search:
+  top_k: 10
+  rerank_top_k: 5

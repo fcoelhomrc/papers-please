@@ -7,28 +7,26 @@ from sqlalchemy.orm import Session
 
 from db.connection import PostgresInterface
 from db.models import Chunk, Document, Object
-from schemas import ChunkResult, SearchResponse
 from process.embedder import MODELS, Reranker
+from schemas import ChunkResult, SearchResponse
 
 
 class SearchEngine(PostgresInterface):
-    def __init__(self, model_key: str = "bge-small"):
+    def __init__(self, encoder: SentenceTransformer, reranker: Reranker, model_key: str = "bge-small"):
         super().__init__()
-        cfg = MODELS[model_key]
-        self._cfg = cfg
+        self._cfg = MODELS[model_key]
         self._model_key = model_key
-        self._encoder = SentenceTransformer(cfg["hf_name"])
+        self._encoder = encoder
+        self._reranker = reranker
         self._pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
-        self._reranker = Reranker()
 
     def _embed_query(self, query: str) -> list[float]:
-        vec = self._encoder.encode(
+        return self._encoder.encode(
             query,
             prompt=self._cfg["query_prompt"],
             normalize_embeddings=True,
             convert_to_numpy=True,
-        )
-        return vec.tolist()
+        ).tolist()
 
     def search(
         self,
@@ -50,7 +48,7 @@ class SearchEngine(PostgresInterface):
         scores = {int(m["id"]): m["score"] for m in matches}
 
         stmt = (
-            select(Chunk.id, Chunk.chunk_text, Chunk.page_num, Document.title, Document.authors, Document.year)
+            select(Chunk.id, Chunk.chunk_text, Chunk.page_num, Object.path, Document.title, Document.authors, Document.year)
             .join(Object, Chunk.obj_id == Object.id)
             .join(Document, Object.doc_id == Document.id)
             .where(Chunk.id.in_(chunk_ids))
@@ -63,6 +61,7 @@ class SearchEngine(PostgresInterface):
                 "chunk_id": r.id,
                 "text": r.chunk_text,
                 "page_num": r.page_num,
+                "pdf_path": r.path,
                 "title": r.title,
                 "authors": r.authors,
                 "year": r.year,
