@@ -10,6 +10,7 @@ class FetchRequest(BaseModel):
 
 class ChunkResult(BaseModel):
     chunk_id: int
+    doc_id: int
     title: str
     authors: list[str] | None
     year: int | None

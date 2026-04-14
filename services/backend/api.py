@@ -24,7 +24,9 @@ async def lifespan(app: FastAPI):
     global _engine
     cfg = load()
     model_key = cfg.embedder.model
-    encoder = SentenceTransformer(MODELS[model_key]["hf_name"], device=cfg.devices.embedder)
+    encoder = SentenceTransformer(
+        MODELS[model_key]["hf_name"], device=cfg.devices.embedder
+    )
     reranker = Reranker(device=cfg.devices.reranker)
     _engine = SearchEngine(encoder=encoder, reranker=reranker, model_key=model_key)
     yield

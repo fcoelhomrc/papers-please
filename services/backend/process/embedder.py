@@ -30,10 +30,14 @@ MODELS: dict[str, dict] = {
     },
 }
 
+
 class Reranker:
     def __init__(self, model_id: str | None = None, device: str = "cpu"):
         from config import load
-        self._model = CrossEncoder(model_id or load().search.reranker_model, device=device)
+
+        self._model = CrossEncoder(
+            model_id or load().search.reranker_model, device=device
+        )
 
     def rerank(
         self, query: str, chunks: list[dict], top_k: int | None = None
@@ -53,7 +57,9 @@ class PdfEmbedder(PostgresInterface):
         config = load()
         cfg = MODELS[model_key or config.embedder.model]
         self._cfg = cfg
-        self._encoder = SentenceTransformer(cfg["hf_name"], device=config.devices.embedder)
+        self._encoder = SentenceTransformer(
+            cfg["hf_name"], device=config.devices.embedder
+        )
         self._pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
 
     def ensure_index(self, recreate: bool = False) -> None:
@@ -67,7 +73,7 @@ class PdfEmbedder(PostgresInterface):
                 vector_type="dense",
                 dimension=self._cfg["embed_size"],
                 metric="cosine",
-                spec=ServerlessSpec(cloud="aws", region="eu-west-1"),
+                spec=ServerlessSpec(cloud="aws", region="us-east-1"),
             )
             logger.info(f"Created index {name!r}")
 

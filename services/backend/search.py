@@ -59,6 +59,7 @@ class SearchEngine(PostgresInterface):
                 Chunk.chunk_text,
                 Chunk.page_num,
                 Object.path,
+                Document.id.label("doc_id"),
                 Document.title,
                 Document.authors,
                 Document.year,
@@ -73,6 +74,7 @@ class SearchEngine(PostgresInterface):
         chunks = [
             {
                 "chunk_id": r.id,
+                "doc_id": r.doc_id,
                 "text": r.chunk_text,
                 "page_num": r.page_num,
                 "pdf_path": r.path,
