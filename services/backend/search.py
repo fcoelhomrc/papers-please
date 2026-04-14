@@ -1,18 +1,22 @@
 import os
 
+from db.connection import PostgresInterface
+from db.models import Chunk, Document, Object
 from pinecone.grpc import PineconeGRPC as Pinecone
+from process.embedder import MODELS, Reranker
+from schemas import ChunkResult, SearchResponse
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from db.connection import PostgresInterface
-from db.models import Chunk, Document, Object
-from process.embedder import MODELS, Reranker
-from schemas import ChunkResult, SearchResponse
-
 
 class SearchEngine(PostgresInterface):
-    def __init__(self, encoder: SentenceTransformer, reranker: Reranker, model_key: str = "bge-small"):
+    def __init__(
+        self,
+        encoder: SentenceTransformer,
+        reranker: Reranker,
+        model_key: str = "bge-small",
+    ):
         super().__init__()
         self._cfg = MODELS[model_key]
         self._model_key = model_key
@@ -42,13 +46,23 @@ class SearchEngine(PostgresInterface):
         matches = response["matches"]
 
         if not matches:
-            return SearchResponse(query=query, model=self._model_key, reranked=False, results=[])
+            return SearchResponse(
+                query=query, model=self._model_key, reranked=False, results=[]
+            )
 
         chunk_ids = [int(m["id"]) for m in matches]
         scores = {int(m["id"]): m["score"] for m in matches}
 
         stmt = (
-            select(Chunk.id, Chunk.chunk_text, Chunk.page_num, Object.path, Document.title, Document.authors, Document.year)
+            select(
+                Chunk.id,
+                Chunk.chunk_text,
+                Chunk.page_num,
+                Object.path,
+                Document.title,
+                Document.authors,
+                Document.year,
+            )
             .join(Object, Chunk.obj_id == Object.id)
             .join(Document, Object.doc_id == Document.id)
             .where(Chunk.id.in_(chunk_ids))

@@ -2,15 +2,14 @@ import logging
 import os
 
 import numpy as np
+from db.connection import PostgresInterface
+from db.models import Chunk, ChunkEmbedding, EmbeddingModel
 from pinecone import ServerlessSpec
 from pinecone.grpc import PineconeGRPC as Pinecone
 from sentence_transformers import CrossEncoder, SentenceTransformer
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
-
-from db.connection import PostgresInterface
-from db.models import Chunk, ChunkEmbedding, EmbeddingModel
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +50,7 @@ class Reranker:
 class PdfEmbedder(PostgresInterface):
     def __init__(self, model_key: str | None = None):
         from config import load
+
         super().__init__()
         cfg = MODELS[model_key or load().embedder.model]
         self._cfg = cfg
@@ -123,7 +123,7 @@ class PdfEmbedder(PostgresInterface):
             }
             for chunk_id, vec, page in batch
         ]
-        index.upsert(vectors=vectors)
+        index.upsert(vectors=vectors)  # type: ignore
 
     def _record_embeddings(self, chunk_ids: list[int], model_id: int):
         rows = [{"chunk_id": cid, "model_id": model_id} for cid in chunk_ids]
@@ -138,6 +138,7 @@ class PdfEmbedder(PostgresInterface):
 
     def execute(self, recreate_index: bool = False, max_chunks: int | None = None):
         from config import load
+
         self.ensure_index(recreate=recreate_index)
         model_id = self._upsert_model_record()
         limit = max_chunks if max_chunks is not None else load().embedder.max_chunks
