@@ -48,6 +48,13 @@
           packages = [ pkgs.uv ];
         };
 
+        # Frontend shell: Node.js for React/Vite development
+        # Usage: nix develop .#frontend
+        frontend = pkgs.mkShell {
+          name = "frontend-dev";
+          packages = [ pkgs.nodejs_22 ];
+        };
+
         # Minimal shell: Python/uv only, no CUDA
         # Usage: nix develop .#minimal
         minimal = pkgs.mkShell {

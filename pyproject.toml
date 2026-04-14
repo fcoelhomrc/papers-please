@@ -7,7 +7,6 @@ dependencies = [
     "docling>=2.88.0",
     "numpy>=2.4.2",
     "pandas>=3.0.1",
-    "pinecone>=8.1.0",
     "psycopg2-binary>=2.9.11",
     "pyarrow>=23.0.1",
     "pydantic>=2.12.5",
@@ -23,6 +22,7 @@ dependencies = [
     "torch>=2.10.0",
     "transformers>=4.40",
     "python-json-logger>=4.1.0",
+    "pinecone[grpc]>=8.1.2",
 ]
 
 
