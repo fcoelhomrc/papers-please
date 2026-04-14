@@ -2,18 +2,49 @@ services:
   db:
     image: docker.io/library/postgres:16
     restart: unless-stopped
-    ports:
-      - "5432:5432"
-    shm_size: 128mb
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d
+      - ./services/db:/docker-entrypoint-initdb.d
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       TZ: Europe/Lisbon
       PGTZ: Europe/Lisbon
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: services/backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - papers_data:/data
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PINECONE_API_KEY: ${PINECONE_API_KEY}
+      OBJECT_STORE_ROOT: /data
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn api:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

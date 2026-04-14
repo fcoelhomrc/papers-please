@@ -13,9 +13,10 @@ class PostgresInterface:
         user = os.environ["POSTGRES_USER"]
         password = os.environ["POSTGRES_PASSWORD"]
         db = os.environ["POSTGRES_DB"]
+        host = os.environ.get("POSTGRES_HOST", "localhost")
 
         engine = create_engine(
-            f"postgresql+psycopg2://{user}:{password}@localhost/{db}",
+            f"postgresql+psycopg2://{user}:{password}@{host}/{db}",
         )
         return engine
 

@@ -29,7 +29,9 @@ class Object(Base):
     doc_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"))
     path: Mapped[str]
     status: Mapped[str] = mapped_column(String, default="pending")
-    downloaded_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
+    downloaded_at: Mapped[datetime.datetime] = mapped_column(
+        default=datetime.datetime.now
+    )
 
 
 class Chunk(Base):
@@ -55,6 +57,12 @@ class EmbeddingModel(Base):
 class ChunkEmbedding(Base):
     __tablename__ = "chunk_embeddings"
 
-    chunk_id: Mapped[int] = mapped_column(ForeignKey("chunks.id", ondelete="CASCADE"), primary_key=True)
-    model_id: Mapped[int] = mapped_column(ForeignKey("embedding_models.id", ondelete="CASCADE"), primary_key=True)
-    embedded_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
+    chunk_id: Mapped[int] = mapped_column(
+        ForeignKey("chunks.id", ondelete="CASCADE"), primary_key=True
+    )
+    model_id: Mapped[int] = mapped_column(
+        ForeignKey("embedding_models.id", ondelete="CASCADE"), primary_key=True
+    )
+    embedded_at: Mapped[datetime.datetime] = mapped_column(
+        default=datetime.datetime.now
+    )

@@ -30,7 +30,7 @@ class PdfChunker(PostgresInterface):
             max_tokens=MAX_TOKENS,
         )
         self._converter = DocumentConverter()
-        self._chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True)
+        self._chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True, repeat_table_header=True)
 
     def pending(self) -> list[tuple[int, str]]:
         stmt = select(Object.id, Object.path).where(Object.status == "pending")
@@ -48,7 +48,8 @@ class PdfChunker(PostgresInterface):
                 prov = chunk.meta.doc_items[0].prov
                 if prov:
                     page_num = prov[0].page_no
-            result.append((i, chunk.text, page_num))
+            if chunk.text:
+                result.append((i, chunk.text, page_num))
         return result
 
     def _write_chunks(self, obj_id: int, chunks: list[tuple[int, str, int | None]]):

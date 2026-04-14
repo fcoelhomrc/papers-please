@@ -1,25 +1,27 @@
 import logging
 import os
 from collections.abc import Iterator
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
 from retry import retry
-from sqlalchemy import exists, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from db.connection import PostgresInterface
 from db.models import Document, Object
-from services.ingest.schemas import DocumentTemplate
+from ingest.schemas import DocumentTemplate
 
 logger = logging.getLogger(__name__)
 
 SEMANTIC_SCHOLAR_API_KEY = os.environ.get("SEMANTIC_SCHOLAR_API_KEY")
 BASE_URL = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
 FIELDS = "paperId,title,abstract,authors,venue,year,openAccessPdf"
+
+MIN_PDF_BYTES = 1024
+PDF_MAGIC = b"%PDF"
 
 
 class SemanticScholarFetcher(PostgresInterface):
@@ -91,7 +93,8 @@ class PdfFetcher(PostgresInterface):
     def __init__(self, max_workers: int, store_root: str):
         super().__init__()
         self.max_workers = max_workers
-        self.store_root = store_root
+        self.store_root = Path(store_root)
+        self._tmp_dir = self.store_root / ".tmp"
 
     def pending(self) -> list[tuple[int, str, str]]:
         stmt = (
@@ -102,10 +105,7 @@ class PdfFetcher(PostgresInterface):
         )
         with Session(self.engine) as session:
             rows = session.execute(stmt).all()
-        result = [
-            (r.id, r.pdf_url, f"{r.source_id}.pdf")
-            for r in rows
-        ]
+        result = [(r.id, r.pdf_url, f"{r.source_id}.pdf") for r in rows]
         logger.info(f"{len(result)} PDFs pending")
         return result
 
@@ -117,25 +117,90 @@ class PdfFetcher(PostgresInterface):
             return response.content
         raise requests.HTTPError(response.status_code)
 
-    @staticmethod
-    def save(content: bytes, path: Path):
-        tmp = path.with_suffix(".tmp")
+    def save(self, content: bytes, path: Path):
+        self._tmp_dir.mkdir(parents=True, exist_ok=True)
+        tmp = self._tmp_dir / path.name
         tmp.write_bytes(content)
-        tmp.rename(path)
+        tmp.rename(path)  # atomic on same filesystem
 
     def register(self, doc_id: int, filename: str):
         with Session(self.engine) as session:
             session.add(Object(doc_id=doc_id, path=filename))
             session.commit()
 
-    def task(self, doc_id: int, url: str, filename: str):
-        path = Path(self.store_root) / filename
+    def task(self, doc_id: int, url: str, filename: str) -> bool:
+        path = self.store_root / filename
         try:
-            self.save(self.download(url), path)
+            content = self.download(url)
+            self.save(content, path)
             self.register(doc_id, filename)
+            logger.info(f"Downloaded {filename} ({len(content) / 1024:.0f} KB)")
+            return True
         except Exception as e:
-            logger.error(f"Failed ({doc_id}, {url}): {e}")
+            logger.error(f"Failed ({filename}): {e}")
+            return False
 
     def execute(self):
+        pending = self.pending()
+        if not pending:
+            logger.info("Nothing to download")
+            return
+        done = 0
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            executor.map(lambda p: self.task(*p), self.pending())
+            futures = {executor.submit(self.task, *p): p[2] for p in pending}
+            for future in as_completed(futures):
+                if future.result():
+                    done += 1
+                logger.info(f"Progress: {done}/{len(pending)}")
+
+    def reconcile(self):
+        store = self.store_root
+
+        # Remove leftover tmp files from interrupted downloads
+        if self._tmp_dir.exists():
+            for f in self._tmp_dir.iterdir():
+                f.unlink()
+                logger.warning(f"Removed incomplete download: {f.name}")
+
+        # Load registered objects from DB
+        with Session(self.engine) as session:
+            registered = {
+                r.path: r.id
+                for r in session.execute(select(Object.path, Object.id)).all()
+            }
+
+        # Check each registered file for existence / corruption
+        corrupt_ids = []
+        for filename, obj_id in registered.items():
+            path = store / filename
+            reason = None
+            if not path.exists():
+                reason = "missing"
+            elif path.stat().st_size < MIN_PDF_BYTES:
+                reason = f"too small ({path.stat().st_size} bytes)"
+                path.unlink()
+            else:
+                with open(path, "rb") as f:
+                    magic = f.read(4)
+                if magic != PDF_MAGIC:
+                    reason = "not a valid PDF"
+                    path.unlink()
+            if reason:
+                logger.warning(f"Corrupt object {obj_id} ({filename}): {reason} — will re-download")
+                corrupt_ids.append(obj_id)
+
+        if corrupt_ids:
+            with Session(self.engine) as session:
+                session.execute(delete(Object).where(Object.id.in_(corrupt_ids)))
+                session.commit()
+
+        # Remove stray PDFs not registered in DB
+        registered_names = set(registered.keys())
+        stray = 0
+        for f in store.iterdir():
+            if f.is_file() and f.suffix == ".pdf" and f.name not in registered_names:
+                f.unlink()
+                stray += 1
+                logger.warning(f"Removed stray file: {f.name}")
+
+        logger.info(f"Reconcile done — {len(corrupt_ids)} corrupt, {stray} stray removed")
