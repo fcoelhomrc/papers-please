@@ -1,16 +1,14 @@
+# Papers, Please
 <p align="center">
-  <img src="https://raw.githubusercontent.com/fcoelhomrc/papers-please/master/assets/logo.png" alt="Logo" width="120" />
+  <img src="https://raw.githubusercontent.com/fcoelhomrc/papers-please/master/assets/logo.jpg" width="100" />
 </p>
-
-<h1 align="center">Papers, Please! 
-</h1>
 
 <p align="center">
     A system to fetch scientific papers PDFs, and perform semantic search on their contents.  
 </p>
 
 <p align="center">
-  <a href="https://store.steampowered.com/app/239030/Papers_Please/"> 🎮 Papers, Please (the great game whose branding we ripped off for this otherwise unrelated personal project) 
+  <a href="https://store.steampowered.com/app/239030/Papers_Please/"> 🎮 Papers, Please (whose branding we have absolutely not stolen) 
 </p>
 
 ## Demo 
