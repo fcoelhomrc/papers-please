@@ -1,19 +1,20 @@
 import logging
 from pathlib import Path
 
-from db.connection import PostgresInterface
-from db.models import Chunk, Object
 from docling.chunking import HybridChunker  # type: ignore
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
-from process.embedder import MODELS
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 from transformers import AutoTokenizer
+
+from db.connection import PostgresInterface
+from db.models import Chunk, Object
+from process.embedder import MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class PdfChunker(PostgresInterface):
             if config.devices.chunker == "cpu"
             else AcceleratorDevice.CUDA
         )
-        pipeline_options = PdfPipelineOptions()
+        pipeline_options = PdfPipelineOptions(ocr_options=RapidOcrOptions())
         pipeline_options.accelerator_options = AcceleratorOptions(device=device)
         tokenizer = HuggingFaceTokenizer(
             tokenizer=AutoTokenizer.from_pretrained(
@@ -52,6 +53,13 @@ class PdfChunker(PostgresInterface):
         with Session(self.engine) as session:
             rows = session.execute(stmt).all()
         logger.info(f"{len(rows)} objects pending chunking")
+        return [(r.id, r.path) for r in rows]
+
+    def failed(self) -> list[tuple[int, str]]:
+        stmt = select(Object.id, Object.path).where(Object.status == "failed")
+        with Session(self.engine) as session:
+            rows = session.execute(stmt).all()
+        logger.info(f"{len(rows)} objects failed chunking")
         return [(r.id, r.path) for r in rows]
 
     def _chunk_pdf(self, path: Path) -> list[tuple[int, str, int | None]]:
@@ -91,6 +99,16 @@ class PdfChunker(PostgresInterface):
             )
             session.commit()
 
+    def _requeue_failed(self):
+        failed = self.failed()
+        with Session(self.engine) as session:
+            for obj_id, _ in failed:
+                session.execute(
+                    update(Object).where(Object.id == obj_id).values(status="pending")
+                )
+                session.commit()
+        logger.info(f"{len(failed)} objects requeued for chunking")
+
     def process(self, obj_id: int, path: str):
         pdf_path = Path(self.store_root) / path
         try:
@@ -103,7 +121,12 @@ class PdfChunker(PostgresInterface):
 
     def execute(self, limit: int | None = None):
         pending = self.pending()
+
         if limit:
             pending = pending[:limit]
         for obj_id, path in pending:
             self.process(obj_id, path)
+
+        pending = self.pending()
+        if len(pending) == 0:
+            self._requeue_failed()
