@@ -45,6 +45,13 @@ class StagesConfig(BaseModel):
     embed: StageConfig = StageConfig(limit=500)
 
 
+class LLMConfig(BaseModel):
+    provider: str = "anthropic"  # "anthropic" | "vllm"
+    model: str = "claude-haiku-4-5"
+    vllm_url: str = "http://localhost:8001/v1"
+    vllm_model: str = ""
+
+
 class Config(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
     storage: StorageConfig = StorageConfig()
@@ -52,6 +59,7 @@ class Config(BaseModel):
     embedder: EmbedderConfig = EmbedderConfig()
     search: SearchConfig = SearchConfig()
     stages: StagesConfig = StagesConfig()
+    llm: LLMConfig = LLMConfig()
 
 
 _config: Config | None = None
