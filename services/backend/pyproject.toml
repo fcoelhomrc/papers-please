@@ -25,6 +25,7 @@ dependencies = [
     "docling[rapidocr]>=2.88.0",
     "rapidocr-onnxruntime>=1.4.4",
     "opencv-python-headless>=4.13.0.92",
+    "langchain-core>=0.3.0",
 ]
 
 
