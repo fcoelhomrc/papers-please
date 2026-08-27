@@ -9,7 +9,8 @@ Postgres + Pinecone. See `docs/mvp-plan.md` for the current plan.
 - Commit incrementally. Messages are short, plain English, present tense
   (e.g. `worker: add retry on OCR failure`).
 - Every subtask gets a GitHub issue first: short description + implementation
-  plan, before writing code.
+  plan, before writing code. Don't pre-create issues for future subtasks —
+  open one only when starting work on it.
 - Issues stay snappy — no essays. Body has just enough to start; keep it short.
 - Each issue has at most one comment. When work is done, update that single
   comment (create it if missing) with what was actually done. Don't leave a
