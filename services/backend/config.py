@@ -48,6 +48,7 @@ class StagesConfig(BaseModel):
 class LLMConfig(BaseModel):
     provider: str = "anthropic"  # "anthropic" | "vllm"
     model: str = "claude-haiku-4-5"
+    max_tokens: int = 512  # keep replies (and cost) bounded - this agent's replies are short
     vllm_url: str = "http://localhost:8001/v1"
     vllm_model: str = ""
 

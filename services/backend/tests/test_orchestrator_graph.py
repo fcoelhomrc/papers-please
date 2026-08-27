@@ -22,21 +22,24 @@ class TestMakeLLM:
         cfg = MagicMock()
         cfg.llm.provider = "anthropic"
         cfg.llm.model = "claude-haiku-4-5"
+        cfg.llm.max_tokens = 512
         with patch("orchestrator.llm.ChatAnthropic") as MockAnthropic:
             make_llm(cfg)
-            MockAnthropic.assert_called_once_with(model="claude-haiku-4-5")
+            MockAnthropic.assert_called_once_with(model="claude-haiku-4-5", max_tokens=512)
 
     def test_vllm_provider(self):
         cfg = MagicMock()
         cfg.llm.provider = "vllm"
         cfg.llm.vllm_url = "http://localhost:8001/v1"
         cfg.llm.vllm_model = "my-local-model"
+        cfg.llm.max_tokens = 512
         with patch("orchestrator.llm.ChatOpenAI") as MockOpenAI:
             make_llm(cfg)
             MockOpenAI.assert_called_once_with(
                 base_url="http://localhost:8001/v1",
                 api_key="EMPTY",
                 model="my-local-model",
+                max_tokens=512,
             )
 
     def test_unknown_provider_raises(self):

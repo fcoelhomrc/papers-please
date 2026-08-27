@@ -14,11 +14,12 @@ from langchain_openai import ChatOpenAI
 
 def make_llm(cfg) -> BaseChatModel:
     if cfg.llm.provider == "anthropic":
-        return ChatAnthropic(model=cfg.llm.model)
+        return ChatAnthropic(model=cfg.llm.model, max_tokens=cfg.llm.max_tokens)
     if cfg.llm.provider == "vllm":
         return ChatOpenAI(
             base_url=cfg.llm.vllm_url,
             api_key="EMPTY",
             model=cfg.llm.vllm_model,
+            max_tokens=cfg.llm.max_tokens,
         )
     raise ValueError(f"unknown llm.provider: {cfg.llm.provider!r}")
