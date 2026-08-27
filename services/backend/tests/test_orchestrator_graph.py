@@ -50,53 +50,59 @@ class TestMakeLLM:
 
 
 class TestBuildAgent:
-    def test_calls_get_status_then_stops_when_nothing_pending(self):
-        """Scripts the LLM: turn 1 calls get_status, turn 2 gives a final answer."""
+    def test_calls_get_status_then_stops_when_nothing_to_fetch(self):
+        """Scripts the LLM: check status, decide we already have enough, stop."""
         resp1 = AIMessage(
             content="",
             tool_calls=[{"name": "get_status", "args": {}, "id": "call_1"}],
         )
-        resp2 = AIMessage(content="Nothing pending, all done.")
+        resp2 = AIMessage(content="We already have papers on this topic, nothing to fetch.")
         llm = FakeToolCallingModel(responses=[resp1, resp2])
 
         with patch(
             "orchestrator.tools.get_status.func",
-            return_value={"documents_total": 0, "chunks_pending_embed": 0},
+            return_value={"documents_total": 40},
         ):
             agent = build_agent(llm)
-            result = agent.invoke({"messages": [HumanMessage("check the pipeline")]})
+            result = agent.invoke({"messages": [HumanMessage("find papers on transformers")]})
 
         messages = result["messages"]
         # Human -> AI(tool_call) -> Tool(result) -> AI(final)
         assert isinstance(messages[0], HumanMessage)
         assert messages[1].tool_calls[0]["name"] == "get_status"
-        assert messages[2].content == '{"documents_total": 0, "chunks_pending_embed": 0}'
-        assert messages[-1].content == "Nothing pending, all done."
+        assert messages[2].content == '{"documents_total": 40}'
+        assert messages[-1].content == "We already have papers on this topic, nothing to fetch."
 
-    def test_routes_to_embed_when_status_says_chunks_are_pending(self):
-        """Scripts the LLM to inspect get_status's output and pick embed_pending -
-        this is the actual routing behaviour get_status exists to support."""
+    def test_calls_fetch_papers_with_llm_chosen_query(self):
+        """Scripts the LLM to check status, then decide to fetch - the one
+        genuinely agentic decision this agent makes (what to search for)."""
         resp1 = AIMessage(
             content="",
             tool_calls=[{"name": "get_status", "args": {}, "id": "call_1"}],
         )
         resp2 = AIMessage(
             content="",
-            tool_calls=[{"name": "embed_pending", "args": {"limit": 50}, "id": "call_2"}],
+            tool_calls=[
+                {
+                    "name": "fetch_papers",
+                    "args": {"query": "transformer attention mechanisms", "max_papers": 30},
+                    "id": "call_2",
+                }
+            ],
         )
-        resp3 = AIMessage(content="Embedded the pending chunks.")
+        resp3 = AIMessage(content="Fetched new papers on transformers.")
         llm = FakeToolCallingModel(responses=[resp1, resp2, resp3])
 
         with (
-            patch(
-                "orchestrator.tools.get_status.func",
-                return_value={"chunks_pending_embed": 12},
-            ),
-            patch("orchestrator.tools.PdfEmbedder") as MockEmbedder,
+            patch("orchestrator.tools.get_status.func", return_value={"documents_total": 0}),
+            patch("orchestrator.tools.SemanticScholarFetcher") as MockFetcher,
         ):
+            MockFetcher.return_value.fetch.return_value = 30
             agent = build_agent(llm)
-            result = agent.invoke({"messages": [HumanMessage("check the pipeline")]})
+            result = agent.invoke({"messages": [HumanMessage("find papers on transformers")]})
 
-            MockEmbedder.return_value.execute.assert_called_once_with(max_chunks=50)
+            MockFetcher.return_value.fetch.assert_called_once_with(
+                query="transformer attention mechanisms", max_papers=30
+            )
 
-        assert result["messages"][-1].content == "Embedded the pending chunks."
+        assert result["messages"][-1].content == "Fetched new papers on transformers."

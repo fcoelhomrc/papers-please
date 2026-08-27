@@ -129,13 +129,19 @@ Replace the single `worker.interval_s` in `config.yaml` with one interval
 per stage (`stages.download.interval_s`, `stages.chunk.interval_s`, ...) so
 they can be tuned independently once they're separate processes.
 
-### 3. Orchestrator tool set
+### 3. Orchestrator tool set — corrected scope
 
-Thin wrappers around the existing `.execute()` calls, expressed as
-LangGraph/LangChain tools:
+**Original version of this subtask (and #4 below) wrapped
+download/chunk/embed as agent tools too — that was wrong and got reverted.**
+Given the DB state, download/chunk/embed each have exactly one correct
+action; there's no decision for an LLM to make, so they stay on the
+deterministic `stages/*.py` workers (subtask 1) and are never exposed as
+agent tools. The only things an LLM decision genuinely adds value to here
+are (a) what to search for when fetching, and (b) retrieval (subtask 9).
+So the tool set is intentionally small:
 
 ```python
-# services/orchestrator/tools.py
+# services/backend/orchestrator/tools.py
 from langchain_core.tools import tool
 
 @tool
@@ -145,52 +151,43 @@ def fetch_papers(query: str, max_papers: int = 100) -> str:
     return f"fetched {n} papers"
 
 @tool
-def download_pending(limit: int = 20) -> str:
-    """Download PDFs for papers that have a URL but no downloaded object."""
-    ...
-
-@tool
-def chunk_pending(limit: int = 10) -> str: ...
-
-@tool
-def embed_pending(limit: int = 500) -> str: ...
-
-@tool
 def get_status() -> dict:
-    """Return counts of documents/objects per pipeline stage."""
+    """Return counts of documents/objects/chunks — context for fetch
+    decisions (e.g. don't refetch what we already have), not a router
+    for the ingest pipeline."""
     # SELECT status, count(*) FROM objects GROUP BY status; pending docs w/o pdf_url; etc.
 ```
 
-`get_status` is what lets the LLM actually route instead of guessing —
-it's the one new piece of DB code this subtask needs (a handful of
-`SELECT count(*) ... GROUP BY` queries).
+Lives in `services/backend/orchestrator/` (not a separate top-level
+package) — it imports `db`/`config`/`ingest` directly, same as `stages/`.
 
 ### 4. Orchestrator agent loop (LangGraph)
 
 ```python
-# services/orchestrator/graph.py
-from langgraph.prebuilt import create_react_agent
+# services/backend/orchestrator/graph.py
+from langchain.agents import create_agent  # langgraph.prebuilt.create_react_agent, deprecated in v1.0, moved here
 
-SYSTEM = """You manage a paper-ingestion pipeline: fetch -> download -> chunk -> embed.
-Call get_status first. Then call at most one stage tool to make progress on
-whichever stage is most behind. If nothing is pending, say so and stop."""
+SYSTEM = """You decide what papers to fetch into a research library, given a request.
+Call get_status if it helps judge whether we already have relevant papers.
+Call fetch_papers with a search query capturing what's being asked for.
+Downloading/chunking/embedding happen automatically on their own schedule
+once papers are fetched - not your job, don't try to trigger them."""
 
 def build_agent(llm):
-    tools = [fetch_papers, download_pending, chunk_pending, embed_pending, get_status]
-    return create_react_agent(llm, tools, prompt=SYSTEM)
+    tools = [fetch_papers, get_status]
+    return create_agent(llm, tools, system_prompt=SYSTEM)
 ```
 
-`create_react_agent` (LangGraph prebuilt) is enough for a single-agent,
-small-tool-set loop — no need for a hand-built graph unless routing logic
-grows past "look at status, pick one tool".
+`create_agent` is enough for this single-agent, two-tool loop — no need
+for a hand-built graph.
 
-### 5. Wire into compose, retire `worker.py`
+### 5. Wire into compose
 
-New `orchestrator` service running the LangGraph loop on a tick
-(`interval_s`, same shape as today's worker sleep loop). `worker.py`
-deleted once the orchestrator covers the same ground; `PdfFetcher` /
-`PdfChunker` / `PdfEmbedder` keep working as they're what the tools call
-into — only the *decision of when to call what* moves to the agent.
+New `orchestrator` service, invoked on demand (a fetch request) rather
+than on a poll-and-loop timer like the stage workers — there's no ongoing
+state for it to check, only a decision to make when someone asks for
+papers on a topic. `stages/*.py` workers are unaffected and keep running
+exactly as they do today; the orchestrator is additive, not a replacement.
 
 ### 6. Rewrite README
 

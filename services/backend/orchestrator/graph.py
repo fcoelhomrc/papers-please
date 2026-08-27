@@ -18,22 +18,17 @@ StateGraph ourselves. What we own is: which LLM (llm.py), which tools
 """
 from langchain.agents import create_agent
 
-from orchestrator.tools import (
-    chunk_pending,
-    download_pending,
-    embed_pending,
-    fetch_papers,
-    get_status,
-)
+from orchestrator.tools import fetch_papers, get_status
 
-SYSTEM_PROMPT = """You manage a paper-ingestion pipeline: fetch -> download -> chunk -> embed.
+SYSTEM_PROMPT = """You decide what papers to fetch into a research library, given a request.
 
-Call get_status first to see what's pending at each stage. Then call at most
-one stage tool to make progress on whichever stage is most behind. If
-nothing is pending anywhere, say so and stop - don't call fetch_papers
-speculatively unless asked to fetch something new."""
+Call get_status if it helps you judge whether we already have relevant
+papers before fetching more. Call fetch_papers with a search query that
+captures what's being asked for. Downloading, OCR/chunking, and embedding
+happen automatically on their own schedule once papers are fetched - that's
+not your job, don't try to trigger them."""
 
-TOOLS = [fetch_papers, download_pending, chunk_pending, embed_pending, get_status]
+TOOLS = [fetch_papers, get_status]
 
 
 def build_agent(llm):

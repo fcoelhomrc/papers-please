@@ -1,17 +1,16 @@
-"""LangChain tools wrapping the existing pipeline stages.
+"""LangChain tools for the orchestrator agent.
 
-Each function below is decorated with @tool (from langchain_core.tools),
-which turns it into a langchain "Tool" object: the docstring becomes the
-description an LLM sees when deciding whether to call it, and the type
-hints become a JSON schema for its arguments. This is plumbing only - the
-actual agent loop that decides *when* to call these lands in subtask 4
-(LangGraph's create_react_agent). For now these are just callable directly,
-same as any Python function, which is how the unit tests exercise them.
+Deliberately small. The ingest pipeline (download -> chunk -> embed) is
+deterministic: given the DB state there's exactly one correct action, so
+it's handled by the stages/*.py workers running on a timer, not by an LLM
+deciding whether to call a tool. An agent has no business being a queue
+manager for that - it adds latency/cost/a new way to silently skip a step,
+for a decision that was never actually being made.
 
-None of the underlying .execute() methods (PdfFetcher/PdfChunker/PdfEmbedder)
-return a count - they log and return None. So each wrapper snapshots
-len(pending()) *before* calling execute() to give the LLM something
-concrete to report, rather than a meaningless "done".
+What's left is where an LLM's judgment is real: what to search for (fetch)
+and, later, what/how to query for retrieval. get_status stays because it's
+useful context for a fetch decision (e.g. "we already have papers on this",
+don't refetch), not because it routes between pipeline stages anymore.
 """
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -19,10 +18,9 @@ from sqlalchemy.orm import Session
 from config import load
 from db.connection import PostgresInterface
 from db.models import Chunk, ChunkEmbedding, Document, Object
-from ingest.fetcher import PdfFetcher, SemanticScholarFetcher
+from ingest.fetcher import SemanticScholarFetcher
 from langchain_core.tools import tool
-from process.chunker import PdfChunker
-from process.embedder import MODELS, PdfEmbedder
+from process.embedder import MODELS
 
 
 @tool
@@ -33,46 +31,12 @@ def fetch_papers(query: str, max_papers: int = 100) -> str:
 
 
 @tool
-def download_pending(limit: int = 20) -> str:
-    """Download PDFs for documents that have a pdf_url but no downloaded object yet."""
-    cfg = load()
-    fetcher = PdfFetcher(max_workers=cfg.stages.download.workers)
-    n = len(fetcher.pending()[:limit])
-    fetcher.execute(limit=limit)
-    return f"attempted {n} downloads (limit={limit})"
-
-
-@tool
-def chunk_pending(limit: int = 10) -> str:
-    """OCR + chunk downloaded PDFs that are still in 'pending' status."""
-    chunker = PdfChunker()
-    n = len(chunker.pending()[:limit])
-    chunker.execute(limit=limit)
-    return f"attempted {n} objects to chunk (limit={limit})"
-
-
-@tool
-def embed_pending(limit: int = 500) -> str:
-    """Embed chunks that don't have a vector yet and upsert them to Pinecone."""
-    embedder = PdfEmbedder()
-    return _run_embed(embedder, limit)
-
-
-def _run_embed(embedder: PdfEmbedder, limit: int) -> str:
-    # PdfEmbedder needs a model_id to know what's "pending", which only
-    # exists once _upsert_model_record() has run - so we can't snapshot a
-    # count up front the way the other tools do. Just report the ceiling.
-    embedder.execute(max_chunks=limit)
-    return f"embedded up to {limit} pending chunks"
-
-
-@tool
 def get_status() -> dict:
     """Return counts of documents/objects/chunks at each pipeline stage.
 
-    This is what lets the orchestrator agent decide which stage tool to
-    call next instead of guessing - e.g. if pending_download is high but
-    objects_by_status.pending is 0, download is the bottleneck.
+    Context for fetch decisions - e.g. how much we already have on a topic
+    before fetching more. Not a router for the ingest pipeline, which runs
+    on its own deterministic schedule (stages/*.py).
     """
     cfg = load()
     model_hf_name = MODELS[cfg.embedder.model]["hf_name"]
@@ -97,8 +61,8 @@ def get_status() -> dict:
         )
 
         # Approximation: a chunk with *no* embedding row at all (any model)
-        # counts as pending. Good enough for routing; doesn't distinguish
-        # "never embedded" from "embedded with a different model".
+        # counts as pending. Good enough for a status snapshot; doesn't
+        # distinguish "never embedded" from "embedded with a different model".
         chunks_pending_embed = session.execute(
             select(func.count())
             .select_from(Chunk)

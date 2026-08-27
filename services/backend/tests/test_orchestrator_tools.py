@@ -23,41 +23,6 @@ class TestFetchPapers:
             assert result == "fetched 7 papers"
 
 
-class TestDownloadPending:
-    def test_invoke_calls_fetcher_with_configured_workers(self):
-        cfg = MagicMock()
-        cfg.stages.download.workers = 3
-        with (
-            patch("orchestrator.tools.load", return_value=cfg),
-            patch("orchestrator.tools.PdfFetcher") as MockFetcher,
-        ):
-            MockFetcher.return_value.pending.return_value = [1, 2, 3, 4, 5]
-            result = tools.download_pending.invoke({"limit": 2})
-
-            MockFetcher.assert_called_once_with(max_workers=3)
-            MockFetcher.return_value.execute.assert_called_once_with(limit=2)
-            assert result == "attempted 2 downloads (limit=2)"
-
-
-class TestChunkPending:
-    def test_invoke_calls_chunker(self):
-        with patch("orchestrator.tools.PdfChunker") as MockChunker:
-            MockChunker.return_value.pending.return_value = [1, 2]
-            result = tools.chunk_pending.invoke({"limit": 10})
-
-            MockChunker.return_value.execute.assert_called_once_with(limit=10)
-            assert result == "attempted 2 objects to chunk (limit=10)"
-
-
-class TestEmbedPending:
-    def test_invoke_calls_embedder(self):
-        with patch("orchestrator.tools.PdfEmbedder") as MockEmbedder:
-            result = tools.embed_pending.invoke({"limit": 100})
-
-            MockEmbedder.return_value.execute.assert_called_once_with(max_chunks=100)
-            assert result == "embedded up to 100 pending chunks"
-
-
 class TestGetStatus:
     def test_invoke_shapes_counts_from_db(self):
         cfg = MagicMock()
