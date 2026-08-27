@@ -7,8 +7,11 @@ from db.models import Document, Object
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from ingest.fetcher import SemanticScholarFetcher
+from langchain_core.messages import AIMessage, HumanMessage
+from orchestrator.graph import build_agent
+from orchestrator.llm import make_llm
 from process.embedder import MODELS, Reranker
-from schemas import DocumentOut, FetchRequest, SearchResponse
+from schemas import ChatRequest, ChatResponse, DocumentOut, FetchRequest, SearchResponse
 from search import SearchEngine
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import select
@@ -17,6 +20,7 @@ from sqlalchemy.orm import Session
 log.setup()
 
 _engine: SearchEngine | None = None
+_agent = None  # built lazily - needs ANTHROPIC_API_KEY, shouldn't block startup without it
 
 
 @asynccontextmanager
@@ -40,6 +44,19 @@ def get_engine() -> SearchEngine:
     return _engine
 
 
+def get_agent():
+    global _agent
+    if _agent is None:
+        try:
+            _agent = build_agent(make_llm(load()))
+        except Exception as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"orchestrator agent unavailable: {e}",
+            ) from e
+    return _agent
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -54,6 +71,19 @@ def fetch(req: FetchRequest):
         max_papers=req.max_papers,
     )
     return {"fetched": total}
+
+
+@app.post("/agent/chat", response_model=ChatResponse)
+def agent_chat(req: ChatRequest, agent=Depends(get_agent)):
+    result = agent.invoke({"messages": [HumanMessage(req.message)]})
+    messages = result["messages"]
+    tool_calls = [
+        call["name"]
+        for m in messages
+        if isinstance(m, AIMessage)
+        for call in m.tool_calls
+    ]
+    return ChatResponse(reply=messages[-1].content, tool_calls=tool_calls)
 
 
 @app.get("/search", response_model=SearchResponse)

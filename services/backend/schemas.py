@@ -8,6 +8,15 @@ class FetchRequest(BaseModel):
     max_papers: int = Field(default=500, ge=1, le=5000)
 
 
+class ChatRequest(BaseModel):
+    message: str
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    tool_calls: list[str] = []  # names of tools the agent invoked, for transparency
+
+
 class ChunkResult(BaseModel):
     chunk_id: int
     doc_id: int
