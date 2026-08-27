@@ -9,14 +9,18 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-def make_cfg(**worker_overrides):
+def make_cfg(download=None, chunk=None, embed=None):
     cfg = MagicMock()
-    cfg.worker.download_workers = 4
-    cfg.worker.download_limit = 20
-    cfg.worker.chunk_limit = 10
-    cfg.worker.embed_limit = 500
-    for k, v in worker_overrides.items():
-        setattr(cfg.worker, k, v)
+    cfg.stages.download.workers = 4
+    cfg.stages.download.limit = 20
+    cfg.stages.chunk.limit = 10
+    cfg.stages.embed.limit = 500
+    for k, v in (download or {}).items():
+        setattr(cfg.stages.download, k, v)
+    for k, v in (chunk or {}).items():
+        setattr(cfg.stages.chunk, k, v)
+    for k, v in (embed or {}).items():
+        setattr(cfg.stages.embed, k, v)
     return cfg
 
 
@@ -24,7 +28,7 @@ class TestDownloadStage:
     def test_run_calls_fetcher_with_configured_limits(self):
         from stages import download
 
-        cfg = make_cfg(download_workers=7, download_limit=42)
+        cfg = make_cfg(download={"workers": 7, "limit": 42})
         with (
             patch("stages.download.load", return_value=cfg),
             patch("stages.download.PdfFetcher") as MockFetcher,
@@ -39,7 +43,7 @@ class TestChunkStage:
     def test_run_calls_chunker_with_configured_limit(self):
         from stages import chunk
 
-        cfg = make_cfg(chunk_limit=13)
+        cfg = make_cfg(chunk={"limit": 13})
         with (
             patch("stages.chunk.load", return_value=cfg),
             patch("stages.chunk.PdfChunker") as MockChunker,
@@ -54,7 +58,7 @@ class TestEmbedStage:
     def test_run_calls_embedder_with_configured_max_chunks(self):
         from stages import embed
 
-        cfg = make_cfg(embed_limit=99)
+        cfg = make_cfg(embed={"limit": 99})
         with (
             patch("stages.embed.load", return_value=cfg),
             patch("stages.embed.PdfEmbedder") as MockEmbedder,

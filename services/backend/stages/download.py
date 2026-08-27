@@ -11,17 +11,18 @@ logger = logging.getLogger("stage.download")
 
 def run():
     cfg = load()
-    w = cfg.worker
-    with log.timed("download", limit=w.download_limit):
-        PdfFetcher(max_workers=w.download_workers).execute(limit=w.download_limit)
+    s = cfg.stages.download
+    with log.timed("download", limit=s.limit):
+        PdfFetcher(max_workers=s.workers).execute(limit=s.limit)
 
 
 if __name__ == "__main__":
     cfg = load()
-    logger.info("stage.download.loop_start", extra={"interval_s": cfg.worker.interval_s})
+    interval_s = cfg.stages.download.interval_s
+    logger.info("stage.download.loop_start", extra={"interval_s": interval_s})
     while True:
         try:
             run()
         except Exception:
             logger.exception("stage.download.error")
-        time.sleep(cfg.worker.interval_s)
+        time.sleep(interval_s)

@@ -11,17 +11,18 @@ logger = logging.getLogger("stage.embed")
 
 def run():
     cfg = load()
-    w = cfg.worker
-    with log.timed("embed", limit=w.embed_limit):
-        PdfEmbedder().execute(max_chunks=w.embed_limit)
+    s = cfg.stages.embed
+    with log.timed("embed", limit=s.limit):
+        PdfEmbedder().execute(max_chunks=s.limit)
 
 
 if __name__ == "__main__":
     cfg = load()
-    logger.info("stage.embed.loop_start", extra={"interval_s": cfg.worker.interval_s})
+    interval_s = cfg.stages.embed.interval_s
+    logger.info("stage.embed.loop_start", extra={"interval_s": interval_s})
     while True:
         try:
             run()
         except Exception:
             logger.exception("stage.embed.error")
-        time.sleep(cfg.worker.interval_s)
+        time.sleep(interval_s)

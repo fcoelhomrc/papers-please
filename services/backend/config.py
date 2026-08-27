@@ -30,12 +30,19 @@ class SearchConfig(BaseModel):
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
-class WorkerConfig(BaseModel):
+class StageConfig(BaseModel):
     interval_s: int = 300
-    download_workers: int = 4
-    download_limit: int = 20
-    chunk_limit: int = 10
-    embed_limit: int = 500
+    limit: int = 20
+
+
+class DownloadStageConfig(StageConfig):
+    workers: int = 4
+
+
+class StagesConfig(BaseModel):
+    download: DownloadStageConfig = DownloadStageConfig(limit=20)
+    chunk: StageConfig = StageConfig(limit=10)
+    embed: StageConfig = StageConfig(limit=500)
 
 
 class Config(BaseModel):
@@ -44,7 +51,7 @@ class Config(BaseModel):
     devices: DevicesConfig = DevicesConfig()
     embedder: EmbedderConfig = EmbedderConfig()
     search: SearchConfig = SearchConfig()
-    worker: WorkerConfig = WorkerConfig()
+    stages: StagesConfig = StagesConfig()
 
 
 _config: Config | None = None

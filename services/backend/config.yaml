@@ -19,9 +19,14 @@ search:
   rerank_top_k: 5
   reranker_model: cross-encoder/ms-marco-MiniLM-L-6-v2
 
-worker:
-  interval_s: 10
-  download_workers: 4
-  download_limit: 20
-  chunk_limit: 10
-  embed_limit: 500
+stages:
+  download:
+    interval_s: 10
+    limit: 20
+    workers: 4
+  chunk:
+    interval_s: 10
+    limit: 10
+  embed:
+    interval_s: 10
+    limit: 500
