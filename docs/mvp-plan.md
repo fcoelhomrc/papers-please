@@ -197,5 +197,108 @@ into — only the *decision of when to call what* moves to the agent.
 Once the above lands, document the real architecture (independent stage
 services + LangGraph orchestrator) instead of the current stub.
 
+### 7. Eval set + Ragas harness
+
+Without this, "agentic pipeline" is a claim with no evidence. Build a small
+eval set and wire up [Ragas](https://docs.ragas.io/) so pipeline changes
+(rerank on/off, model swaps, agentic vs. fixed retrieval) are measurable,
+not vibes.
+
+```
+services/backend/eval/
+  dataset.jsonl        # {"question": ..., "ground_truth": ..., "doc_ids": [...]}
+  run.py               # loads dataset, runs a pipeline variant, scores with ragas
+  results/              # one JSON per (pipeline_variant, timestamp) run
+```
+
+```python
+# services/backend/eval/run.py
+from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
+from datasets import Dataset
+
+def run_eval(pipeline: Pipeline, dataset_path: str) -> dict:
+    rows = [json.loads(l) for l in open(dataset_path)]
+    records = []
+    for row in rows:
+        result = pipeline.answer(row["question"])
+        records.append({
+            "question": row["question"],
+            "answer": result.answer,
+            "contexts": result.contexts,
+            "ground_truth": row["ground_truth"],
+        })
+    ds = Dataset.from_list(records)
+    scores = evaluate(ds, metrics=[faithfulness, answer_relevancy, context_precision, context_recall])
+    return scores.to_pandas().to_dict()
+```
+
+`Pipeline` is a small common interface both the existing retrieve+rerank
+path and the new agentic RAG path (subtask 9) implement, so `run_eval` is
+variant-agnostic:
+
+```python
+class Pipeline(Protocol):
+    def answer(self, question: str) -> AnswerResult: ...  # AnswerResult = {answer, contexts}
+```
+
+Eval set starts small (~20-30 hand-written Q/A pairs grounded in a handful
+of ingested papers) — enough to catch regressions, not a benchmark claim.
+
+### 8. Prompt versioning
+
+Any prompt sent to an LLM (orchestrator system prompt, agentic RAG's
+tool-use system prompt, reranker query-prompt string) gets a version tag so
+eval results and issue reports can say *which* prompt produced a score.
+
+```
+services/backend/prompts/
+  orchestrator/v1.md
+  agentic_rag/v1.md
+```
+
+```python
+# services/backend/prompts/registry.py
+def load_prompt(name: str, version: str) -> str:
+    return (Path(__file__).parent / name / f"{version}.md").read_text()
+
+PROMPT_VERSIONS = {"orchestrator": "v1", "agentic_rag": "v1"}  # config default, override per eval run
+```
+
+Bump `vN` on meaningful prompt edits (new file, old ones kept) rather than
+editing in place — so an eval run always records an exact, reproducible
+prompt version alongside its score, and old scores stay comparable.
+
+### 9. Optional agentic RAG path (for comparison)
+
+A second answer-producing path, alongside the existing fixed
+retrieve→rerank pipeline, implementing the same `Pipeline` interface from
+subtask 7. Instead of a fixed top_k retrieve + rerank, an agent iterates:
+search, read more if the top chunks look insufficient, optionally refine
+the query, then answer.
+
+```python
+# services/backend/pipelines/agentic_rag.py
+@tool
+def search_chunks(query: str, top_k: int = 5) -> list[dict]: ...  # wraps existing SearchEngine
+
+@tool
+def get_document(doc_id: int) -> dict: ...  # full doc metadata + more chunks if needed
+
+class AgenticRagPipeline:
+    def __init__(self, llm):
+        self.agent = create_react_agent(
+            llm, [search_chunks, get_document],
+            prompt=load_prompt("agentic_rag", PROMPT_VERSIONS["agentic_rag"]),
+        )
+
+    def answer(self, question: str) -> AnswerResult: ...
+```
+
+Selected via config (`search.pipeline: fixed | agentic`) or as an explicit
+`/search` query param — not a replacement for the fixed pipeline, a second
+option to run side-by-side in eval (subtask 7) for a results/comparison
+section: same eval set, `fixed` vs `agentic` scores, cost/latency deltas.
+
 Each subtask gets its own GitHub issue per `CLAUDE.md`, opened only when
 work starts on it — small, sequential, committed incrementally.
