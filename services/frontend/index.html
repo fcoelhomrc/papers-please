@@ -1,12 +1,46 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Papers Please</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Papers Please</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <span class="brand">Papers Please</span>
+      <nav class="tabs">
+        <button class="tab-btn active" data-view="search">Search</button>
+        <button class="tab-btn" data-view="fetch">Fetch</button>
+        <button class="tab-btn" data-view="documents">Documents</button>
+      </nav>
+      <button class="chat-toggle" id="chat-toggle" aria-label="Toggle chat">Chat</button>
+    </header>
+
+    <div class="body">
+      <main class="content">
+        <section id="view-search" class="view active"></section>
+        <section id="view-fetch" class="view"></section>
+        <section id="view-documents" class="view"></section>
+      </main>
+
+      <aside class="chat-panel" id="chat-panel">
+        <div class="chat-header">
+          <span>Agent</span>
+          <button class="chat-close" id="chat-close" aria-label="Close chat">&times;</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <p class="chat-hint">Ask the agent to fetch papers, e.g. "find recent papers on transformer attention".</p>
+        </div>
+        <form class="chat-form" id="chat-form">
+          <input type="text" id="chat-input" placeholder="Message the agent…" autocomplete="off">
+          <button type="submit">Send</button>
+        </form>
+      </aside>
+    </div>
+  </div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
 </html>

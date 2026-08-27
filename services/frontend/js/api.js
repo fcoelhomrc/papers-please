@@ -3,18 +3,15 @@ const BASE = '/api'
 async function handle(res) {
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)
-    throw new Error(text || `HTTP ${res.status}`)
+    let detail = text
+    try { detail = JSON.parse(text).detail ?? text } catch { /* not json */ }
+    throw new Error(detail || `HTTP ${res.status}`)
   }
   return res.json()
 }
 
 export function search(q, { topK = 10, rerank = false, rerankTopK = 5 } = {}) {
-  const params = new URLSearchParams({
-    q,
-    top_k: topK,
-    rerank,
-    rerank_top_k: rerankTopK,
-  })
+  const params = new URLSearchParams({ q, top_k: topK, rerank, rerank_top_k: rerankTopK })
   return fetch(`${BASE}/search?${params}`).then(handle)
 }
 
@@ -33,4 +30,12 @@ export function listDocuments({ offset = 0, limit = 20 } = {}) {
 
 export function pdfUrl(docId) {
   return `${BASE}/documents/${docId}/pdf`
+}
+
+export function chat(message) {
+  return fetch(`${BASE}/agent/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  }).then(handle)
 }
