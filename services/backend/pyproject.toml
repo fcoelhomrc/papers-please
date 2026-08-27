@@ -33,6 +33,12 @@ dev = [
     "pytest>=8.0.0",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: hits real Postgres (podman container) and/or real Pinecone (test namespace); needs network + a container runtime, run explicitly with `-m integration`",
+]
+addopts = "-m 'not integration'"
+
 [tool.uv.sources]
 torch = [
   { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },

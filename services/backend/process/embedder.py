@@ -50,13 +50,14 @@ class Reranker:
 
 
 class PdfEmbedder(PostgresInterface):
-    def __init__(self, model_key: str | None = None):
+    def __init__(self, model_key: str | None = None, namespace: str = ""):
         from config import load
 
         super().__init__()
         config = load()
         cfg = MODELS[model_key or config.embedder.model]
         self._cfg = cfg
+        self._namespace = namespace
         self._encoder = SentenceTransformer(
             cfg["hf_name"], device=config.devices.embedder
         )
@@ -128,7 +129,7 @@ class PdfEmbedder(PostgresInterface):
             }
             for chunk_id, vec, page in batch
         ]
-        index.upsert(vectors=vectors)  # type: ignore
+        index.upsert(vectors=vectors, namespace=self._namespace)  # type: ignore
 
     def _record_embeddings(self, chunk_ids: list[int], model_id: int):
         rows = [{"chunk_id": cid, "model_id": model_id} for cid in chunk_ids]
