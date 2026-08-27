@@ -1,0 +1,1820 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns:mml="http://www.w3.org/1998/Math/MathML">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="format-detection" content="telephone=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        
+                    <meta name="citation_journal_title" content="Journal of Breast Cancer"/>
+<meta name="citation_title" content="Treatment Patterns and Outcomes in Elderly Patients with Metastatic Breast Cancer: A Multicenter Retrospective Study"/>
+<meta name="citation_author" content="Park, Jin Hyun"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul Metropolitan Government-Seoul National University Boramae Medical Center, Seoul National University College of Medicine, Seoul, Korea">
+<meta name="citation_author" content="Choi, In Sil"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul Metropolitan Government-Seoul National University Boramae Medical Center, Seoul National University College of Medicine, Seoul, Korea">
+<meta name="citation_author_email" content="hmoischoi@hanmail.net">
+<meta name="citation_author" content="Kim, Ki Hwan"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul Metropolitan Government-Seoul National University Boramae Medical Center, Seoul National University College of Medicine, Seoul, Korea">
+<meta name="citation_author" content="Kim, Jin-Soo"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul Metropolitan Government-Seoul National University Boramae Medical Center, Seoul National University College of Medicine, Seoul, Korea">
+<meta name="citation_author" content="Lee, Kyung-Hun"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul National University Hospital, Seoul National University College of Medicine, Seoul, Korea">
+<meta name="citation_author_institution" content="Cancer Research Institute, Seoul National University, Seoul, Korea">
+<meta name="citation_author" content="Kim, Tae-Yong"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul National University Hospital, Seoul National University College of Medicine, Seoul, Korea">
+<meta name="citation_author_institution" content="Cancer Research Institute, Seoul National University, Seoul, Korea">
+<meta name="citation_author" content="Im, Seock-Ah"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul National University Hospital, Seoul National University College of Medicine, Seoul, Korea">
+<meta name="citation_author_institution" content="Cancer Research Institute, Seoul National University, Seoul, Korea">
+<meta name="citation_author" content="Kim, Se Hyun"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul National University Bundang Hospital, Seoul National University College of Medicine, Seongnam, Korea">
+<meta name="citation_author" content="Kim, Yu Jung"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul National University Bundang Hospital, Seoul National University College of Medicine, Seongnam, Korea">
+<meta name="citation_author" content="Kim, Jee Hyun"/>
+<meta name="citation_author_institution" content="Department of Internal Medicine, Seoul National University Bundang Hospital, Seoul National University College of Medicine, Seongnam, Korea">
+<meta name="citation_date" content="2017/12/01"/>
+<meta name="citation_volume" content="20"/>
+<meta name="citation_issue" content="4"/>
+<meta name="citation_firstpage" content="368"/>
+<meta name="citation_lastpage" content="377"/>
+<meta name="citation_doi" content="10.4048/jbc.2017.20.4.368"/>
+<meta name="citation_issn" content="1738-6756"/>
+<meta name="citation_pdf_url" content="http://ejbc.kr/Synapse/Data/PDFData/0096JBC/jbc-20-368.pdf"/>
+<meta name="citation_language" content="English"/>
+<meta name="citation_keywords" content="aged; Breast neoplasms; Drug Therapy; survival"/>
+<meta name="citation_reference" content="citation_title=Global cancer statistics, 2012; citation_author=LA Torre; citation_author=F Bray; citation_author=RL Siegel; citation_author=J Ferlay; citation_author=J Lortet-Tieulent; citation_author=A Jemal; citation_journal_title=CA Cancer J Clin; citation_volume=65; citation_pages=87-108; citation_date=2015;"/>
+<meta name="citation_reference" content="citation_title=Cancer statistics in Korea: incidence, mortality, survival, and prevalence in 2014; citation_author=KW Jung; citation_author=YJ Won; citation_author=CM Oh; citation_author=HJ Kong; citation_author=DH Lee; citation_author=KH Lee; citation_journal_title=Cancer Res Treat; citation_volume=49; citation_pages=292-305; citation_date=2017;"/>
+<meta name="citation_reference" content="citation_title=Basic facts of breast cancer in Korea in 2014: the 10-year overall survival progress; citation_author=EH Park; citation_author=SY Min; citation_author=Z Kim; citation_author=CS Yoon; citation_author=KW Jung; citation_author=SJ Nam; citation_journal_title=J Breast Cancer; citation_volume=20; citation_pages=1-11; citation_date=2017;"/>
+<meta name="citation_reference" content="citation_title=Barriers to clinical trial participation by older women with breast cancer; citation_author=MM Kemeny; citation_author=BL Peterson; citation_author=AB Kornblith; citation_author=HB Muss; citation_author=J Wheeler; citation_author=E Levine; citation_journal_title=J Clin Oncol; citation_volume=21; citation_pages=2268-2275; citation_date=2003;"/>
+<meta name="citation_reference" content="citation_title=Underrepresentation of patients 65 years of age or older in cancer-treatment trials; citation_author=LF Hutchins; citation_author=JM Unger; citation_author=JJ Crowley; citation_author=CA Coltman; citation_author=KS Albain; citation_journal_title=N Engl J Med; citation_volume=341; citation_pages=2061-2067; citation_date=1999;"/>
+<meta name="citation_reference" content="citation_title=Participation of patients 65 years of age or older in cancer clinical trials; citation_author=JH Lewis; citation_author=ML Kilgore; citation_author=DP Goldman; citation_author=EL Trimble; citation_author=R Kaplan; citation_author=MJ Montello; citation_journal_title=J Clin Oncol; citation_volume=21; citation_pages=1383-1389; citation_date=2003;"/>
+<meta name="citation_reference" content="citation_title=Undertreatment strongly decreases prognosis of breast cancer in elderly women; citation_author=C Bouchardy; citation_author=E Rapiti; citation_author=G Fioretta; citation_author=P Laissue; citation_author=I Neyroud-Caspar; citation_author=P Schäfer; citation_journal_title=J Clin Oncol; citation_volume=21; citation_pages=3580-3587; citation_date=2003;"/>
+<meta name="citation_reference" content="citation_title=Effect of undertreatment on the disparity in age-related breast cancer-specific survival among older women; citation_author=C Owusu; citation_author=TL Lash; citation_author=RA Silliman; citation_journal_title=Breast Cancer Res Treat; citation_volume=102; citation_pages=227-236; citation_date=2007;"/>
+<meta name="citation_reference" content="citation_title=Adjuvant chemotherapy in older and younger women with lymph node-positive breast cancer; citation_author=HB Muss; citation_author=S Woolf; citation_author=D Berry; citation_author=C Cirrincione; citation_author=RB Weiss; citation_author=D Budman; citation_journal_title=JAMA; citation_volume=293; citation_pages=1073-1081; citation_date=2005;"/>
+<meta name="citation_reference" content="citation_title=Unexpected toxicities in elderly patients treated with oral idarubicin in metastatic breast cancer: the GINECO experience; citation_author=G Freyer; citation_author=A Lortholary; citation_author=C Delcambre; citation_author=T Delozier; citation_author=G Piot; citation_author=F Genin; citation_journal_title=Clin Oncol (R Coll Radiol); citation_volume=16; citation_pages=17-23; citation_date=2004;"/>
+<meta name="citation_reference" content="citation_title=Predicting chemotherapy toxicity in older adults with cancer: a prospective multicenter study; citation_author=A Hurria; citation_author=K Togawa; citation_author=SG Mohile; citation_author=C Owusu; citation_author=HD Klepin; citation_author=CP Gross; citation_journal_title=J Clin Oncol; citation_volume=29; citation_pages=3457-3465; citation_date=2011;"/>
+<meta name="citation_reference" content="citation_title=Predicting the risk of chemotherapy toxicity in older patients: the Chemotherapy Risk Assessment Scale for High-Age Patients (CRASH) score; citation_author=M Extermann; citation_author=I Boler; citation_author=RR Reich; citation_author=GH Lyman; citation_author=RH Brown; citation_author=J DeFelice; citation_journal_title=Cancer; citation_volume=118; citation_pages=3377-3386; citation_date=2012;"/>
+<meta name="citation_reference" content="citation_title=Dealing with metastatic breast cancer in elderly women: results from a French study on a large cohort carried out by the &#x2018;Observatory on Elderly Patients&#x2019;; citation_author=G Freyer; citation_author=AC Braud; citation_author=P Chaibi; citation_author=M Spielmann; citation_author=JP Martin; citation_author=G Vilela; citation_journal_title=Ann Oncol; citation_volume=17; citation_pages=211-216; citation_date=2006;"/>
+<meta name="citation_reference" content="citation_title=Management of elderly patients with breast cancer: updated recommendations of the International Society of Geriatric Oncology (SIOG) and European Society of Breast Cancer Specialists (EUSOMA); citation_author=L Biganzoli; citation_author=H Wildiers; citation_author=C Oakman; citation_author=L Marotti; citation_author=S Loibl; citation_author=I Kunkler; citation_journal_title=Lancet Oncol; citation_volume=13; citation_pages=e148-e160; citation_date=2012;"/>
+<meta name="citation_reference" content="citation_title=A retrospective study of the impact of age on patterns of care for elderly patients with metastatic breast cancer; citation_author=K Hashimoto; citation_author=K Yonemori; citation_author=C Shimizu; citation_author=A Hirakawa; citation_author=H Yamamoto; citation_author=M Ono; citation_journal_title=Med Oncol; citation_volume=28; citation_pages=434-440; citation_date=2011;"/>
+<meta name="citation_reference" content="citation_title=First-line chemotherapy for metastatic breast cancer in patients &#x2265;75 years: a retrospective single-centre analysis; citation_author=M Debled; citation_author=N Madranges; citation_author=C Mertens; citation_author=M Durand; citation_author=V Brouste; citation_author=E Brain; citation_journal_title=Crit Rev Oncol Hematol; citation_volume=80; citation_pages=171-179; citation_date=2011;"/>
+<meta name="citation_reference" content="citation_title=Adjuvant chemotherapy in older women with early-stage breast cancer; citation_author=HB Muss; citation_author=DA Berry; citation_author=CT Cirrincione; citation_author=M Theodoulou; citation_author=AM Mauer; citation_author=AB Kornblith; citation_journal_title=N Engl J Med; citation_volume=360; citation_pages=2055-2065; citation_date=2009;"/>
+<meta name="citation_reference" content="citation_title=Predictors of toxicity and toxicity profile of adjuvant chemotherapy in elderly breast cancer patients; citation_author=P Garg; citation_author=F Rana; citation_author=R Gupta; citation_author=EM Buzaianu; citation_author=TH Guthrie; citation_journal_title=Breast J; citation_volume=15; citation_pages=404-408; citation_date=2009;"/>
+<meta name="citation_reference" content="citation_title=Safety and efficacy of weekly docetaxel in frail and/or elderly patients with metastatic breast cancer: a phase II study; citation_author=R D'hondt; citation_author=R Paridaens; citation_author=H Wildiers; citation_author=K Pauwelyn; citation_author=J Thomas; citation_author=H Dumez; citation_journal_title=Anticancer Drugs; citation_volume=15; citation_pages=341-346; citation_date=2004;"/>
+<meta name="citation_reference" content="citation_title=Weekly paclitaxel as first-line chemotherapy for elderly patients with metastatic breast cancer. A multicentre phase II trial; citation_author=AJ ten Tije; citation_author=CH Smorenburg; citation_author=C Seynaeve; citation_author=A Sparreboom; citation_author=KL Schothorst; citation_author=LG Kerkhofs; citation_journal_title=Eur J Cancer; citation_volume=40; citation_pages=352-357; citation_date=2004;"/>
+<meta name="citation_reference" content="citation_title=Weekly paclitaxel as first-line chemotherapy in elderly advanced breast cancer patients: a phase II study of the Gruppo Italiano di Oncologia Geriatrica (GIOGer); citation_author=L Del Mastro; citation_author=F Perrone; citation_author=L Repetto; citation_author=L Manzione; citation_author=V Zagonel; citation_author=L Fratino; citation_journal_title=Ann Oncol; citation_volume=16; citation_pages=253-258; citation_date=2005;"/>
+<meta name="citation_reference" content="citation_title=A joined analysis of two European Organization for the Research and Treatment of Cancer (EORTC) studies to evaluate the role of pegylated liposomal doxorubicin (Caelyx) in the treatment of elderly patients with metastatic breast cancer; citation_author=L Biganzoli; citation_author=R Coleman; citation_author=A Minisini; citation_author=A Hamilton; citation_author=M Aapro; citation_author=P Therasse; citation_journal_title=Crit Rev Oncol Hematol; citation_volume=61; citation_pages=84-89; citation_date=2007;"/>
+<meta name="citation_reference" content="citation_title=Safety and efficacy of two different doses of capecitabine in the treatment of advanced breast cancer in older women; citation_author=E Bajetta; citation_author=G Procopio; citation_author=L Celio; citation_author=L Gattinoni; citation_author=S Della Torre; citation_author=L Mariani; citation_journal_title=J Clin Oncol; citation_volume=23; citation_pages=2155-2161; citation_date=2005;"/>
+<meta name="citation_reference" content="citation_title=Treatment patterns and clinical outcomes in elderly patients with HER2-positive metastatic breast cancer from the registHER observational study; citation_author=PA Kaufman; citation_author=AM Brufsky; citation_author=M Mayer; citation_author=HS Rugo; citation_author=D Tripathy; citation_author=MU Yood; citation_journal_title=Breast Cancer Res Treat; citation_volume=135; citation_pages=875-883; citation_date=2012;"/>
+<meta name="citation_reference" content="citation_title=Cardiac risk associated with the receipt of anthracycline and trastuzumab in a large nationwide cohort of older women with breast cancer, 1998-2005; citation_author=XL Du; citation_author=R Xia; citation_author=K Burau; citation_author=CC Liu; citation_journal_title=Med Oncol; citation_volume=28; citation_issue=Suppl 1; citation_pages=S80-S90; citation_date=2011;"/>
+<meta name="citation_reference" content="citation_title=Incidence of heart failure or cardiomyopathy after adjuvant trastuzumab therapy for breast cancer; citation_author=J Chen; citation_author=JB Long; citation_author=A Hurria; citation_author=C Owusu; citation_author=RM Steingart; citation_author=CP Gross; citation_journal_title=J Am Coll Cardiol; citation_volume=60; citation_pages=2504-2512; citation_date=2012;"/>
+<meta name="citation_reference" content="citation_title=Infused therapy and survival in older patients diagnosed with metastatic breast cancer who received trastuzumab; citation_author=RI Griffiths; citation_author=D Lalla; citation_author=RJ Herbert; citation_author=JF Doan; citation_author=MG Brammer; citation_author=MD Danese; citation_journal_title=Cancer Invest; citation_volume=29; citation_pages=573-584; citation_date=2011;"/>
+<meta name="citation_reference" content="citation_title=Chemotherapy treatment and survival in older women with estrogen receptor-negative metastatic breast cancer: a population-based analysis; citation_author=M Schneider; citation_author=IH Zuckerman; citation_author=E Onukwugha; citation_author=N Pandya; citation_author=B Seal; citation_author=J Gardner; citation_journal_title=J Am Geriatr Soc; citation_volume=59; citation_pages=637-646; citation_date=2011;"/>
+
+<meta property="og:title" content="Treatment Patterns and Outcomes in Elderly Patients with Metastatic Breast Cancer: A Multicenter Retrospective Study">
+<meta property="og:url" content="https://doi.org/10.4048/jbc.2017.20.4.368">
+<meta property="og:image" content="http://ejbc.kr/image/synapse-logo.gif">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="https://doi.org/10.4048/jbc.2017.20.4.368">
+<meta property="og:description" content="Park JH, et al. J Breast Cancer. 2017 Dec;20(4):368-377. https://doi.org/10.4048/jbc.2017.20.4.368">
+
+<meta name="dc.identifier" content="doi:10.4048/jbc.2017.20.4.368">
+
+        
+        <title>:: JBC :: Journal of Breast Cancer</title>
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="css/bootstrap5.custom.css">
+        <link href="https://cdn.jsdelivr.net/gh/kartik-v/bootstrap-popover-x@1.5.1/css/bootstrap-popover-x.min.css" media="all" rel="stylesheet" type="text/css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">        
+
+        <link rel="stylesheet" href="css/nouislider.min.css">
+
+                <link rel="stylesheet" href="css/chartist.css">
+                <link rel="stylesheet" href="css/chartist-plugin-tooltip.css">
+        
+        <link rel="stylesheet" href="fonts/IBM-plex/css/ibm-plex.css" />
+<link rel="stylesheet" href="fonts/IBM-plex/css/ibm-plex-sans-kr.css" /> 
+<link rel="stylesheet" href="css/default.css">   
+<link rel="stylesheet" href="https://xmlink.kr/css/sliderControl.css">
+<link rel="stylesheet" href="https://xmlink.kr/css/zoomBar.css">
+
+<link rel="shortcut icon" href="favicon-jbc.ico">
+        
+
+                <!-- GA START -->
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-100755984-31"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'UA-100755984-31');
+        </script>
+        <!-- GA END -->
+        
+          
+    </head>
+    
+    <body class="d-flex flex-column  ">
+
+        <header class="masthead masthead sticky-top bg-white">
+                <div class="container-fluid">
+
+
+    <div class="header">
+        <div class="container">
+            <a href="/">
+              <svg xmlns="http://www.w3.org/2000/svg" id="_레이어_2" viewBox="0 0 321.43 93.91"><defs><style>.cls-1{fill:#ef8bb5;}.cls-2{fill:#241473;}.cls-3{fill:none;}</style></defs><g id="_레이어_2-2"><g><path class="cls-2" d="M177.83,68.42c0,3.24-.34,6.13-1.03,8.66-.68,2.53-1.7,4.82-3.06,6.86-1.36,2.04-3.09,3.87-5.2,5.49-2.11,1.62-4.59,3.12-7.45,4.48-.13-.19-.41-.58-.83-1.17-.42-.59-.87-1.19-1.36-1.8-.48-.62-.94-1.21-1.36-1.8-.42-.58-.7-.97-.83-1.17,1.95-1.49,3.72-3.16,5.31-5.01,1.59-1.85,2.8-3.75,3.65-5.69,.12-.65,.25-1.43,.38-2.34,.14-.9,.22-1.88,.3-2.92,.06-1.04,.11-2.06,.15-3.07,.03-1.01,.05-1.96,.05-2.87V9.94h11.29v58.48Zm61.79-13.91c0,3.17-.45,6.06-1.37,8.66-.9,2.59-2.35,4.8-4.33,6.61-1.98,1.82-4.52,3.21-7.64,4.19-3.11,.97-6.88,1.46-11.29,1.46-3.62,0-7.38-.16-11.23-.49-3.86-.32-7.18-.68-9.98-1.07V10.23c2.86-.33,5.95-.6,9.3-.83,3.33-.23,6.73-.34,10.16-.34,7.66,0,13.35,1.33,17.08,3.99,3.73,2.66,5.59,6.59,5.59,11.78,0,3.31-.97,6.21-2.93,8.7-1.95,2.5-4.34,4.33-7.2,5.5v.2c1.88,.38,3.67,1.01,5.36,1.85,1.68,.85,3.16,1.89,4.43,3.16,1.26,1.27,2.25,2.76,2.96,4.48,.72,1.72,1.07,3.65,1.07,5.79m-15.28-27.54c0-3.63-.94-6.19-2.82-7.68-1.87-1.49-4.54-2.24-7.98-2.24s-6.23,.19-8.56,.58v20.14c.85-.13,1.87-.24,3.07-.34,1.19-.1,2.44-.18,3.74-.25,1.3-.06,2.63-.11,3.99-.14,1.37-.03,2.6-.05,3.69-.05,1.5-1.04,2.68-2.41,3.56-4.14,.87-1.72,1.31-3.68,1.31-5.89m3.6,28.41c0-2.2-.36-4-1.07-5.4-.72-1.4-1.65-2.5-2.82-3.31-1.17-.81-2.5-1.36-3.99-1.65-1.49-.3-3.02-.44-4.58-.44-.9,0-1.84,.01-2.81,.04-.97,.03-1.95,.07-2.93,.1-.97,.03-1.86,.07-2.67,.1-.81,.03-1.51,.08-2.1,.15v21.89c1.55,.13,3.22,.25,4.97,.34,1.76,.1,3.56,.15,5.45,.15,2.14,0,4.07-.15,5.79-.44,1.72-.28,3.13-.76,4.24-1.41,.65-.77,1.23-2.07,1.75-3.89,.51-1.81,.78-3.89,.78-6.23m48.56,20.24c-5.06,0-9.38-.69-12.95-2.09-3.57-1.39-6.45-3.42-8.66-6.08-2.21-2.66-3.81-5.97-4.82-9.92-1.01-3.96-1.5-8.5-1.5-13.63,0-7.85,1.1-14.07,3.31-18.68,2.21-4.6,5.36-8.09,9.49-10.46,4.11-2.37,9.14-3.91,15.08-4.62,5.94-.71,12.64-1.07,20.09-1.07v9.34c-2.85,0-5.89,.04-9.09,.1-3.21,.06-6.31,.21-9.29,.44-2.99,.23-5.76,.58-8.33,1.07-2.56,.49-4.62,1.15-6.17,1.99-.52,.84-.97,2.01-1.37,3.5-.39,1.49-.73,3.2-1.02,5.11-.3,1.91-.52,3.94-.68,6.08-.16,2.14-.25,4.28-.25,6.42,0,8.11,1.4,14.11,4.18,18,2.79,3.89,7.24,5.84,13.33,5.84,3.24,0,6.14-.31,8.66-.93,2.53-.62,5.16-1.5,7.89-2.68l1.65,7.78c-2.98,1.36-6.06,2.45-9.24,3.26-3.18,.81-6.61,1.21-10.3,1.21"/><path class="cls-1" d="M41.81,25.6c0,.81-.09,1.53-.25,2.16-.17,.63-.43,1.2-.76,1.71-.34,.51-.77,.96-1.29,1.37-.53,.4-1.14,.78-1.85,1.12-.03-.05-.1-.14-.2-.29-.11-.15-.22-.3-.34-.45-.12-.15-.23-.31-.33-.45-.11-.15-.17-.25-.21-.29,.49-.37,.92-.79,1.32-1.25,.39-.46,.69-.93,.9-1.42,.03-.16,.07-.35,.1-.58,.03-.22,.06-.47,.07-.73,.02-.26,.03-.51,.04-.77,0-.25,.01-.49,.01-.71V11.02h2.81v14.57Zm9,1.79c-1.93,0-3.39-.54-4.35-1.6-.97-1.06-1.46-2.62-1.46-4.65s.48-3.47,1.43-4.6c.95-1.12,2.41-1.68,4.38-1.68s3.37,.55,4.35,1.67c.97,1.11,1.46,2.65,1.46,4.61s-.47,3.51-1.41,4.61c-.95,1.1-2.41,1.65-4.39,1.65m3.05-6.26c0-1.6-.27-2.73-.81-3.39-.54-.66-1.28-1-2.21-1-.49,0-.93,.04-1.33,.13-.41,.09-.77,.25-1.09,.47-.2,.37-.35,.9-.47,1.58-.12,.67-.19,1.41-.19,2.2s.07,1.52,.21,2.07c.14,.56,.34,1.01,.6,1.35,.25,.34,.57,.58,.95,.72,.37,.15,.79,.22,1.28,.22,.53,0,.99-.05,1.38-.14,.39-.1,.74-.26,1.07-.48,.21-.37,.37-.89,.47-1.57,.11-.67,.16-1.4,.16-2.17m8.36-6.28v8.36c0,.27,.01,.54,.03,.8,.02,.25,.09,.49,.19,.69,.11,.2,.27,.36,.49,.48,.22,.12,.51,.18,.88,.18,.26,0,.53-.04,.82-.11,.29-.07,.59-.16,.87-.28,.29-.11,.57-.24,.86-.39,.28-.15,.54-.29,.78-.43V15.46l2.69-.6v12.29h-1.96l-.39-1.46h-.05c-.26,.16-.57,.34-.93,.54-.37,.2-.75,.39-1.18,.57-.42,.18-.86,.33-1.32,.45-.46,.12-.92,.19-1.39,.19-1.01,0-1.79-.26-2.31-.78-.53-.52-.79-1.38-.79-2.59V15.46l2.69-.6Zm17.28,2.64c-.61,0-1.13,.03-1.55,.1-.42,.07-.79,.18-1.11,.34-.18,.18-.32,.36-.45,.54-.12,.18-.24,.4-.35,.65v8.03h-2.69v-9.36l-.09-2.69h1.91l.65,2.04h.02c.21-.32,.47-.69,.78-1.1,.32-.41,.66-.7,1.03-.86,.3-.13,.65-.22,1.04-.25,.39-.04,.82-.06,1.28-.06l-.48,2.64Zm10.26,9.65v-8.13c0-.26-.02-.52-.04-.77-.02-.26-.09-.49-.2-.68-.1-.19-.26-.35-.48-.48-.22-.12-.51-.18-.88-.18-.25,0-.51,.03-.81,.1-.3,.07-.6,.17-.91,.28-.3,.11-.6,.24-.88,.39-.28,.14-.53,.29-.74,.44v9.02h-2.69v-9.75l-.05-2.28h2.01l.41,1.48h.02c.26-.16,.58-.34,.95-.55,.37-.2,.77-.39,1.2-.57,.43-.18,.87-.33,1.33-.45,.46-.12,.91-.18,1.35-.18,1.02,0,1.78,.26,2.31,.79,.52,.53,.79,1.39,.79,2.58v8.93h-2.69Zm13.52,.48l-.82-1.65c-.6,.36-1.24,.68-1.95,.97-.7,.29-1.5,.44-2.39,.44-.98,0-1.73-.31-2.25-.94-.51-.62-.77-1.42-.77-2.39,0-1.37,.55-2.39,1.64-3.04,1.1-.65,2.85-1.02,5.26-1.1v-1.36c0-.73-.14-1.22-.42-1.49-.27-.27-.73-.4-1.35-.4-.48,0-1.01,.05-1.6,.17-.58,.11-1.18,.26-1.79,.43l-.34-1.53c.76-.27,1.55-.49,2.38-.65,.83-.16,1.69-.24,2.56-.24,1.03,0,1.83,.23,2.39,.69,.57,.46,.85,1.31,.85,2.56v9.14l-1.4,.39Zm-1.16-2.91c-.02-.16-.04-.53-.06-1.09-.03-.56-.04-1.28-.04-2.13-1.02,0-1.85,.05-2.48,.15-.64,.1-1.12,.23-1.44,.38-.08,.16-.15,.39-.21,.68-.07,.29-.1,.62-.1,1,0,1.25,.48,1.87,1.43,1.87,.55,0,1.04-.08,1.5-.23,.45-.15,.92-.36,1.4-.62m8.68-.78c0,.5,.09,.88,.24,1.12,.16,.24,.44,.36,.83,.36,.21,0,.44-.03,.69-.1,.25-.07,.46-.13,.64-.19l.36,1.58c-.13,.07-.3,.14-.52,.22-.22,.08-.46,.15-.72,.22-.27,.06-.55,.12-.84,.17-.29,.05-.57,.07-.85,.07-.32,0-.63-.04-.94-.12-.31-.08-.57-.22-.81-.44-.23-.21-.42-.5-.56-.86-.14-.36-.21-.83-.21-1.39V9.74l2.69-.68v14.89Zm16.61,3.44c-1.94,0-3.39-.54-4.36-1.6-.97-1.06-1.45-2.62-1.45-4.65s.48-3.47,1.42-4.6c.95-1.12,2.41-1.68,4.39-1.68s3.37,.55,4.34,1.67c.97,1.11,1.46,2.65,1.46,4.61s-.47,3.51-1.41,4.61c-.94,1.1-2.41,1.65-4.39,1.65m3.05-6.26c0-1.6-.27-2.73-.81-3.39-.54-.66-1.28-1-2.21-1-.48,0-.93,.04-1.33,.13-.4,.09-.77,.25-1.09,.47-.19,.37-.35,.9-.47,1.58-.12,.67-.18,1.41-.18,2.2s.07,1.52,.21,2.07c.13,.56,.33,1.01,.59,1.35,.25,.34,.57,.58,.94,.72,.37,.15,.8,.22,1.28,.22,.53,0,1-.05,1.37-.14,.39-.1,.74-.26,1.07-.48,.21-.37,.37-.89,.47-1.57,.1-.67,.15-1.4,.15-2.17m13-10.09c-.13,0-.34,0-.65,.02-.3,.02-.61,.04-.93,.06-.32,.03-.63,.05-.93,.09-.3,.03-.53,.06-.67,.1-.11,.27-.21,.67-.28,1.2-.07,.53-.11,1.09-.11,1.71v.88h3.17l-.22,1.58c-.38,.05-.83,.09-1.34,.14-.51,.05-1.05,.09-1.61,.12v10.21h-2.68v-10.18h-2.47v-1.36c.16-.05,.36-.1,.59-.15,.23-.05,.46-.09,.7-.13,.24-.04,.47-.08,.68-.11,.2-.03,.38-.05,.51-.07v-.68c0-1.02,.16-1.87,.48-2.56,.32-.69,.76-1.24,1.32-1.66,.56-.42,1.21-.72,1.98-.9,.77-.18,1.59-.27,2.46-.27v1.96ZM11.4,49.01c0,.79-.11,1.51-.34,2.16-.22,.65-.59,1.2-1.08,1.65-.5,.45-1.12,.8-1.9,1.04-.78,.24-1.71,.36-2.81,.36-.9,0-1.83-.04-2.79-.12-.96-.08-1.79-.17-2.48-.27v-15.86c.71-.08,1.48-.15,2.31-.2,.83-.06,1.67-.08,2.53-.08,1.9,0,3.32,.33,4.25,1,.93,.66,1.39,1.64,1.39,2.93,0,.83-.25,1.55-.72,2.17-.49,.62-1.08,1.08-1.79,1.37v.05c.47,.1,.91,.25,1.33,.46,.42,.21,.79,.47,1.1,.79,.31,.31,.56,.69,.74,1.12,.18,.43,.26,.91,.26,1.44m-3.8-6.86c0-.9-.23-1.54-.7-1.92-.47-.37-1.13-.56-1.99-.56s-1.55,.05-2.13,.14v5.02c.21-.03,.46-.06,.76-.08,.3-.03,.61-.05,.93-.06,.32-.02,.65-.03,.99-.04,.34,0,.65-.01,.92-.01,.38-.25,.67-.6,.89-1.03,.22-.43,.33-.91,.33-1.47m.9,7.08c0-.55-.09-1-.27-1.35-.17-.35-.41-.62-.71-.82-.29-.21-.62-.34-.99-.42-.37-.07-.76-.11-1.14-.11-.22,0-.46,0-.7,.01-.25,.01-.49,.02-.73,.03-.24,0-.47,.02-.67,.02-.2,0-.38,.02-.52,.04v5.46c.38,.03,.79,.06,1.24,.08,.43,.03,.88,.04,1.35,.04,.53,0,1.01-.04,1.44-.11,.42-.07,.78-.19,1.05-.35,.16-.19,.31-.52,.44-.97,.13-.45,.19-.97,.19-1.55m11.62-4.85c-.61,0-1.13,.03-1.55,.1-.42,.07-.79,.18-1.11,.34-.18,.18-.33,.35-.45,.54-.12,.17-.24,.4-.35,.65v8.03h-2.69v-9.36l-.09-2.69h1.91l.66,2.04h.02c.21-.32,.47-.69,.78-1.1,.32-.41,.66-.7,1.03-.86,.3-.13,.65-.22,1.04-.26,.39-.04,.82-.06,1.28-.06l-.48,2.64Zm7.16-2.64c.56,0,1.11,.09,1.65,.29,.53,.19,1.01,.5,1.44,.93,.43,.43,.8,.97,1.1,1.64,.31,.66,.52,1.46,.63,2.38l-2.49,1.19-5.2,.32v.05c0,1.34,.27,2.31,.82,2.92,.55,.61,1.31,.91,2.28,.91,.73,0,1.41-.1,2.03-.3,.63-.2,1.2-.42,1.72-.65l.54,1.5c-.57,.34-1.3,.65-2.19,.93-.89,.29-1.84,.43-2.82,.43-.73,0-1.4-.11-2.04-.34-.63-.23-1.17-.58-1.64-1.06-.45-.48-.82-1.09-1.07-1.84-.26-.75-.39-1.66-.39-2.71s.14-2.01,.41-2.82c.27-.82,.67-1.5,1.16-2.06,.49-.56,1.08-.98,1.77-1.28,.69-.29,1.46-.43,2.3-.43m-2.08,2.08c-.47,.69-.73,1.7-.78,3.03l4.91-.17c-.04-.39-.11-.77-.2-1.15-.09-.38-.23-.72-.41-1.02-.18-.3-.44-.54-.75-.73-.31-.19-.71-.28-1.19-.28-.28,0-.55,.03-.83,.07-.27,.05-.53,.13-.75,.25m17.06,10.69l-.82-1.65c-.6,.36-1.25,.68-1.95,.97-.7,.29-1.49,.44-2.39,.44-.98,0-1.73-.31-2.25-.94-.51-.62-.77-1.42-.77-2.39,0-1.38,.55-2.39,1.64-3.04,1.1-.66,2.85-1.02,5.26-1.11v-1.36c0-.73-.14-1.22-.42-1.49-.27-.27-.73-.4-1.36-.4-.48,0-1.01,.05-1.59,.17-.58,.11-1.18,.26-1.79,.43l-.34-1.53c.76-.27,1.55-.49,2.38-.65,.83-.16,1.68-.24,2.56-.24,1.03,0,1.83,.23,2.39,.69,.56,.46,.85,1.31,.85,2.56v9.14l-1.4,.39Zm-1.16-2.91c-.02-.16-.03-.53-.06-1.09-.02-.56-.03-1.28-.03-2.13-1.02,0-1.84,.05-2.49,.16-.63,.1-1.12,.23-1.44,.38-.08,.16-.15,.39-.22,.68-.07,.29-.1,.62-.1,1,0,1.24,.48,1.87,1.43,1.87,.54,0,1.04-.08,1.5-.23,.45-.15,.92-.36,1.4-.62m13.67-1.09c0,1.16-.41,2.08-1.23,2.75-.83,.67-1.94,1.01-3.36,1.01-.78,0-1.44-.05-1.99-.16-.56-.1-1.12-.27-1.69-.49l-.25-2.21c.57,.28,1.17,.5,1.8,.67,.62,.17,1.25,.25,1.86,.25,.44,0,.83-.03,1.18-.08,.34-.06,.63-.13,.86-.21,.06-.11,.12-.26,.17-.45,.05-.18,.07-.41,.07-.67,0-.39-.14-.71-.41-.96-.27-.25-.61-.48-1.02-.68-.4-.2-.84-.4-1.32-.62-.48-.21-.92-.47-1.32-.76-.4-.3-.74-.67-1.02-1.11-.27-.44-.4-.98-.4-1.63,0-.74,.19-1.34,.59-1.8,.39-.46,.94-.81,1.63-1.06,.69-.25,1.52-.41,2.48-.49,.96-.08,1.99-.12,3.11-.12v2.02c-1.03,0-1.96,.01-2.8,.05-.83,.03-1.54,.1-2.12,.19-.14,.24-.22,.57-.22,1,0,.37,.13,.68,.4,.92,.26,.24,.6,.46,1,.66,.4,.2,.84,.4,1.29,.61,.46,.2,.89,.45,1.3,.74,.4,.29,.74,.65,1.01,1.06,.26,.41,.39,.93,.39,1.57m5.86,3.76c-.91,0-1.63-.24-2.17-.7-.54-.47-.81-1.19-.81-2.16v-7.54l-1.6-.17v-1.26c.28-.07,.54-.13,.8-.2,.26-.06,.53-.14,.8-.22,.11-.36,.23-.71,.35-1.07,.12-.36,.24-.71,.35-1.07l1.87-.39,.07,2.48h3.54l-.25,1.62c-.27,.03-.57,.06-.89,.07-.33,.02-.63,.04-.93,.05-.3,.01-.58,.03-.83,.05-.26,.02-.45,.03-.58,.05v6.71c0,.49,.09,.91,.29,1.27,.19,.36,.57,.55,1.13,.55,.33,0,.67-.05,1.02-.14,.35-.09,.66-.18,.91-.28l.22,1.63c-.39,.18-.88,.34-1.46,.49-.58,.14-1.19,.22-1.84,.22m18.66,0c-1.26,0-2.33-.17-3.22-.52-.88-.35-1.6-.85-2.15-1.52-.55-.66-.95-1.49-1.19-2.47-.26-.99-.38-2.12-.38-3.4,0-1.95,.28-3.51,.83-4.66,.55-1.14,1.33-2.01,2.36-2.6,1.02-.59,2.27-.97,3.75-1.15,1.48-.18,3.14-.26,5-.26v2.33c-.71,0-1.46,0-2.26,.02-.8,.02-1.58,.05-2.31,.11-.74,.06-1.43,.15-2.07,.27-.63,.12-1.15,.29-1.53,.49-.13,.21-.25,.5-.34,.88-.09,.37-.18,.79-.25,1.28-.07,.47-.13,.98-.17,1.51-.04,.53-.06,1.07-.06,1.6,0,2.02,.34,3.52,1.04,4.49s1.8,1.45,3.32,1.45c.81,0,1.52-.08,2.16-.23,.63-.15,1.28-.38,1.96-.67l.41,1.94c-.74,.34-1.51,.61-2.3,.82-.79,.2-1.64,.3-2.57,.3m14.84,.24l-.82-1.65c-.59,.36-1.25,.68-1.94,.97-.71,.29-1.5,.44-2.39,.44-.98,0-1.73-.31-2.25-.94-.51-.62-.77-1.42-.77-2.39,0-1.38,.55-2.39,1.65-3.04,1.09-.66,2.85-1.02,5.25-1.11v-1.36c0-.73-.14-1.22-.42-1.49-.27-.27-.73-.4-1.35-.4-.48,0-1.02,.05-1.6,.17-.58,.11-1.18,.26-1.79,.43l-.34-1.53c.76-.27,1.55-.49,2.38-.65,.83-.16,1.69-.24,2.56-.24,1.03,0,1.83,.23,2.39,.69,.57,.46,.85,1.31,.85,2.56v9.14l-1.41,.39Zm-1.16-2.91c-.02-.16-.04-.53-.06-1.09-.03-.56-.04-1.28-.04-2.13-1.02,0-1.84,.05-2.48,.16-.64,.1-1.12,.23-1.44,.38-.08,.16-.15,.39-.22,.68-.06,.29-.1,.62-.1,1,0,1.24,.48,1.87,1.43,1.87,.55,0,1.05-.08,1.5-.23,.46-.15,.92-.36,1.41-.62m13.72,2.43v-8.13c0-.26-.01-.52-.03-.78-.03-.26-.09-.49-.2-.68-.11-.19-.27-.35-.48-.47-.22-.13-.52-.19-.89-.19-.24,0-.51,.04-.81,.11-.3,.07-.61,.16-.91,.27-.3,.11-.6,.24-.88,.39-.28,.15-.53,.29-.74,.43v9.03h-2.69v-9.75l-.05-2.28h2.01l.41,1.48h.02c.26-.16,.57-.34,.95-.54,.37-.2,.77-.39,1.19-.57,.43-.18,.87-.32,1.33-.45,.46-.12,.9-.18,1.34-.18,1.02,0,1.79,.26,2.31,.78,.52,.53,.79,1.39,.79,2.58v8.93h-2.69Zm8.35-5.9c0,1.55,.28,2.64,.84,3.27,.57,.63,1.33,.95,2.28,.95,.56,0,1.09-.09,1.58-.26,.49-.17,.95-.37,1.37-.59l.41,1.43c-.5,.39-1.11,.71-1.82,.96s-1.51,.38-2.39,.38c-.71,0-1.37-.11-1.99-.32-.62-.21-1.14-.56-1.6-1.03-.45-.48-.81-1.09-1.07-1.84-.26-.75-.39-1.67-.39-2.75,0-1.44,.23-2.59,.68-3.46,.45-.86,1.08-1.53,1.9-2,.82-.47,1.79-.77,2.93-.92,1.14-.14,2.4-.21,3.76-.21v2.01c-.56,0-1.13,0-1.71,.03-.58,.02-1.13,.04-1.66,.07-.53,.03-.99,.07-1.4,.14-.41,.05-.74,.13-.98,.23-.21,.31-.38,.78-.54,1.42-.14,.64-.21,1.47-.21,2.51m13.99-6.4c.56,0,1.11,.09,1.64,.29,.53,.19,1.01,.5,1.44,.93,.43,.43,.79,.97,1.1,1.64,.31,.66,.52,1.46,.63,2.38l-2.5,1.19-5.2,.32v.05c0,1.34,.27,2.31,.82,2.92,.55,.61,1.31,.91,2.27,.91,.73,0,1.41-.1,2.04-.3,.63-.2,1.2-.42,1.71-.65l.54,1.5c-.57,.34-1.3,.65-2.19,.93-.9,.29-1.84,.43-2.82,.43-.72,0-1.4-.11-2.04-.34-.62-.23-1.17-.58-1.63-1.06-.46-.48-.81-1.09-1.07-1.84-.26-.75-.38-1.66-.38-2.71s.13-2.01,.4-2.82c.27-.82,.66-1.5,1.15-2.06,.49-.56,1.08-.98,1.78-1.28,.69-.29,1.46-.43,2.3-.43m-2.08,2.08c-.47,.69-.73,1.7-.78,3.03l4.91-.17c-.05-.39-.12-.77-.21-1.15-.09-.38-.23-.72-.41-1.02-.19-.3-.44-.54-.75-.73-.32-.19-.72-.28-1.2-.28-.27,0-.55,.03-.82,.07-.27,.05-.53,.13-.74,.25m15.73,.56c-.62,0-1.13,.03-1.55,.1-.42,.07-.79,.18-1.12,.34-.17,.18-.32,.35-.44,.54-.12,.17-.24,.4-.36,.65v8.03h-2.68v-9.36l-.1-2.69h1.92l.65,2.04h.02c.21-.32,.47-.69,.79-1.1,.31-.41,.65-.7,1.03-.86,.3-.13,.65-.22,1.04-.26,.39-.04,.82-.06,1.28-.06l-.48,2.64Z"/><path class="cls-1" d="M321.43,15.16C321.43,6.79,314.64,0,306.27,0V7.8c4.06,0,7.35,3.29,7.35,7.35s-3.29,7.35-7.35,7.35v7.81c8.37,0,15.16-6.79,15.16-15.16"/><rect class="cls-3" x="0" width="321.43" height="93.91"/></g></g></svg>
+            </a>
+            <div class="header-right d-none d-lg-block">
+              <div class="issn">pISSN 1738-6756&nbsp;&nbsp;&nbsp;eISSN 2092-9900</div>
+              <div class="OA">Open Access, Peer-reviewed</div>
+            </div>
+        </div>
+        <div class="container"> 
+            <nav class="navbar navbar-expand-lg">
+                <div class="container-fluid">
+                    <button class="navbar-toggler border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="navbar-toggler border-0 p-0">
+                        <button class="btn" type="button" data-bs-toggle="collapse" href="#navbar-search-collapse" role="button" aria-expanded="false" aria-controls="navbar-search-collapse"> <!-- text-white -->                                
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"></path>
+                            </svg>
+                        </button>                   
+                    </div>
+
+                    <div class="collapse navbar-collapse">
+                        <ul class="nav nav-fill me-auto mb-2 mb-lg-0">
+                            <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="/">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">About</a>
+                                <ul class="dropdown-menu">
+                                     <li><a class="dropdown-item" href="index.php?body=about">Aims and Scope</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=edpolicy">Editorial Policies</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=board">Editorial Board</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=metrics">Journal Metrics</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=j-info">Journal Information</a></li>
+                                </ul>
+                            </li>                            
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Browse</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="index.php?body=forthcoming">Forthcoming Articles</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=current">Current Issue</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=archive">Archive</a></li>
+                                    <li><a class="dropdown-item" href="https://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&term=%22J%20Breast%20Cancer%22%5Bjour%5D" target="_blank">JBC on <img src="images/banner_PubMed_small.gif" alt=""></a></li>
+                                    <li><a class="dropdown-item" href="https://www.ncbi.nlm.nih.gov/pmc/journals/1573" target="_blank">JBC on <img src="images/banner_PubMedCentral.gif" alt=""></a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=editors-choice">Editor's Choice</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=most-read">Most Read</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=most-cited">Most Cited</a></li>
+                                </ul>
+                            </li>                            
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">For Contributors</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="index.php?body=instruction">Instructions for Authors</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=ethics">Research and Publication Ethics</a></li>
+                                    <li><a class="dropdown-item" href="https://www.editorialmanager.com/jbreastcancer/" target="_black"><img src="images/button-esubmission.png" alt=""></a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=charge" target="_blank">Subscription & Publication Charges</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=article_processing_charges" target="_blank">Article Processing Charges</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=contact">Contact us</a></li>
+                                </ul>                                
+                            </li>
+                        </ul>
+                        <button class="btn" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-search-collapse" aria-expanded="false" aria-controls="search"> <!-- text-white -->                                
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                </svg>
+                        </button>  
+                    </div>
+
+                    <div class="collapse offcanvas offcanvas-start" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+                        <div class="offcanvas-header border-bottom">
+                            <h1 class="offcanvas-title" id="offcanvasNavbarLabel">Journal of Breast Cancer</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                        </div>
+                        <div class="offcanvas-body">
+                            <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">About</a>
+                                <ul class="dropdown-menu">
+                                     <li><a class="dropdown-item" href="index.php?body=about">Aims and Scope</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=edpolicy">Editorial Policies</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=board">Editorial Board</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=metrics">Journal Metrics</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=j-info">Journal Information</a></li>
+                                </ul>
+                            </li>                            
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Browse</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="index.php?body=forthcoming">Forthcoming Articles</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=current">Current Issue</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=archive">Archive</a></li>
+                                    <li><a class="dropdown-item" href="https://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&term=%22J%20Breast%20Cancer%22%5Bjour%5D" target="_blank">JBC on <img src="images/banner_PubMed_small.gif" alt=""></a></li>
+                                    <li><a class="dropdown-item" href="https://www.ncbi.nlm.nih.gov/pmc/journals/1573" target="_blank">JBC on <img src="images/banner_PubMedCentral.gif" alt=""></a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=editors-choice">Editor's Choice</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=most-read">Most Read</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=most-cited">Most Cited</a></li>
+                                </ul>
+                            </li>                            
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">For Contributors</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="index.php?body=instruction">Instructions for Authors</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=ethics">Research and Publication Ethics</a></li>
+                                    <li><a class="dropdown-item" href="https://www.editorialmanager.com/jbreastcancer/" target="_black"><img src="images/button-esubmission.png" alt=""></a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=charge" target="_blank">Subscription & Publication Charges</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=article_processing_charges" target="_blank">Article Processing Charges</a></li>
+                                    <li><a class="dropdown-item" href="index.php?body=contact">Contact us</a></li>
+                                </ul>
+                            </li>
+                            <li class="bd-links-span-all my-3 border-top"></li>
+                            <li class="nav-item dropdown"></li>  
+
+                            </ul>
+                        </div>
+                    </div>              
+                </div>
+            </nav>
+            
+
+            <div class="collapse" id="navbar-search-collapse">
+                <div class="card border border-0 rounded-0">                    
+                    <div class="card-body">
+                    <form action="search.php" method="get" id="FormBasicSearch" class="d-flex" role="search">
+                        <div class="input-group">
+                            <input type="hidden" name="where" value="asummary">
+                            <input type="text" name="query" class="form-control" placeholder="Enter keyword, author, title or citation" aria-label="Enter keyword, author, title or citation" aria-describedby="button-addon2">
+                            <button class="searchbar__submit-btn" aria-label="search" title="search" type="submit" data-gsearch-submit="">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"> <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"></path></svg>
+                            </button>
+                            <a href="/AdvSearchBlade.php" class="searchbar__advanced-search-link mx-2 ms-4" arialabelledby="advanced search" title="advanced search">Advanced Search</a>
+                        </div>
+                    </form>                
+                    </div>    
+                </div>
+            </div>                 
+        </div>
+    </div>
+</div>
+
+<div class="line"></div>
+            <!-- Navbar Article -->
+    <div id="navbar-article-top-toolbar" class="sticky-top d-lg-none"> 
+        <div class="container text-center py-1">
+            <div class="row justify-content-start">
+                <div class="col dropdown">
+                    <a class="dropdown-toggle nav-link text-white" href="#" id="navbar-article-top-toolbar-navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">                        
+                        <i class="bi bi-list-ul text-white"></i>
+                    </a>
+                    <ul id="navbar-article-top-toolbar-goto" class="dropdown-menu w-100" aria-labelledby="navbar-article-top-toolbar-navbarDropdown"></ul>
+                </div>
+                
+                
+                                <div class="col"><a href="/pdf/10.4048/jbc.2017.20.4.368" class="nav-link" onclick="trackDownloadLink('PDF', '10.4048/jbc.2017.20.4.368');"><i class="bi bi-file-earmark-pdf text-white"></i></a></div>
+                
+                <div class="col"><a href="#" class="nav-link CiteDialog" data-article-id=10.4048/jbc.2017.20.4.368 data-article-citation=UGFyayBKSCwgQ2hvaSBJUywgS2ltIEtILCBLaW0gSlMsIExlZSBLSCwgS2ltIFRZLCBJbSBTQSwgS2ltIFNILCBLaW0gWUosIEtpbSBKSC4gVHJlYXRtZW50IFBhdHRlcm5zIGFuZCBPdXRjb21lcyBpbiBFbGRlcmx5IFBhdGllbnRzIHdpdGggTWV0YXN0YXRpYyBCcmVhc3QgQ2FuY2VyOiBBIE11bHRpY2VudGVyIFJldHJvc3BlY3RpdmUgU3R1ZHkuIEogQnJlYXN0IENhbmNlci4gMjAxNyBEZWM7MjAoNCk6MzY4LTM3Ny4gPEEgSFJFRj0iaHR0cHM6Ly9kb2kub3JnLzEwLjQwNDgvamJjLjIwMTcuMjAuNC4zNjgiIHRhcmdldD1fYmxhbms+aHR0cHM6Ly9kb2kub3JnLzEwLjQwNDgvamJjLjIwMTcuMjAuNC4zNjg8L0E+><i class="bi bi-quote text-white"></i></a></div>
+                
+                <div class="col"><a href="#" class="nav-link"><i class="bi bi-chevron-up text-white"></i></a></div>
+            </div>
+        </div>
+    </div>
+        </header>
+
+        <main>
+        
+    <div class="container mt-3">
+        <nav>
+            <ol class="breadcrumb" >
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/index.php?body=archive">Archive</a></li>                
+                <li class="breadcrumb-item"><a href="search.php?where=asummary&id=9578&code=0096JBC">v.20(4);&nbsp;Dec&nbsp;2017</a></li>
+                <li class="breadcrumb-item active" aria-current="page">10.4048/jbc.2017.20.4.368</li>
+            </ol>            
+        </nav>
+
+        <hr>
+        
+        <section>            
+
+            <div class="row">                
+                <div class="col-xxl-8 col-xl-9 col-lg-8">
+                                        <div xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:php="http://php.net/xsl" class="abody">
+<a id="top" name="top"></a>
+
+<div id="article-level-0-front" class="fm">
+<div><div id="article-front-meta" class="row no-gutters my-3">
+<div class="d-flex">
+<div id="article-front-meta-left" class="w-100">
+<div>J Breast Cancer. 2017 Dec;20(4):368-377. English.<br>Published online Dec 19, 2017.<br><a class="article-meta-doi-link" href="https://doi.org/10.4048/jbc.2017.20.4.368">https://doi.org/10.4048/jbc.2017.20.4.368</a>
+</div>
+<div>© 2017 Korean Breast Cancer Society
+
+</div>
+</div>
+<div id="article-front-meta-right" class="flex-shrink-1"><div><div id="crossref-crossmark" style="display:none;"><a data-target="crossmark"></a></div></div></div>
+</div>
+<div class="clearfix"></div>
+</div></div>
+<div id="article-front-bibliographic">
+<div class="article-type">Original Article</div>
+<div class="article-title"><h1 class="content-title">Treatment Patterns and Outcomes in Elderly Patients with Metastatic Breast Cancer: A Multicenter Retrospective Study
+</h1></div>
+<div class="article-contrib">
+<span class="capture-id">Jin Hyun Park,<sup></sup></span>
+<span class="capture-id">In Sil Choi,<span class="article-icon-corresp"></span><sup></sup></span>
+<span class="capture-id">Ki Hwan Kim,<sup></sup></span>
+<span class="capture-id">Jin-Soo Kim,<sup></sup></span>
+<span class="capture-id">Kyung-Hun Lee,<sup>1</sup><sup>,</sup><sup>2</sup></span>
+<span class="capture-id">Tae-Yong Kim,<sup>1</sup><sup>,</sup><sup>2</sup></span>
+<span class="capture-id">Seock-Ah Im,<sup>1</sup><sup>,</sup><sup>2</sup></span>
+<span class="capture-id">Se Hyun Kim,<sup>3</sup></span>
+<span class="capture-id">Yu Jung Kim,<sup>3</sup></span>
+ and <span class="capture-id">Jee Hyun Kim<sup>3</sup></span>
+</div>
+<div class="article-front-meta-sub-tab mt-3 mb-0"><div class="d-inline-flex flex-wrap">
+<div class=""><a class="btn btn-outline-article" data-bs-toggle="collapse" href="#article-front-meta-id-aurthorinfo" role="button" aria-expanded="false" aria-controls="article-front-meta-id-aurthorinfo">Author information</a></div>
+<div class=""><a class="btn btn-outline-article" data-bs-toggle="collapse" href="#article-front-meta-id-articlehistory" role="button" aria-expanded="false" aria-controls="article-front-meta-id-articlehistory">Author notes</a></div>
+<div class=""><a class="btn btn-outline-article" data-bs-toggle="collapse" href="#article-front-meta-id-license" role="button" aria-expanded="false" aria-controls="article-front-meta-id-license">Copyright and License</a></div>
+</div></div>
+<div class="article-front-meta-sub">
+<div class="collapse multi-collapse" id="article-front-meta-id-aurthorinfo"><div class="card card-body"><ul class="list-group list-group-flush">
+<li class="list-group-item"><div class="article-afilliations"><ul>
+<li>Department of Internal Medicine, Seoul Metropolitan Government-Seoul National University Boramae Medical Center, Seoul National University College of Medicine, Seoul, Korea.<br>
+</li>
+<li>
+<sup>1</sup>Department of Internal Medicine, Seoul National University Hospital, Seoul National University College of Medicine, Seoul, Korea.<br>
+</li>
+<li>
+<sup>2</sup>Cancer Research Institute, Seoul National University, Seoul, Korea.<br>
+</li>
+<li>
+<sup>3</sup>Department of Internal Medicine, Seoul National University Bundang Hospital, Seoul National University College of Medicine, Seongnam, Korea.<br>
+</li>
+</ul></div></li>
+<li class="list-group-item"><div class="article-author-notes"><span class="capture-id"><div>
+<span class="gen"></span><span class="article-icon-corresp"></span>Correspondence to: In Sil Choi. Department of Internal Medicine, Seoul Metropolitan Government-Seoul National University Boramae Medical Center, Seoul National University College of Medicine, 20 Boramae-ro 5-gil, Dongjak-gu, Seoul 07061, Korea. Tel: +82-2-870-2231, Fax: +82-2-831-2826, <span class="author-email">Email: <A href="mailto:hmoischoi@hanmail.net">hmoischoi@hanmail.net</A></span>
+
+</div></span></div></li>
+</ul></div></div>
+<div class="collapse multi-collapse" id="article-front-meta-id-articlehistory"><div class="card card-body"><div class="article-received-accepted-date">Received June 07, 2017; Accepted  September 06, 2017.</div></div></div>
+<div class="collapse multi-collapse" id="article-front-meta-id-license"><div class="card card-body"><div class="article-license">
+<p>This is an Open Access article distributed under the terms of the Creative Commons Attribution Non-Commercial License (<a href="http://creativecommons.org/licenses/by-nc/4.0/" target="_blank">http://creativecommons.org/licenses/by-<wbr/>nc/4.0/</a>) which permits unrestricted non-commercial use, distribution, and reproduction in any medium, provided the original work is properly cited.</p>
+</div></div></div>
+<div id="article-citedby"></div>
+<div id="article-relate-articles"></div>
+</div>
+
+
+<div><div class="article-abstract">
+<div class="article-section-header">
+<div class="__SECTION__" id="__ID_SECTION_0" data-section-name="Abstract"><div class="dropdown">
+<a href="#" class="dropdown-goto dropdown-toggle d-none" id="dropdownGoto_0" title="Go to other sections in this page" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Go to:</a><div class="dropdown-menu dropdown-menu-right d-none" aria-labelledby="dropdownGoto_0"></div>
+</div></div>
+<h2>Abstract</h2>
+</div>
+<div>
+<h3>Purpose</h3>
+<p>Currently, there is little information regarding optimal treatment for metastatic breast cancer (MBC) in elderly patients. In this retrospective study, we examined a cohort of elderly patients with MBC receiving a range of treatments, in terms of demographic and clinicopathologic characteristics, treatment patterns, and outcomes.</p>
+</div>
+<div>
+<h3>Methods</h3>
+<p>Patients aged 65 years and older, and diagnosed with MBC between 2003 and 2015, were identified from the databases of three academic hospitals in South Korea. A total of 161 cases were eligible for inclusion. We assessed clinicopathologic features, treatment patterns, and outcomes, using the available electronic medical records. Based on age at MBC diagnosis, patients were divided into three groups: 65 to 69, 70 to 74, and ≥75 years.</p>
+</div>
+<div>
+<h3>Results</h3>
+<p>Most patients had received active treatment according to biologic subtype as in younger patients, although frequent dose modifications were observed during chemotherapy. The median overall survival (OS) for all patients was 30.3 months; age (≥70 years), Eastern Cooperative Oncology Group (ECOG) performance status (PS) (≥2), triple-negative cancer, and number of metastatic sites (≥2) were significant poor prognostic factors for OS in multivariate analyses. All types of systemic treatments according to biologic subtype conferred more prolonged OS in patients receiving treatment. Patients aged ≥75 years were more likely to have a poor ECOG PS and advanced comorbidity, and tended to receive less intensive treatments compared to the other age groups.</p>
+</div>
+<div>
+<h3>Conclusion</h3>
+<p>Elderly patients with MBC should not be excluded from receiving standard treatments prescribed for younger patients. Future research plans for elderly patients, especially aged ≥75 years with breast cancer, should include a geriatric assessment for identifying individuals at risk for treatment-related toxicity. Overall, this analysis will provide a better understanding of this population and help guide clinical care in real-world practice.</p>
+</div>
+
+</div></div>
+</div>
+</div>
+
+<div id="article-level-0-end-metadata" class="fm">
+<div class="my-3"><div>
+<div class="article-keyword-group-title">Keywords</div>
+<div>
+<span class="capture-id">Aged</span>; <span class="capture-id">Breast neoplasms</span>; <span class="capture-id">Drug therapy</span>; <span class="capture-id">Survival</span>
+</div>
+</div></div>
+
+</div>
+
+<div id="article-level-0-body" class="body">
+
+<div>
+<div><div class="article-section-header">
+<div class="__SECTION__" id="__ID_SECTION_1" data-section-name="INTRODUCTION"><div class="dropdown">
+<a href="#" class="dropdown-goto dropdown-toggle d-none" id="dropdownGoto_1" title="Go to other sections in this page" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Go to:</a><div class="dropdown-menu dropdown-menu-right d-none" aria-labelledby="dropdownGoto_1"></div>
+</div></div>
+<h2>INTRODUCTION</h2>
+</div></div>
+<p>Breast cancer is the most frequently diagnosed cancer and the leading cause of cancer-related death in women, accounting for 25% of all female cancers, and 14% of cancer-related deaths globally [<span class="xref"><span id="XREF_B1" class="ref-destination-back"></span><a href="#B1" data-id="XREF_B1" data-toggle="ref-popover" data-trigger="manual" data-placement="right">1</a></span>]. In Korean women, breast cancer is the second most common type of cancer, and the incidence rate has been rising [<span class="xref"><span id="XREF_B2" class="ref-destination-back"></span><a href="#B2" data-id="XREF_B2" data-toggle="ref-popover" data-trigger="manual" data-placement="right">2</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B3" class="ref-destination-back"></span><a href="#B3" data-id="XREF_B3" data-toggle="ref-popover" data-trigger="manual" data-placement="right">3</a></span>]. According to data from the Korean Breast Cancer Society registry, the median age of diagnosis of breast cancer was 50 years, and the proportion of patients older than 70 years was estimated at about 7% [<span class="xref"><span id="XREF_B3" class="ref-destination-back"></span><a href="#B3" data-id="XREF_B3" data-toggle="ref-popover" data-trigger="manual" data-placement="right">3</a></span>]. A rapid increase in the size of the elderly population has resulted in a concomitant increase in the number of diagnosed cases of breast cancer in elderly women [<span class="xref"><span id="XREF_B3" class="ref-destination-back"></span><a href="#B3" data-id="XREF_B3" data-toggle="ref-popover" data-trigger="manual" data-placement="right">3</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B4" class="ref-destination-back"></span><a href="#B4" data-id="XREF_B4" data-toggle="ref-popover" data-trigger="manual" data-placement="right">4</a></span>]. Evidence exists to show that breast cancer incidence and mortality rates increase with age. According to the National Cancer Institute Surveillance, Epidemiology, and End Results Cancer Statistics Review, 43% of patients with newly diagnosed breast cancers were aged ≥65 years and 20% were aged ≥75 years, and a majority of the breast cancer mortalities occurred in these age groups [<span class="xref"><span id="XREF_B5" class="ref-destination-back"></span><a href="#B5" data-id="XREF_B5" data-toggle="ref-popover" data-trigger="manual" data-placement="right">5</a></span>].</p>
+<p>As the incidence of elderly breast cancer is increasing, the absolute number of elderly patients with metastatic disease is also on the rise. Irrespective of the patient's age, metastatic breast cancer (MBC) is incurable, and approximately 25% of all patients diagnosed with MBC survive for 5 years [<span class="xref"><span id="XREF_B2" class="ref-destination-back"></span><a href="#B2" data-id="XREF_B2" data-toggle="ref-popover" data-trigger="manual" data-placement="right">2</a></span>]. While the process for diagnosing and treating MBC in younger patients is well-defined, the principles of treatment are relatively not well established in elderly patients because of under-representation of this age group in clinical trials [<span class="xref"><span id="XREF_B6" class="ref-destination-back"></span><a href="#B6" data-id="XREF_B6" data-toggle="ref-popover" data-trigger="manual" data-placement="right">6</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B7" class="ref-destination-back"></span><a href="#B7" data-id="XREF_B7" data-toggle="ref-popover" data-trigger="manual" data-placement="right">7</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B8" class="ref-destination-back"></span><a href="#B8" data-id="XREF_B8" data-toggle="ref-popover" data-trigger="manual" data-placement="right">8</a></span>]. Modified management strategies are often used for older individuals; however, supporting evidence for such approaches is poor, and often leads to under-treatment, which has been well documented in several studies [<span class="xref"><span id="XREF_B9" class="ref-destination-back"></span><a href="#B9" data-id="XREF_B9" data-toggle="ref-popover" data-trigger="manual" data-placement="right">9</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B10" class="ref-destination-back"></span><a href="#B10" data-id="XREF_B10" data-toggle="ref-popover" data-trigger="manual" data-placement="right">10</a></span>]. Chemotherapy, which can be associated with substantial toxicity, is usually indicated in elderly patients with hormone receptor (HR)-negative disease, hormone-refractory disease, or rapidly progressing disease. The elderly population possesses variability in physical, cognitive, and psychosocial function; some may tolerate chemotherapy as well as younger patients, while others may experience unpredictable and severe side effects [<span class="xref"><span id="XREF_B11" class="ref-destination-back"></span><a href="#B11" data-id="XREF_B11" data-toggle="ref-popover" data-trigger="manual" data-placement="right">11</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B12" class="ref-destination-back"></span><a href="#B12" data-id="XREF_B12" data-toggle="ref-popover" data-trigger="manual" data-placement="right">12</a></span>]. Thus, for elderly patients, it is important to customize therapy using parameters based on a geriatric assessment, and such parameters need to be evaluated through prospective clinical trials [<span class="xref"><span id="XREF_B13" class="ref-destination-back"></span><a href="#B13" data-id="XREF_B13" data-toggle="ref-popover" data-trigger="manual" data-placement="right">13</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B14" class="ref-destination-back"></span><a href="#B14" data-id="XREF_B14" data-toggle="ref-popover" data-trigger="manual" data-placement="right">14</a></span>]. Currently, there is little information regarding the potential risks and benefits associated with treatment for MBC in elderly patients, as only a few studies have focused directly on these patients. In this regard, in order to increase our knowledge on optimal clinical care of these patients, and to gain important insights into well-designed prospective clinical trials focusing on the specific requirements of elderly patients, it is important that we understand how these patients are currently being treated in real-world clinical practice.</p>
+<p>In this retrospective study, we examined a cohort of elderly patients with MBC, receiving a range of treatments at three academic hospitals in South Korea. We analyzed demographic and clinicopathologic characteristics, treatment patterns, and treatment outcomes, to understand underlying correlations between parameters.</p>
+</div>
+
+<div>
+<div><div class="article-section-header">
+<div class="__SECTION__" id="__ID_SECTION_2" data-section-name="METHODS"><div class="dropdown">
+<a href="#" class="dropdown-goto dropdown-toggle d-none" id="dropdownGoto_2" title="Go to other sections in this page" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Go to:</a><div class="dropdown-menu dropdown-menu-right d-none" aria-labelledby="dropdownGoto_2"></div>
+</div></div>
+<h2>METHODS</h2>
+</div></div>
+<div>
+<p class="article-section-sub-title article-section-sub-title-level-2"><h3>Study population</h3></p>
+<p>Patients aged ≥65 years diagnosed with MBC between 2003 and 2015 were identified from the databases of three academic hospitals in South Korea. We reviewed and analyzed the characteristics of the patients who met the following inclusion criteria: patients with a history of either recurrent breast cancer or those presenting with <i>de novo</i> stage IV disease, patients with no previous history of treatment for metastatic disease, and patients aged ≥65 years. Recurrent breast cancer did not include cases of isolated ipsilateral or contralateral breast recurrence, isolated regional lymph node recurrence, or that of local chest wall recurrence. The date of recurrence was defined as the time of detection of first distant metastasis. Treatments for MBC were administered according to standard-of-care by the treating oncologist.</p>
+<p>A total of 161 cases were identified, and we assessed the clinicopathologic features, treatment patterns, and follow-up treatment outcomes using our available electronic medical records. Patients were divided into three comparison groups based on age at MBC diagnosis: 65 to 69 years, 70 to 74 years, and ≥75 years.</p>
+<p>This study was approved by the Institutional Review Board of Seoul Metropolitan Government-Seoul National University Boramae Medical Center, Seoul National University Hospital, and Seoul National University Bundang Hospital (IRB numbers: 16-2016-31, J-1612-002-809, and B-1606-349-114), respectively. In this retrospective outcomes study, the informed consent was waived.</p>
+</div>
+<div>
+<p class="article-section-sub-title article-section-sub-title-level-2"><h3>Data collection</h3></p>
+<p>Data were extracted for the following variables: (1) baseline demographics and clinicopathologic information such as patient's age, performance status (PS), comorbidities, estrogen receptor (ER) and progesterone receptor (PR) status, human epidermal growth factor receptor 2 (HER2) status, metastatic sites and number; (2) details of treatment with chemotherapy, hormonal therapy, surgery, and radiation therapy; and (3) surveillance information including date of last visit or follow-up, date of recurrence (in case of distant recurrence after primary surgery), and survival status.</p>
+<p>The Charlson comorbidity index (CCI) was assessed based solely on the retrospective review of the patient's medical records.</p>
+<p>The data pertaining to HR and HER2 status, as ascertained by immunohistochemical analysis, was obtained from medical records, and analyzed. The tumor tissues were evaluated for ER and PR status by standard immunohistochemistry, and tumors were considered receptor-positive if at least 1% of cells tested were stain-positive. The HER2 status was also evaluated by immunohistochemistry staining, and tumors were considered receptor-positive if the staining intensity was 3+. The staining intensity of zero or 1+ were considered receptor-negative and the intensity of 2+ were further evaluated with fluorescence <i>in situ</i> hybridization.</p>
+</div>
+<div>
+<p class="article-section-sub-title article-section-sub-title-level-2"><h3>Statistical analysis</h3></p>
+<p>Descriptive analyses were performed to evaluate clinicopathologic characteristics and treatment modalities. Data were stratified by age (65–69 years, 70–74 years, and ≥75 years), and descriptive statistics were employed to examine differences between the strata. Categorical variables were compared using the chi-square test or the Fisher exact test. Some of the measures required a log transformation in order to meet the normality assumptions. Survival curves, estimated by the Kaplan-Meier method, were compared across groups using the log-rank method. Overall survival (OS) was measured from the first diagnosis of MBC to the date of death from all causes or last follow-up date. For multivariate analysis, a Cox proportional hazards regression model was used to estimate the adjusted hazard ratio for determining the significance of prognostic factors. All analyses were carried out using the IBM SPSS Statistics version 20.0 (IBM Corp., Armonk, USA) software. The statistical significance was set at <i>p</i>&lt;0.05.</p>
+</div>
+</div>
+
+<div>
+<div><div class="article-section-header">
+<div class="__SECTION__" id="__ID_SECTION_3" data-section-name="RESULTS"><div class="dropdown">
+<a href="#" class="dropdown-goto dropdown-toggle d-none" id="dropdownGoto_3" title="Go to other sections in this page" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Go to:</a><div class="dropdown-menu dropdown-menu-right d-none" aria-labelledby="dropdownGoto_3"></div>
+</div></div>
+<h2>RESULTS</h2>
+</div></div>
+<div>
+<p class="article-section-sub-title article-section-sub-title-level-2"><h3>Patient characteristics</h3></p>
+<p>A total of 161 patients with a median age of 71 years (range, 65–86 years) were identified. The distribution of patients by age group was as follows: 65 to 69 years (n=54, 33.5%); 70 to 74 years (n=67, 41.6%); and ≥75 years (n=40, 24.8%). The baseline demographic and clinicopathologic information of patients is summarized in <span class="fig-table-link"><a href="#T1">Table 1</a></span>. The majority of patients had Eastern Cooperative Oncology Group (ECOG) PS of 0–1. Thirty percent of patients in the ≥75 years group had an ECOG PS ≥2 as compared to 10.4% of those in the 70 to 74 years group, and 9.3% of those in the 65 to 69 years group (<i>p</i>=0.005). The highest CCI score ≥11 was exhibited by 100% of patients aged ≥75 years, while, in comparison, this score was seen in 73.1% of those aged 70 to 74 years, and in 3.7% of those aged 65 to 69 years (<i>p</i>&lt;0.001). Among the patients tested, an ER and/or PR positive status was seen in 61.5% of patients, and a HER2 positive status was seen in 24.2% of patients. There were no significant differences in HR positivity and HER2 overexpression status across age groups. The HER2 status was less frequently tested among patients ≥75 years. Approximately 40% of patients had <i>de novo</i> stage IV disease and 60% had recurrent breast cancer.<div class="image-at-section"><div class="article-figure-table" id="T1"><div class="article-figure-table-card" id="TABLE-T1" data-type="T" data-afn="96_JBC_20_4_368" data-fn="jbc-20-368-i001_0096JBC"><div class="card border-0 my-3"><div class="row no-gutters">
+<div class="col-md-4 mx-auto d-flex justify-content-center flex-wrap align-middle"><div class="card-body">
+<a href="#" class="article-figure-table-btn" data-type="TH"><img class="align-top" src="/ArticleImage/0096JBC/jbc-20-368-i001-m.jpg"></a>
+</div></div>
+<div class="col-md-8"><div class="card-body">
+<p class="card-text"><span class="label"><a href="#" class="article-figure-table-btn" data-type="T">Table 1</a>
+</span><span class="capture-id"><br><span class="capture-id">Patient characteristics (n=161)</span></span></p>
+<ul class="list-inline">
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="T">Click for larger image</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="TH">Click for full table</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm" href="ViewImagePopup.php?Type=TX&amp;id=T1&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i001_0096JBC" target="_blank">Download as Excel file</a></li>
+</ul>
+</div></div>
+</div></div></div></div></div></p>
+</div>
+<div>
+<p class="article-section-sub-title article-section-sub-title-level-2"><h3>Treatment patterns</h3></p>
+<p>Treatment modalities according to age group are shown in <span class="fig-table-link"><a href="#T2">Table 2</a></span>. Hormonal therapy was the treatment of choice in patients aged ≥75 years, whereas chemotherapy was more frequently prescribed for patients aged &lt;75 years. A total of 123 patients received at least one chemotherapy regimen, while 42.5% of patients aged ≥75 years did not receive any chemotherapy, compared to 17.9% of those aged 70 to 74 years and 16.7% of those aged 65 to 69 years (<i>p</i>=0.005), who did not receive any chemotherapy.<div class="image-at-section"><div class="article-figure-table" id="T2"><div class="article-figure-table-card" id="TABLE-T2" data-type="T" data-afn="96_JBC_20_4_368" data-fn="jbc-20-368-i002_0096JBC"><div class="card border-0 my-3"><div class="row no-gutters">
+<div class="col-md-4 mx-auto d-flex justify-content-center flex-wrap align-middle"><div class="card-body">
+<a href="#" class="article-figure-table-btn" data-type="TH"><img class="align-top" src="/ArticleImage/0096JBC/jbc-20-368-i002-m.jpg"></a>
+</div></div>
+<div class="col-md-8"><div class="card-body">
+<p class="card-text"><span class="label"><a href="#" class="article-figure-table-btn" data-type="T">Table 2</a>
+</span><span class="capture-id"><br><span class="capture-id">Treatment modalities according to age group (n=161)</span></span></p>
+<ul class="list-inline">
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="T">Click for larger image</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="TH">Click for full table</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm" href="ViewImagePopup.php?Type=TX&amp;id=T2&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i002_0096JBC" target="_blank">Download as Excel file</a></li>
+</ul>
+</div></div>
+</div></div></div></div></div></p>
+<p>Hormonal therapy was indicated in a total of 72 patients, and a variety of agents were administered as palliative treatment for metastatic disease; 60 patients received nonsteroidal aromatase inhibitors (e.g., anastrozole and letrozole), while 40 patients received steroidal aromatase inhibitors (e.g., exemestane), 23 patients, tamoxifen, and 12 patients, fulvestrant. In recent 5 years, the U.S. Food and Drug Administration FDA-approved targeted agents such as everolimus and palbociclib were prescribed to four patients.</p>
+<p>Among 39 HER2-positive patients, 48.7% presented with HR-positive tumors, while 94.9% (37/39) received at least one anti-HER2 therapy including trastuzumab, lapatinib, pertuzumab, and trastuzumab emtansine (T-DM1) in their treatment course. As first-line treatment, 31 patients received trastuzumab-based therapy; 28 patients received chemotherapy (27 received taxanes and one received gemcitabine) plus trastuzumab; two patients who were in the ≥75 years group received hormonal therapy plus trastuzumab; the remaining one patient received trastuzumab and taxanes with pertuzumab as first-line treatment. Subsequently, lapatinib was ad-ministered with capecitabine in a total of 16 patients, either as second-line or later-line treatment. The T-DM1 monotherapy was administered in five patients as third-line or later-line treatment. In the ≥75 years group, two patients did not receive any anti-HER2 therapy; one patient received hormonal therapy, and the other remaining patient received best supportive care only.</p>
+<p>When we assessed the line of systemic treatment that patients received according to age group, all but one patient in the ≥75 years group received third-line treatment or were under-treated, while 45.6% of patients in the groups aged 70 to 74 years and 65 to 69 years received fourth-line or later-line treatment.</p>
+<p>Nine patients received only best supportive care without additional treatment. Among these, five patients were in the ≥75 years group, three in the 70 to 74 years group, and one patient was in the 65 to 69 years group. Eight patients had ECOG PS ≥2 and six patients presented with a CCI score of ≥11. Seven patients presented with two or more metastatic sites, and all nine patients had visceral metastatic disease.</p>
+</div>
+<div>
+<p class="article-section-sub-title article-section-sub-title-level-2"><h3>Factors affecting the selection of first-line treatment among HR-positive patients</h3></p>
+<p>Among 99 HR-positive patients, 49 and 44 patients received hormonal therapy and chemotherapy, respectively, as first-line treatment. The remaining six patients did not receive any systemic treatment; two patients received local treatment, and four patients received best supportive care only. Patient char-acteristics in the two treatment groups are listed in <span class="fig-table-link"><a href="#T3">Table 3</a></span>. Age distribution, HER2 status, and CCI scores were significantly different between the two groups (<i>p</i>=0.001, <i>p</i>=0.008, and <i>p</i>=0.010, respectively). In the multivariate logistic regression analysis, odds ratios (ORs) for receiving chemotherapy in the group aged 70 to 74 years and in those aged ≥75 years, in comparison to the group aged 65 to 69 years were 0.358 (<i>p</i>=0.228) and 0.010 (<i>p</i>=0.006), respectively. The ORs for receiving chemotherapy in HER2-positive patients compared to HER2-negative patients was 9.392 (<i>p</i>=0.014). The ORs for PS (2–4 vs. 0–1), metastatic sites (visceral vs. bone, soft tissue, and lymph node), and CCI (≥11 vs. 9–10) were 0.258 (<i>p</i>=0.189), 1.494 (<i>p</i>=0.484), and 1.852 (<i>p</i>=0.488), respectively. Thus, age ≥75 years and a HER2-negative status were significantly correlated with non-receipt of chemotherapy.<div class="image-at-section"><div class="article-figure-table" id="T3"><div class="article-figure-table-card" id="TABLE-T3" data-type="T" data-afn="96_JBC_20_4_368" data-fn="jbc-20-368-i003_0096JBC"><div class="card border-0 my-3"><div class="row no-gutters">
+<div class="col-md-4 mx-auto d-flex justify-content-center flex-wrap align-middle"><div class="card-body">
+<a href="#" class="article-figure-table-btn" data-type="TH"><img class="align-top" src="/ArticleImage/0096JBC/jbc-20-368-i003-m.jpg"></a>
+</div></div>
+<div class="col-md-8"><div class="card-body">
+<p class="card-text"><span class="label"><a href="#" class="article-figure-table-btn" data-type="T">Table 3</a>
+</span><span class="capture-id"><br><span class="capture-id">Patient characteristics and first-line treatment modality among patients with hormone receptor-positive breast cancer</span></span></p>
+<ul class="list-inline">
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="T">Click for larger image</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="TH">Click for full table</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm" href="ViewImagePopup.php?Type=TX&amp;id=T3&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i003_0096JBC" target="_blank">Download as Excel file</a></li>
+</ul>
+</div></div>
+</div></div></div></div></div></p>
+</div>
+<div>
+<p class="article-section-sub-title article-section-sub-title-level-2"><h3>Chemotherapy as first-line treatment</h3></p>
+<p>We evaluated the feasibility of chemotherapy in 99 patients who received chemotherapy as first-line treatment by investigating type of chemotherapy, number of treatment cycles, and dose modifications of each chemotherapy regimen (<span class="fig-table-link"><a href="#T4">Table 4</a></span>). When chemotherapy was indicated for first-line treatment, 31 of 99 patients (31.3%) received combination chemotherapy and of these, 41.9% of patients received taxane-based regimens and 35.5% received anthracycline-based regimens. Thirty-nine of 99 patients (39.4%) received monochemotherapy; paclitaxel was prescribed in more than half of the patients (56.4%) followed by capecitabine (23.1%) and docetaxel (17.9%). When anti-HER2 therapy was indicated for HER2-positive patients (29.3%, 29/99), trastuzumab plus taxane was used as first-line chemotherapy in all but one patient, who received lapatinib plus capecitabine. Excluding anti-HER therapy, patients aged ≥75 years were more likely to receive mono-chemotherapy rather than combination chemotherapy (≥75 years, 83.3% vs. 16.7%; &lt;75 years, 50.0% vs. 50.0%; <i>p</i>=0.034). Chemotherapy dose modifications were frequent regardless of the type of chemotherapy, and doses were mainly adjusted on the basis of the occurrence of adverse events in a prior course and the discretion of the treating physician. Dose reductions were more common in patients aged ≥75 years than in those aged &lt;75 years (81.2% vs. 54.2%, not significant). The causes of early discontinuation of chemotherapy without progressive disease were as follows: chemotherapy-free interval after achievement of partial response or stable disease (24.2%, 24/99), adverse events (11.1%, 11/99), patient refusal (2.0%, 2/99), loss to follow-up (5.1%, 5/99), and unknown (2.0%, 2/99). Among HER2-positive patients, no cardiac adverse events such as left ventricular dysfunction (LVD) or heart failure related to anti-HER2 therapy were observed.<div class="image-at-section"><div class="article-figure-table" id="T4"><div class="article-figure-table-card" id="TABLE-T4" data-type="T" data-afn="96_JBC_20_4_368" data-fn="jbc-20-368-i004_0096JBC"><div class="card border-0 my-3"><div class="row no-gutters">
+<div class="col-md-4 mx-auto d-flex justify-content-center flex-wrap align-middle"><div class="card-body">
+<a href="#" class="article-figure-table-btn" data-type="TH"><img class="align-top" src="/ArticleImage/0096JBC/jbc-20-368-i004-m.jpg"></a>
+</div></div>
+<div class="col-md-8"><div class="card-body">
+<p class="card-text"><span class="label"><a href="#" class="article-figure-table-btn" data-type="T">Table 4</a>
+</span><span class="capture-id"><br><span class="capture-id">Chemotherapy as first-line treatment in elderly patients with metastatic breast cancer (n=99)</span></span></p>
+<ul class="list-inline">
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="T">Click for larger image</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="TH">Click for full table</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm" href="ViewImagePopup.php?Type=TX&amp;id=T4&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i004_0096JBC" target="_blank">Download as Excel file</a></li>
+</ul>
+</div></div>
+</div></div></div></div></div></p>
+</div>
+<div>
+<p class="article-section-sub-title article-section-sub-title-level-2"><h3>Survival outcomes</h3></p>
+<p>At the time of this analysis (February 2017), 117 of 161 patients had died. The median OS for all patients was 30.3 months (95% confidence interval [CI], 23.3–36.6) across the entire patient population. The 1-year survival rate was 81.1% ±3.1% and 2-year survival rate was 56.7%±4.0% (<span class="fig-table-link"><a href="#F1">Figure 1A</a></span>). We also performed subgroup analyses for OS according to HR and HER2 status. The median OS of patients with HR-positive/HER2-negative (n=74), HER2-positive (n=39), and triple-negative tumors (n=39), was 35.0 months (95% CI, 23.3–46.7), 32.7 months (95% CI, 13.2–52.2), and 17.7 months (95% CI, 12.8–22.6), respectively (<span class="fig-table-link"><a href="#F1">Figure 1B</a></span>). When we assessed OS according to type of systemic treatment that patients received, all types of systemic treatments were found to significantly improve patient survival. A total of 123 patients received at least one chemotherapy regimen during their treatment course, and the median OS for these patients was 32.7 months (95% CI, 22.2–43.1), in comparison to 15.2 months (95% CI, 12.7–17.6) in patients who did not receive any type of chemotherapy (<i>p</i>=0.004) (<span class="fig-table-link"><a href="#F2">Figure 2A</a></span>). Among 39 triple-negative patients, for whom chemotherapy was the treatment of choice, the median OS of 35 patients who received at least one chemotherapy regimen was 18.7 months (95% CI, 15.2–22.2), while that of four patients who did not, was only 2 months (95% CI, 0.5–3.5). In a total of 99 HR-positive patients for whom hormonal therapy was indicated, the median OS of 72 patients who received at least one hormonal therapy and that of 27 patients who did not was 47.4 months (95% CI, 31.1–63.6) and 18.8 months (95% CI, 7.1–30.5), respectively (<i>p</i>=0.002) (<span class="fig-table-link"><a href="#F2">Figure 2B</a></span>). Lastly, of the total of 39 HER2-positive patients, the median OS of 37 patients who received at least one anti-HER2 therapy was 35.4 months (95% CI, 15.8–54.9), while that of two patients who did not, was 14.3 months (<i>p</i>=0.004) (<span class="fig-table-link"><a href="#F2">Figure 2C</a></span>). In contrast to the above data, the median OS of 13 patients (four who received local treatment and nine who received best supportive care) who did not receive any type of systemic treatment was only 5.2 months (95% CI, 2.9–7.4).<div class="image-at-section"><div class="article-figure-table" id="F1"><div class="article-figure-table-card" id="FIGURE-F1" data-type="F" data-afn="96_JBC_20_4_368" data-fn="jbc-20-368-g001_0096JBC"><div class="card border-0 my-3"><div class="row no-gutters">
+<div class="col-md-4 mx-auto d-flex justify-content-center flex-wrap align-middle"><div class="card-body">
+<a href="#" class="article-figure-table-btn" data-type="F"><img class="align-top" src="/ArticleImage/0096JBC/jbc-20-368-g001-m.jpg"></a>
+</div></div>
+<div class="col-md-8"><div class="card-body">
+<p class="card-text"><span class="label"><a href="#" class="article-figure-table-btn" data-type="F">Figure 1</a>
+</span><span class="capture-id"><br><span class="capture-id">The Kaplan-Meier survival curves for overall survival (OS). Survival curves for OS in all patients (n=161) (A). Survival curves for OS according to biologic subtype (B).</span><br><span class="capture-id">HR=hormone receptor; HER2=human epidermal growth factor receptor 2; TNBC=triple-negative breast cancer.</span></span></p>
+<ul class="list-inline">
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="F">Click for larger image</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm" href="ViewImagePopup.php?Type=FP&amp;id=F1&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-g001_0096JBC" target="_blank">Download as PowerPoint slide</a></li>
+</ul>
+</div></div>
+</div></div></div></div></div><div class="image-at-section"></div><div class="image-at-section"><div class="article-figure-table" id="F2"><div class="article-figure-table-card" id="FIGURE-F2" data-type="F" data-afn="96_JBC_20_4_368" data-fn="jbc-20-368-g002_0096JBC"><div class="card border-0 my-3"><div class="row no-gutters">
+<div class="col-md-4 mx-auto d-flex justify-content-center flex-wrap align-middle"><div class="card-body">
+<a href="#" class="article-figure-table-btn" data-type="F"><img class="align-top" src="/ArticleImage/0096JBC/jbc-20-368-g002-m.jpg"></a>
+</div></div>
+<div class="col-md-8"><div class="card-body">
+<p class="card-text"><span class="label"><a href="#" class="article-figure-table-btn" data-type="F">Figure 2</a>
+</span><span class="capture-id"><br><span class="capture-id">The Kaplan-Meier survival curves for overall survival (OS) according to treatments. Survival curves for OS in patients who received at least one chemotherapy regimen compared to those who did not (A). Survival curves for OS in patients who received at least one hormonal therapy compared to those who did not (B). Survival curves for OS in patients who received at least one anti-HER2 therapy compared to those who did not (C).</span><br><span class="capture-id">HT=hormonal therapy; HER2=human epidermal growth factor receptor 2.</span></span></p>
+<ul class="list-inline">
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="F">Click for larger image</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm" href="ViewImagePopup.php?Type=FP&amp;id=F2&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-g002_0096JBC" target="_blank">Download as PowerPoint slide</a></li>
+</ul>
+</div></div>
+</div></div></div></div></div><div class="image-at-section"></div><div class="image-at-section"></div></p>
+<p>When we analyzed the prognostic factors affecting OS, we found that age, ECOG PS, combined HR and HER2 status (triple-negative status), and number of metastatic sites were significantly associated with OS, and were significant in both univariate and multivariate analyses (<span class="fig-table-link"><a href="#T5">Table 5</a></span>). The unadjusted median OS of patients aged 65 to 69 years was significantly longer than those of patients in the other age groups (65–69 years, 47.1 months [95% CI, 40.1–54.0]; 70–74 years, 28.4 months [95% CI, 20.5–36.2]; ≥75 years, 18.1 months [95% CI, 14.2–21.9]; <i>p</i>=0.001); the hazard ratios in the groups aged 70 to 74 years and ≥75 years, in comparison to the group aged 65 to 69 years were 1.855 (95% CI, 1.143–3.011) (<i>p</i>=0.011) and 2.111 (95% CI, 1.237–3.603) (<i>p</i>=0.006), respectively, in multivariate analyses. Furthermore, we also performed prognostic factor analyses for OS only in patients 70 years and older, while excluding patients aged 65 to 69 years. The ECOG PS, triple-negative cancer, and number of metastatic sites were significant poor prognostic factors for OS in the multivariate analyses, while age was not a significant factor for OS in this age group (data not shown).<div class="image-at-section"><div class="article-figure-table" id="T5"><div class="article-figure-table-card" id="TABLE-T5" data-type="T" data-afn="96_JBC_20_4_368" data-fn="jbc-20-368-i005_0096JBC"><div class="card border-0 my-3"><div class="row no-gutters">
+<div class="col-md-4 mx-auto d-flex justify-content-center flex-wrap align-middle"><div class="card-body">
+<a href="#" class="article-figure-table-btn" data-type="TH"><img class="align-top" src="/ArticleImage/0096JBC/jbc-20-368-i005-m.jpg"></a>
+</div></div>
+<div class="col-md-8"><div class="card-body">
+<p class="card-text"><span class="label"><a href="#" class="article-figure-table-btn" data-type="T">Table 5</a>
+</span><span class="capture-id"><br><span class="capture-id">Prognostic factor analyses for overall survival (n=161)</span></span></p>
+<ul class="list-inline">
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="T">Click for larger image</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm article-figure-table-btn" data-type="TH">Click for full table</a></li>
+<li class="list-inline-item"><a role="button" class="btn btn-outline-article btn-sm" href="ViewImagePopup.php?Type=TX&amp;id=T5&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i005_0096JBC" target="_blank">Download as Excel file</a></li>
+</ul>
+</div></div>
+</div></div></div></div></div></p>
+</div>
+</div>
+
+<div>
+<div><div class="article-section-header">
+<div class="__SECTION__" id="__ID_SECTION_4" data-section-name="DISCUSSION"><div class="dropdown">
+<a href="#" class="dropdown-goto dropdown-toggle d-none" id="dropdownGoto_4" title="Go to other sections in this page" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Go to:</a><div class="dropdown-menu dropdown-menu-right d-none" aria-labelledby="dropdownGoto_4"></div>
+</div></div>
+<h2>DISCUSSION</h2>
+</div></div>
+<p>The objective of this retrospective study was to investigate demographic and clinicopathologic characteristics, treatment patterns, and follow-up treatment outcomes in patients with MBC aged 65 years and older. In this study, patients ≥75 years were more likely to have a poor ECOG PS (≥2) and advanced comorbidity (CCI ≥11), compared to those in the other age groups. In a study of MBC patients aged 65 years and older in France, Freyer et al. [<span class="xref"><span id="XREF_B15" class="ref-destination-back"></span><a href="#B15" data-id="XREF_B15" data-toggle="ref-popover" data-trigger="manual" data-placement="right">15</a></span>] also reported that elderly patients were more likely to present with initial metastasis (&gt;75 years, 52%; 65–74 years, 39%; <i>p</i>&lt;0.0001), and the incidence of an ECOG PS of 0 in patients aged 64 to 75 years was more frequent than in those aged &gt;75 years (25% vs. 9%, <i>p</i>&lt;0.0001).</p>
+<p>Regarding decisions about systemic treatment for MBC in elderly patients, biologic subtype guides treatment, as in younger patients. Hormonal therapy is the approach of choice for HR-positive metastatic disease. Anti-HER2 therapy should be used or added to the endocrine or chemotherapy regimen when the cancer is HER2-positive. For MBC that is HR-negative, has been refractory to hormonal therapy, or is rapidly progressing disease, chemotherapy is indicated [<span class="xref"><span id="XREF_B16" class="ref-destination-back"></span><a href="#B16" data-id="XREF_B16" data-toggle="ref-popover" data-trigger="manual" data-placement="right">16</a></span>]. When we investigated treatment patterns according to age group in this study, patients aged ≥75 years were less likely to receive chemotherapy compared to those aged &lt;75 years; however, there were no significant differences pertaining to the receipt of hormonal therapy and anti-HER2 therapy. In addition, age was one of the most important deciding factors in the selection of chemotherapy (versus hormonal therapy) as first-line treatment among HR-positive patients; the OR for receiving chemotherapy in the group ≥75 years in comparison to the group aged 65 to 69 years was 0.010 (<i>p</i>=0.006). Age has already been reported to be a significant factor related to treatment selection in elderly patients with MBC [<span class="xref"><span id="XREF_B15" class="ref-destination-back"></span><a href="#B15" data-id="XREF_B15" data-toggle="ref-popover" data-trigger="manual" data-placement="right">15</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B17" class="ref-destination-back"></span><a href="#B17" data-id="XREF_B17" data-toggle="ref-popover" data-trigger="manual" data-placement="right">17</a></span>].</p>
+<p>When chemotherapy was indicated for first-line treatment, taxanes were the most commonly prescribed chemotherapy agents, regardless of HER2 status. Dose modifications were common irrespective of the types of chemotherapy, and early discontinuation of chemotherapy due to adverse events or patient refusal was observed in 13.1% of patients. In a study of 7-year retrospective analysis of 117 MBC patients aged ≥75 years receiving first-line chemotherapy, 103 received monotherapy (67, capecitabine; 29, vinorelbine; five, docetaxel; two, liposomal doxorubicin) and 14 received polychemotherapy (12, anthracycline-based; two, vinorelbine-gemcitabine), with acceptable toxicity [<span class="xref"><span id="XREF_B18" class="ref-destination-back"></span><a href="#B18" data-id="XREF_B18" data-toggle="ref-popover" data-trigger="manual" data-placement="right">18</a></span>]. Data on chemotherapy for elderly patients with MBC remain very limited, while adjuvant chemotherapy has been reported to be feasible in most patients aged ≥70 years who are selected for chemotherapy, although increasing age, lower functional status, and higher comorbidity index scores have been associated with dose reductions and treatment breaks in chemotherapy [<span class="xref"><span id="XREF_B19" class="ref-destination-back"></span><a href="#B19" data-id="XREF_B19" data-toggle="ref-popover" data-trigger="manual" data-placement="right">19</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B20" class="ref-destination-back"></span><a href="#B20" data-id="XREF_B20" data-toggle="ref-popover" data-trigger="manual" data-placement="right">20</a></span>]. The International Society of Geriatric Oncology recommends that in elderly patients with MBC, single-agent chemotherapy should be generally preferred to combination regimens, and preference should be given to chemotherapeutic agents that have better safety profiles (such as weekly taxanes, pegylated liposomal doxorubicin, capecitabine, and vinorelbine), and those with safety data available in elderly patients [<span class="xref"><span id="XREF_B16" class="ref-destination-back"></span><a href="#B16" data-id="XREF_B16" data-toggle="ref-popover" data-trigger="manual" data-placement="right">16</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B21" class="ref-destination-back"></span><a href="#B21" data-id="XREF_B21" data-toggle="ref-popover" data-trigger="manual" data-placement="right">21</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B22" class="ref-destination-back"></span><a href="#B22" data-id="XREF_B22" data-toggle="ref-popover" data-trigger="manual" data-placement="right">22</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B23" class="ref-destination-back"></span><a href="#B23" data-id="XREF_B23" data-toggle="ref-popover" data-trigger="manual" data-placement="right">23</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B24" class="ref-destination-back"></span><a href="#B24" data-id="XREF_B24" data-toggle="ref-popover" data-trigger="manual" data-placement="right">24</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B25" class="ref-destination-back"></span><a href="#B25" data-id="XREF_B25" data-toggle="ref-popover" data-trigger="manual" data-placement="right">25</a></span>]. Recently, prediction models for chemotherapy toxicity, which estimated risk of toxicity based on clinical factors in addition to geriatric assessment variables, have been developed and can be used to help weigh the risks and benefits of chemotherapy [<span class="xref"><span id="XREF_B13" class="ref-destination-back"></span><a href="#B13" data-id="XREF_B13" data-toggle="ref-popover" data-trigger="manual" data-placement="right">13</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B14" class="ref-destination-back"></span><a href="#B14" data-id="XREF_B14" data-toggle="ref-popover" data-trigger="manual" data-placement="right">14</a></span>]. These models, however, require further validation in specific diseases and with particular treatments.</p>
+<p>In this study, anti-HER2 therapy was indicated in 39 HER2-positive patients. There was no significant difference in the receipt of anti-HER2 therapy based on age; in fact, all but two patients received at least one anti-HER2 therapy in their treatment course. Data are limited regarding treatment patterns and outcomes in elderly patients with metastatic HER2-positive breast cancer. In the registHER observational study of 1,001 women (209 women aged ≥65 years) with newly diagnosed metastatic HER2-positive breast cancer, patients aged ≥75 years were least likely to receive trastuzumab-based first-line treatment (≥75 years, 77% [50/65]; 65–74 years, 81% [117/144]; &lt;65 years, 85% [674/792]). In addition, among all patients receiving trastuzumab-based first-line treatment, pa-tients aged ≥75 years were more likely to receive either trastuzumab monotherapy or trastuzumab with hormonal therapy, rather than trastuzumab-based chemotherapy regimens [<span class="xref"><span id="XREF_B26" class="ref-destination-back"></span><a href="#B26" data-id="XREF_B26" data-toggle="ref-popover" data-trigger="manual" data-placement="right">26</a></span>]. In our study, among the 28 patients who received trastuzumab with chemotherapy as first-line treatment, most patients continued to receive trastuzumab until progression even if chemotherapy was discontinued after disease stabilization. In terms of cardiac toxicity, no LVD or heart failure were observed in our study, although recent population-based studies have shown that the incidence of heart failure or cardiomyopathy may be high in elderly patients [<span class="xref"><span id="XREF_B27" class="ref-destination-back"></span><a href="#B27" data-id="XREF_B27" data-toggle="ref-popover" data-trigger="manual" data-placement="right">27</a></span><span class="xref"><span class="gen">, </span><span id="XREF_B28" class="ref-destination-back"></span><a href="#B28" data-id="XREF_B28" data-toggle="ref-popover" data-trigger="manual" data-placement="right">28</a></span>].</p>
+<p>When we analyzed survival outcomes, the median OS for all patients was 30.3 months (95% CI, 23.3–36.6) across the entire patient population. The OS according to biologic subtype were as follows: 35.0 months (95% CI, 23.3–46.7) in HR-positive/HER2-negative patients, 32.7 months (95% CI, 13.2–52.2) in HER2-positive patients, and 17.7 months (95% CI, 12.8–22.6) in patients with triple-negative status. As previously described, our study has also shown that anti-HER2 therapy is associated with a significant improvement in OS of elderly patients with HER2-positive MBC. In the registHER study, when data were analyzed on the basis of receipt of first-line trastuzumab or not, OS was significantly longer for older women receiving trastuzumab compared to those who did not (median OS, 40.4 months vs. 25.9 months) [<span class="xref"><span id="XREF_B26" class="ref-destination-back"></span><a href="#B26" data-id="XREF_B26" data-toggle="ref-popover" data-trigger="manual" data-placement="right">26</a></span>]. In another study of a large cohort (n=610) of elderly patients (mean age, 74 years) with HER2-positive MBC, Griffiths et al. [<span class="xref"><span id="XREF_B29" class="ref-destination-back"></span><a href="#B29" data-id="XREF_B29" data-toggle="ref-popover" data-trigger="manual" data-placement="right">29</a></span>] reported that trastuzumab plus chemotherapy was associated with a lower adjusted cancer mortality rate (hazard ratio, 0.54; 95% CI, 0.39–0.74; <i>p</i>&lt;0.001) than trastuzumab alone among patients who received trastuzumab as part of first-line therapy. In our study, we observed that the HER2 testing was less frequently performed among patients ≥75 years than those aged 65 to 74 years. Since anti-HER2 therapy improved survival outcome in HER2-positive MBC across age groups, we believe that the HER2 testing should be routinely performed for all elderly patients. Among 39 triple-negative patients in our study, for whom chemotherapy was the approach of choice, the median OS of 35 patients who received at least one chemotherapy regimen was 18.7 months (95% CI, 15.2–22.2), while that of four patients who did not, was only 2.0 months (95% CI, 0.5–3.5). In one population-based study of elderly patients aged ≥66 years and with metastatic ER-negative breast cancer, chemotherapy was associated with a significant survival benefit (hazard ratio, 0.61; 95% CI, 0.54–0.70) [<span class="xref"><span id="XREF_B30" class="ref-destination-back"></span><a href="#B30" data-id="XREF_B30" data-toggle="ref-popover" data-trigger="manual" data-placement="right">30</a></span>]. In real-world clinical practice, elderly cancer patients are less likely to be offered chemotherapy and tend to receive less intensive treatment because of concerns regarding their ability to tolerate the therapy. However, in this study, we found that chemotherapy was feasible as first-line treatment, and significantly improved patient survival in the elderly. However, patients aged ≥75 years were more likely to have a poor ECOG PS and advanced comorbidity, and tended to receive no chemotherapy or less intensive chemotherapy. Freyer et al. [<span class="xref"><span id="XREF_B15" class="ref-destination-back"></span><a href="#B15" data-id="XREF_B15" data-toggle="ref-popover" data-trigger="manual" data-placement="right">15</a></span>] also reported that age was found to be a strongly discriminating factor in treatment decisions: a cutoff threshold for differential treatment based on age was 76.5 years.</p>
+<p>Multivariate analyses for OS performed across the entire patient population, showed that age (≥70 years), poor PS (ECOG 2–4), triple negative cancer, and number of metastatic sites (≥2) were significant poor prognostic factors for OS. Among patients aged ≥70 years, poor PS (ECOG 2–4), triple-negative cancer, and number of metastatic sites (≥2) were also significant poor prognostic factors for OS in multivariate analyses.</p>
+<p>This retrospective study has several limitations. We could not identify accurately the reasons as to why patients aged ≥75 years had received less intensive treatment: if due to patient choice or due to the physician discretion. We also could not determine the geriatric assessment variables that may be associated with increased risk of treatment toxicity and survival outcomes, since they were not evaluated in routine clinical practice. In addition, the safety and efficacy of chemotherapy could not be assessed by retrospective chart review, as accurately as in prospective clinical trials.</p>
+<p>In conclusion, the majority of patients received active treatment according to the biologic cancer subtype as in younger patients, although frequent dose modifications were observed during chemotherapy. All types of systemic treatment conferred more prolonged OS, although many patients who did not receive systemic treatment had poor prognostic factors such as poor PS and advanced comorbidity. In this regard, we therefore recognize the fact that elderly patients with MBC who are considered fit for systemic treatment should not be excluded from receiving active treatment with the appropriate regimens and dose intensity. In addition, future research plans for elderly patients, especially those aged ≥75 years with breast cancer, should include a geriatric assessment that could be utilized to identify patients at risk for treatment-related toxicity, and also to select patients who could benefit from active treatment. Overall, this analysis of elderly patients with MBC will provide a better understanding of this population and help guide clinical care in real-world practice.</p>
+</div>
+
+<div id="supplementary-material"><p></p></div>
+</div>
+
+<div id="article-level-0-figs-and-tables" class="bm bm-figure-tables">
+
+</div>
+
+<div id="article-level-0-back" class="bm">
+<div class="article-section-header">
+<div class="__SECTION__" id="__ID_SECTION_5" data-section-name="Notes"><div class="dropdown">
+<a href="#" class="dropdown-goto dropdown-toggle d-none" id="dropdownGoto_5" title="Go to other sections in this page" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Go to:</a><div class="dropdown-menu dropdown-menu-right d-none" aria-labelledby="dropdownGoto_5"></div>
+</div></div>
+<div class="article-section-title">Notes</div>
+</div>
+<div id=""><p><span class="fn-label">CONFLICT OF INTEREST:</span>The authors declare that they have no competing interests.</p></div>
+
+<div class="capture-id">
+<div><div class="article-section-header">
+<div class="__SECTION__" id="__ID_SECTION_6" data-section-name="ACKNOWLEDGMENTS"><div class="dropdown">
+<a href="#" class="dropdown-goto dropdown-toggle d-none" id="dropdownGoto_6" title="Go to other sections in this page" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Go to:</a><div class="dropdown-menu dropdown-menu-right d-none" aria-labelledby="dropdownGoto_6"></div>
+</div></div>
+<h2>ACKNOWLEDGMENTS</h2>
+</div></div>
+<p>The authors would like to thank Sohee Oh, PhD of the Department of Biostatistics in Seoul Metropolitan Government-Seoul National University Boramae Medical Center for her statistical advice.</p>
+</div>
+<div class="references">
+<div class="__SECTION__" id="__ID_SECTION_7" data-section-name="References"><div class="dropdown">
+<a href="#" class="dropdown-goto dropdown-toggle d-none" id="dropdownGoto_7" title="Go to other sections in this page" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Go to:</a><div class="dropdown-menu dropdown-menu-right d-none" aria-labelledby="dropdownGoto_7"></div>
+</div></div>
+<h3 class="title">References</h3>
+</div>
+<div class="bm">
+<tr>
+<td></td>
+<td></td>
+</tr>
+<ol>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B1" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B1_DATA" class="ref-data" valign="top">Torre LA, Bray F, Siegel RL, Ferlay J, Lortet-Tieulent J, Jemal A. Global cancer statistics, 2012. CA Cancer J Clin 2015;65:87–108.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B1] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/25651787" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.3322%2Fcaac.21262" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B1] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B2" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B2_DATA" class="ref-data" valign="top">Jung KW, Won YJ, Oh CM, Kong HJ, Lee DH, Lee KH, et al. Cancer statistics in Korea: incidence, mortality, survival, and prevalence in 2014. Cancer Res Treat 2017;49:292–305.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B2] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/28279062" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.4143%2Fcrt.2017.118" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B2] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B3" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B3_DATA" class="ref-data" valign="top">Park EH, Min SY, Kim Z, Yoon CS, Jung KW, Nam SJ, et al. Basic facts of breast cancer in Korea in 2014: the 10-year overall survival progress. J Breast Cancer 2017;20:1–11.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B3] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/28382089" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.4048%2Fjbc.2017.20.1.1" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B3] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B4" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B4_DATA" class="ref-data" valign="top">Korea Breast Cancer Foundation. Breast cancer facts &amp; figures (2013).  [Accessed May 15th, 2017].  <div class="citation-comment">
+<a href="http://www.kbcf.or.kr/index.do" target="_blank">http://www.kbcf.or.kr/index.do</a>.</div>
+<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B4] *** BEGIN ***--><!--[KOREAMED SYNAPSE REFID:B4] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B5" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B5_DATA" class="ref-data" valign="top">Howlader N, Noone AM, Krapcho M, Miller D, Bishop K, Altekruse SF, et al. SEER cancer statistics review, 1975-2013. National Cancer  Institute;  [Accessed May 15th, 2017].  <div class="citation-comment">
+<a href="http://seer.cancer.gov/csr/1975_2013" target="_blank">http://seer.cancer.gov/csr/1975_<wbr/>2013</a>.</div>
+<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B5] *** BEGIN ***--><!--[KOREAMED SYNAPSE REFID:B5] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B6" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B6_DATA" class="ref-data" valign="top">Kemeny MM, Peterson BL, Kornblith AB, Muss HB, Wheeler J, Levine E, et al. Barriers to clinical trial participation by older women with breast cancer. J Clin Oncol 2003;21:2268–2275.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B6] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/12805325" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1200%2FJCO.2003.09.124" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B6] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B7" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B7_DATA" class="ref-data" valign="top">Hutchins LF, Unger JM, Crowley JJ, Coltman CA Jr, Albain KS. Underrepresentation of patients 65 years of age or older in cancer-treatment trials. N Engl J Med 1999;341:2061–2067.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B7] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/10615079" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1056%2FNEJM199912303412706" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B7] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B8" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B8_DATA" class="ref-data" valign="top">Lewis JH, Kilgore ML, Goldman DP, Trimble EL, Kaplan R, Montello MJ, et al. Participation of patients 65 years of age or older in cancer clinical trials. J Clin Oncol 2003;21:1383–1389.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B8] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/12663731" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1200%2FJCO.2003.08.010" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B8] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B9" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B9_DATA" class="ref-data" valign="top">Bouchardy C, Rapiti E, Fioretta G, Laissue P, Neyroud-Caspar I, Schäfer P, et al. Undertreatment strongly decreases prognosis of breast cancer in elderly women. J Clin Oncol 2003;21:3580–3587.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B9] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/12913099" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1200%2FJCO.2003.02.046" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B9] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B10" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B10_DATA" class="ref-data" valign="top">Owusu C, Lash TL, Silliman RA. Effect of undertreatment on the disparity in age-related breast cancer-specific survival among older women. Breast Cancer Res Treat 2007;102:227–236.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B10] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/17004115" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1007%2Fs10549-006-9321-x" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B10] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B11" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B11_DATA" class="ref-data" valign="top">Muss HB, Woolf S, Berry D, Cirrincione C, Weiss RB, Budman D, et al. Adjuvant chemotherapy in older and younger women with lymph node-positive breast cancer. JAMA 2005;293:1073–1081.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B11] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/15741529" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1001%2Fjama.293.9.1073" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B11] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B12" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B12_DATA" class="ref-data" valign="top">Freyer G, Lortholary A, Delcambre C, Delozier T, Piot G, Genin F, et al. Unexpected toxicities in elderly patients treated with oral idarubicin in metastatic breast cancer: the GINECO experience. Clin Oncol (R Coll Radiol) 2004;16:17–23.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B12] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/14768751" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1016%2Fj.clon.2003.07.001" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B12] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B13" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B13_DATA" class="ref-data" valign="top">Hurria A, Togawa K, Mohile SG, Owusu C, Klepin HD, Gross CP, et al. Predicting chemotherapy toxicity in older adults with cancer: a prospective multicenter study. J Clin Oncol 2011;29:3457–3465.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B13] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/21810685" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1200%2FJCO.2011.34.7625" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B13] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B14" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B14_DATA" class="ref-data" valign="top">Extermann M, Boler I, Reich RR, Lyman GH, Brown RH, DeFelice J, et al. Predicting the risk of chemotherapy toxicity in older patients: the Chemotherapy Risk Assessment Scale for High-Age Patients (CRASH) score. Cancer 2012;118:3377–3386.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B14] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/22072065" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1002%2Fcncr.26646" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B14] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B15" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B15_DATA" class="ref-data" valign="top">Freyer G, Braud AC, Chaibi P, Spielmann M, Martin JP, Vilela G, et al. Dealing with metastatic breast cancer in elderly women: results from a French study on a large cohort carried out by the ‘Observatory on Elderly Patients’. Ann Oncol 2006;17:211–216.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B15] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/16291586" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1093%2Fannonc%2Fmdj043" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B15] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B16" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B16_DATA" class="ref-data" valign="top">Biganzoli L, Wildiers H, Oakman C, Marotti L, Loibl S, Kunkler I, et al. Management of elderly patients with breast cancer: updated recommendations of the International Society of Geriatric Oncology (SIOG) and European Society of Breast Cancer Specialists (EUSOMA). Lancet Oncol 2012;13:e148–e160.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B16] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/22469125" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1016%2FS1470-2045%2811%2970383-7" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B16] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B17" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B17_DATA" class="ref-data" valign="top">Hashimoto K, Yonemori K, Shimizu C, Hirakawa A, Yamamoto H, Ono M, et al. A retrospective study of the impact of age on patterns of care for elderly patients with metastatic breast cancer. Med Oncol 2011;28:434–440.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B17] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/20354821" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1007%2Fs12032-010-9497-0" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B17] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B18" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B18_DATA" class="ref-data" valign="top">Debled M, Madranges N, Mertens C, Durand M, Brouste V, Brain E, et al. First-line chemotherapy for metastatic breast cancer in patients ≥75 years: a retrospective single-centre analysis. Crit Rev Oncol Hematol 2011;80:171–179.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B18] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/21036058" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1016%2Fj.critrevonc.2010.10.002" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B18] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B19" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B19_DATA" class="ref-data" valign="top">Muss HB, Berry DA, Cirrincione CT, Theodoulou M, Mauer AM, Kornblith AB, et al. Adjuvant chemotherapy in older women with early-stage breast cancer. N Engl J Med 2009;360:2055–2065.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B19] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/19439741" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1056%2FNEJMoa0810266" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B19] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B20" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B20_DATA" class="ref-data" valign="top">Garg P, Rana F, Gupta R, Buzaianu EM, Guthrie TH. Predictors of toxicity and toxicity profile of adjuvant chemotherapy in elderly breast cancer patients. Breast J 2009;15:404–408.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B20] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/19508671" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1111%2Fj.1524-4741.2009.00745.x" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B20] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B21" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B21_DATA" class="ref-data" valign="top">D'hondt R, Paridaens R, Wildiers H, Pauwelyn K, Thomas J, Dumez H, et al. Safety and efficacy of weekly docetaxel in frail and/or elderly patients with metastatic breast cancer: a phase II study. Anticancer Drugs 2004;15:341–346.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B21] *** BEGIN ***--><!--[KOREAMED SYNAPSE REFID:B21] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B22" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B22_DATA" class="ref-data" valign="top">ten Tije AJ, Smorenburg CH, Seynaeve C, Sparreboom A, Schothorst KL, Kerkhofs LG, et al. Weekly paclitaxel as first-line chemotherapy for elderly patients with metastatic breast cancer. A multicentre phase II trial. Eur J Cancer 2004;40:352–357.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B22] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/14746852" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1016%2Fj.ejca.2003.08.013" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B22] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B23" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B23_DATA" class="ref-data" valign="top">Del Mastro L, Perrone F, Repetto L, Manzione L, Zagonel V, Fratino L, et al. Weekly paclitaxel as first-line chemotherapy in elderly advanced breast cancer patients: a phase II study of the Gruppo Italiano di Oncologia Geriatrica (GIOGer). Ann Oncol 2005;16:253–258.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B23] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/15668279" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1093%2Fannonc%2Fmdi056" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B23] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B24" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B24_DATA" class="ref-data" valign="top">Biganzoli L, Coleman R, Minisini A, Hamilton A, Aapro M, Therasse P, et al. A joined analysis of two European Organization for the Research and Treatment of Cancer (EORTC) studies to evaluate the role of pegylated liposomal doxorubicin (Caelyx) in the treatment of elderly patients with metastatic breast cancer. Crit Rev Oncol Hematol 2007;61:84–89.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B24] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/17116400" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1016%2Fj.critrevonc.2006.07.008" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B24] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B25" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B25_DATA" class="ref-data" valign="top">Bajetta E, Procopio G, Celio L, Gattinoni L, Della Torre S, Mariani L, et al. Safety and efficacy of two different doses of capecitabine in the treatment of advanced breast cancer in older women. J Clin Oncol 2005;23:2155–2161.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B25] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/15710946" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1200%2FJCO.2005.02.167" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B25] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B26" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B26_DATA" class="ref-data" valign="top">Kaufman PA, Brufsky AM, Mayer M, Rugo HS, Tripathy D, Yood MU, et al. Treatment patterns and clinical outcomes in elderly patients with HER2-positive metastatic breast cancer from the registHER observational study. Breast Cancer Res Treat 2012;135:875–883.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B26] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/22923238" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1007%2Fs10549-012-2209-z" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B26] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B27" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B27_DATA" class="ref-data" valign="top">Du XL, Xia R, Burau K, Liu CC. Cardiac risk associated with the receipt of anthracycline and trastuzumab in a large nationwide cohort of older women with breast cancer, 1998-2005. Med Oncol 2011;28 Suppl 1:S80–S90.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B27] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/20967512" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1007%2Fs12032-010-9717-7" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B27] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B28" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B28_DATA" class="ref-data" valign="top">Chen J, Long JB, Hurria A, Owusu C, Steingart RM, Gross CP. Incidence of heart failure or cardiomyopathy after adjuvant trastuzumab therapy for breast cancer. J Am Coll Cardiol 2012;60:2504–2512.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B28] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/23158536" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1016%2Fj.jacc.2012.07.068" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B28] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B29" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B29_DATA" class="ref-data" valign="top">Griffiths RI, Lalla D, Herbert RJ, Doan JF, Brammer MG, Danese MD. Infused therapy and survival in older patients diagnosed with metastatic breast cancer who received trastuzumab. Cancer Invest 2011;29:573–584.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B29] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/21929325" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.3109%2F07357907.2011.616251" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B29] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+<li><ol class="references-and-notes-list"><li class="skip-numbering" value="1">
+<div id="B30" class="ref-destination"></div>
+<div class="ref-item">
+<span id="XREF_B30_DATA" class="ref-data" valign="top">Schneider M, Zuckerman IH, Onukwugha E, Pandya N, Seal B, Gardner J, et al. Chemotherapy treatment and survival in older women with estrogen receptor-negative metastatic breast cancer: a population-based analysis. J Am Geriatr Soc 2011;59:637–646.<div><ul class="list-group list-group-horizontal">
+<!--[KOREAMED SYNAPSE REFID:B30] *** BEGIN ***--><li class="list-group-item-ref"><a href="https://pubmed.ncbi.nlm.nih.gov/21453377" target="_new"><span>PubMed</span></a></li>
+<li class="list-group-item-ref"><a href="https://doi.org/10.1111%2Fj.1532-5415.2011.03351.x" target="_new"><span>CrossRef</span></a></li>
+<!--[KOREAMED SYNAPSE REFID:B30] *** END ***-->
+</ul></div></span>
+</div>
+</li></ol></li>
+</ol>
+</div>
+
+
+</div>
+</div>
+
+                                    </div>
+                <div class="article-portlets col-xxl-3 offset-xxl-1 col-xl-3 col-lg-4 col-xs-12">
+                    <!--
+    //
+    // PORTLET - FORMATS
+    //			
+    --> 
+    <div class="d-lg-none">
+        <hr></hr>
+    </div>
+
+    <div id="PortletFormatLink" class="porlet">
+        <ul class="list-group list-group-flush">
+                                                    <li class="list-group-item ms-0 ps-0 ">            
+                    <a class="format-item icon-link CiteDialog" href="#" onclick="" data-article-id=10.4048/jbc.2017.20.4.368 data-article-citation=UGFyayBKSCwgQ2hvaSBJUywgS2ltIEtILCBLaW0gSlMsIExlZSBLSCwgS2ltIFRZLCBJbSBTQSwgS2ltIFNILCBLaW0gWUosIEtpbSBKSC4gVHJlYXRtZW50IFBhdHRlcm5zIGFuZCBPdXRjb21lcyBpbiBFbGRlcmx5IFBhdGllbnRzIHdpdGggTWV0YXN0YXRpYyBCcmVhc3QgQ2FuY2VyOiBBIE11bHRpY2VudGVyIFJldHJvc3BlY3RpdmUgU3R1ZHkuIEogQnJlYXN0IENhbmNlci4gMjAxNyBEZWM7MjAoNCk6MzY4LTM3Ny4gPEEgSFJFRj0iaHR0cHM6Ly9kb2kub3JnLzEwLjQwNDgvamJjLjIwMTcuMjAuNC4zNjgiIHRhcmdldD1fYmxhbms+aHR0cHM6Ly9kb2kub3JnLzEwLjQwNDgvamJjLjIwMTcuMjAuNC4zNjg8L0E+>
+                    <div>
+                        <i aria-hidden="true" class="bi bi-quote"></i>
+                    </div>
+                    <span class="align-top">Cite</span>
+                    </a>
+                </li>                
+                                        
+                                                    <li class="list-group-item ms-0 ps-0 ">            
+                    <a class="format-item icon-link " href="search.php?where=aview&amp;id=10.4048/jbc.2017.20.4.368&amp;code=0096JBC&amp;vmode=FULL" onclick="" >
+                    <div>
+                        <i aria-hidden="true" class="bi bi-book"></i>
+                    </div>
+                    <span class="align-top">Article</span>
+                    </a>
+                </li>                
+                                        
+                                                    <li class="list-group-item ms-0 ps-0 ">            
+                    <a class="format-item icon-link " href="/pdf/10.4048/jbc.2017.20.4.368" onclick="trackDownloadLink('PDF', '10.4048/jbc.2017.20.4.368');" >
+                    <div>
+                        <i aria-hidden="true" class="bi bi-file-earmark-pdf"></i>
+                    </div>
+                    <span class="align-top">PDF</span>
+                    </a>
+                </li>                
+                                        
+                                
+                                
+                                
+                                
+                </ul>
+    </div>
+
+
+    <!--
+    //
+    // PORTLET - Cited by
+    //			
+    -->
+
+
+        <div class="my-5 border-top porlet">
+        <div class="my-3">
+            <div><h5>Cited by</h5></div>                    
+        </div>        
+        <div class="d-inline-flex flex-wrap">
+                        <div class="p-1">
+                <a href="#" class="btn btn-outline-article CrossrefCitationListLink" role="button" data-bs-doi=10.4048/jbc.2017.20.4.368>
+                    Crossref&nbsp;<span>11</span>
+                </a>                
+            </div>
+                        <div class="p-1">
+                <a href="https://scholar.google.com/scholar?cites=http%3A%2F%2Fdx.doi.org%2F10.4048%2Fjbc.2017.20.4.368" class="btn btn-outline-article " role="button" >
+                    <font><font color=#324eba>G</FONT><FONT color=#e92736>o</FONT><FONT color=#feac06>o</FONT><FONT color=#324eba>g</FONT><FONT color=#0cb225>l</FONT><FONT color=#e92736>e</FONT> <span><FONT color=#324eba>Scholar</FONT></span></font>&nbsp;<span></span>
+                </a>                
+            </div>
+                        <div class="p-1">
+                <a href="https://pubmed.ncbi.nlm.nih.gov/?linkname=pubmed_pubmed_citedin&from_uid=29285042" class="btn btn-outline-article " role="button" >
+                    <font color="#004f8a">PubMed</font>&nbsp;<span>7</span>
+                </a>                
+            </div>
+                        <div class="p-1">
+                <a href="https://www.scopus.com/inward/citedby.uri?partnerID=HzOxMe3b&scp=85039697079&origin=inward" class="btn btn-outline-article " role="button" >
+                    <font color=#126470>Scopus</font>&nbsp;<span>12</span>
+                </a>                
+            </div>
+                        <div class="p-1">
+                <a href="http://ws.isiknowledge.com/cps/openurl/service?url_ver=Z39.88-2004&rft_id=info:doi/10.4048/jbc.2017.20.4.368&svc_val_fmt=info:/fmt:kev:mtx:sch_svc&svc.citing=yes" class="btn btn-outline-article " role="button" >
+                    <font color=#009A22>Web of Science</font>&nbsp;<span>11</span>
+                </a>                
+            </div>
+                    </div>
+    </div> 
+    
+    <!--
+    //
+    // PORTLET - MeSH
+    //
+    -->   
+
+    
+        
+
+                <div class="my-5 border-top porlet">
+            <div class="my-3">
+                <h5>Publication Types</h5>
+            </div>
+
+            <div class="d-inline-flex flex-wrap material-chips">
+            <div class="chip text-truncate my-1 mr-1">Multicenter Study</div><div class="chip text-truncate my-1 mr-1">Original Article</div>            
+            </div>
+        </div>
+        
+                <div class="my-5 border-top porlet">
+            <div class="my-3">
+                <h5>MeSH Terms</h5>
+            </div>
+
+            <div class="d-inline-flex flex-wrap material-chips">
+            <div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Aged%2A%22%5BMeSH+Major+Topic%5D" target="_blank">Aged*</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Breast%2A%22%5BMeSH+Major+Topic%5D" target="_blank">Breast*</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Breast+Neoplasms%2A%22%5BMeSH+Major+Topic%5D" target="_blank">Breast Neoplasms*</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Cohort+Studies%22%5BMeSH+Terms%5D" target="_blank">Cohort Studies</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Comorbidity%22%5BMeSH+Terms%5D" target="_blank">Comorbidity</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Diagnosis%22%5BMeSH+Terms%5D" target="_blank">Diagnosis</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Drug+Therapy%22%5BMeSH+Terms%5D" target="_blank">Drug Therapy</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Electronic+Health+Records%22%5BMeSH+Terms%5D" target="_blank">Electronic Health Records</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Geriatric+Assessment%22%5BMeSH+Terms%5D" target="_blank">Geriatric Assessment</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Humans%22%5BMeSH+Terms%5D" target="_blank">Humans</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Korea%22%5BMeSH+Terms%5D" target="_blank">Korea</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Multivariate+Analysis%22%5BMeSH+Terms%5D" target="_blank">Multivariate Analysis</a></div><div class="chip text-truncate my-1 mr-1"><a href="https://pubmed.ncbi.nlm.nih.gov/?term=%22Retrospective+Studies%2A%22%5BMeSH+Major+Topic%5D" target="_blank">Retrospective Studies*</a></div>            
+            </div>
+        </div>
+               
+
+            
+    <!--
+    //
+    // PORTLET - Metrics
+    //			
+    -->
+    
+    <div class="my-5 border-top porlet">
+        
+        <div class="modal modal-center" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="myModalLabel"></h5>
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="myModalTotalLinkLabel" class="mb-1"></div>       
+                        <div id="my-chart" class="my-1"></div>
+                        <div align="right"><small>Since  2020/07/01</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="my-3">
+            <div><h5>Metrics</h5></div>                    
+        </div>
+
+        <div>
+            <div class="row">
+                                                        
+                    <div class="col-6 border-right pb-1">
+                        <a href="#" class="PageViewLink">
+                            Page Views<br>
+                            <span class="text-primary">126</span>
+                        </a>
+                    </div>
+                                                        
+                    <div class="col-6  pb-1">
+                        <a href="#" class="PDFDownloadLink">
+                            PDF Downloads<br>
+                            <span class="text-primary">44</span>
+                        </a>
+                    </div>
+                            </div>
+        </div>
+        
+    </div>    
+
+       
+    
+    
+
+    <!--
+    //
+    // PORTLET - Share
+    //			
+    -->
+
+        <div class="my-5 border-top porlet">
+        <div class="my-3">
+            <div><h5>Share</h5></div>                    
+        </div>        
+        <div>
+            <ul class="list-inline">   
+                <li class="list-inline-item">                
+                    <A HREF="https://twitter.com/intent/tweet?url=https%3A%2F%2Fejbc.kr%2FDOIx.php%3Fid%3D10.4048%2Fjbc.2017.20.4.368&text=Treatment+Patterns+and+Outcomes+in+Elderly+Patients+with+Metastatic+Breast+Cancer%3A+A+Multicenter+Retrospective+Study" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Twitter" target="_blank"><i class="bi bi-twitter fs-3"></i></A></li>
+                </li>                                
+                <li class="list-inline-item">
+                    <A HREF="https://www.facebook.com/sharer/sharer.php?u=https://ejbc.kr/DOIx.php?id=10.4048/jbc.2017.20.4.368" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Facebook" target="_blank"><i class="bi bi-facebook fs-3"></i></A></li>
+                </li>
+                <li class="list-inline-item">
+                    <A data-bs-trigger="click" id="SharePermalink" role="button" data-bs-placement="bottom" data-toggle="article-popover"><i class="bi bi-link-45deg fs-3"></i></A></li>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!--
+    //
+    // PORTLET - Links to
+    //			
+    -->
+        <div class="my-5 border-top porlet linksto">
+        <div class="my-3">
+            <div><h5>Links to</h5></div>                    
+        </div>        
+        <div>
+            <ul class="list-unstyled"">   
+                                <li>
+                    <A HREF="https://www.ncbi.nlm.nih.gov/pubmed/29285042" target="_blank"><span>PubMed</span></a>
+                </li>
+                                <li>
+                    <A HREF="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5743997/?report=classic" target="_blank">PubMed Central</span></a>
+                </li>
+                                <li>
+                    <A HREF="https://www.ncbi.nlm.nih.gov/pubmed?LinkName=pubmed_pubmed&from_uid=29285042" target="_blank">Related citations in PubMed</A>
+                </li>
+                            </ul>
+        </div>
+    </div>  
+        
+
+    <!--
+    //
+    // PORTLET - Figures
+    //			
+    -->
+
+        <div class="my-5 border-top porlet">
+        <div class="my-3">
+            <div class="d-flex">
+                <div class="flex-grow-1"><h5>Figures</h5></div>            
+                <div><small><a href="search.php?where=aview&id=10.4048/jbc.2017.20.4.368&code=0096JBC&vmode=FT"><span class="fw-bolder">Show all...</a></a></small></div>
+            </div>
+        </div>
+        
+        <div class="figs-gray w-75 mx-auto">
+            <div id="article-portlet-figure-carousel" class="article-portlet-carousel carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                                                        
+                    
+                                                                                    <div class="carousel-item active">
+                        <a href="ViewImage.php?Type=F&amp;aid=580569&amp;id=F1&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-g001_0096JBC" class="article-figure-table-link" data-id="FIGURE-F1" data-type="F"><img class="d-block w-100" src="ArticleImage/0096JBC/jbc-20-368-g001-m.jpg" alt="slide"></a>
+                        <div class="carousel-caption d-none d-md-block">        
+                        </div>
+                    </div>
+                                                        
+                    
+                                        <div class="carousel-item">
+                        <a href="ViewImage.php?Type=F&amp;aid=580569&amp;id=F2&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-g002_0096JBC" class="article-figure-table-link" data-id="FIGURE-F2" data-type="F"><img class="d-block w-100" src="ArticleImage/0096JBC/jbc-20-368-g002-m.jpg" alt="slide"></a>
+                        <div class="carousel-caption d-none d-md-block">        
+                        </div>
+                    </div>
+                                </div>
+
+                <button class="carousel-control-prev" type="button" data-bs-target="#article-portlet-figure-carousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#article-portlet-figure-carousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+                <div>
+                    <p class="text-center"><span class="carousel-current-page">1</span> / 2</p>
+                </div>
+            </div>
+        </div>        
+    </div>
+        
+
+
+    <!--
+    //
+    // PORTLET - Tables
+    //			
+    -->
+        <div class="my-5 border-top porlet">
+        <div class="my-3">
+            <div class="d-flex">
+                <div class="flex-grow-1"><h5>Tables</h5></div>            
+                <div><small><a href="search.php?where=aview&id=10.4048/jbc.2017.20.4.368&code=0096JBC&vmode=FT"><span class="fw-bolder">Show all...</span></a></small></div>
+            </div>
+        </div>
+
+        <div class="w-75 table-gray mx-auto">
+            <div id="article-portlet-table-carousel" class="article-portlet-carousel carousel slide" data-bs-ride="carousel">
+
+                <div class="carousel-inner">
+                                                        
+                    
+                                                                                    <div class="carousel-item active">
+                        <a href="ViewImage.php?Type=T&amp;aid=580569&amp;id=T1&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i001_0096JBC" class="article-figure-table-link" data-id="TABLE-T1" data-type="T"><img class="d-block w-100" src="ArticleImage/0096JBC/jbc-20-368-i001-m.jpg" alt="slide"></a>
+                    </div>
+                                                        
+                    
+                                        <div class="carousel-item">
+                        <a href="ViewImage.php?Type=T&amp;aid=580569&amp;id=T2&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i002_0096JBC" class="article-figure-table-link" data-id="TABLE-T2" data-type="T"><img class="d-block w-100" src="ArticleImage/0096JBC/jbc-20-368-i002-m.jpg" alt="slide"></a>
+                    </div>
+                                                        
+                    
+                                        <div class="carousel-item">
+                        <a href="ViewImage.php?Type=T&amp;aid=580569&amp;id=T3&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i003_0096JBC" class="article-figure-table-link" data-id="TABLE-T3" data-type="T"><img class="d-block w-100" src="ArticleImage/0096JBC/jbc-20-368-i003-m.jpg" alt="slide"></a>
+                    </div>
+                                                        
+                    
+                                        <div class="carousel-item">
+                        <a href="ViewImage.php?Type=T&amp;aid=580569&amp;id=T4&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i004_0096JBC" class="article-figure-table-link" data-id="TABLE-T4" data-type="T"><img class="d-block w-100" src="ArticleImage/0096JBC/jbc-20-368-i004-m.jpg" alt="slide"></a>
+                    </div>
+                                                        
+                    
+                                        <div class="carousel-item">
+                        <a href="ViewImage.php?Type=T&amp;aid=580569&amp;id=T5&amp;afn=96_JBC_20_4_368&amp;fn=jbc-20-368-i005_0096JBC" class="article-figure-table-link" data-id="TABLE-T5" data-type="T"><img class="d-block w-100" src="ArticleImage/0096JBC/jbc-20-368-i005-m.jpg" alt="slide"></a>
+                    </div>
+                                </div>
+                
+                <button class="carousel-control-prev" type="button" data-bs-target="#article-portlet-table-carousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#article-portlet-table-carousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>  
+                <div>
+                    <p class="text-center"><span class="carousel-current-page">1</span> / 5</p>
+                </div>              
+            </div>      
+        </div>
+    </div>                    
+         
+
+    <!--
+    //
+    // PORTLET - ORCIDs
+    //			
+    -->	
+
+    
+
+    <!--
+    //
+    // PORTLET - FundRef
+    //
+    -->
+
+     
+    
+    <hr class="navbar-goto-display d-none">                  
+    
+    <!--
+    //
+    // PORTLET - Goto
+    //
+    -->
+
+    <nav id="navbar-goto" data-bs-spy="scroll" class="sticky-top mb-5" tabindex="0">        
+        <div class="navbar-goto-display d-none">
+            <ul id="navbar-goto-item" class="nav nav-pills flex-column">
+            </ul>
+        </div>
+    </nav>
+                </div>
+            </div>           
+
+        </section>
+    </div>
+
+    <div>
+                <div id="CrossrefCitationListModal" class="modal fade" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Cited by Crossref</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>                               
+                            </div>
+                            <div class="modal-body">
+                                <p>Is Cited by the Following Articles in <img src="image/icon_CrossRef.gif"></p>
+                                <p class="modal-body-citationlist"></p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="CiteModal" class="modal" tabindex="-1">
+                <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Cite</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="CiteModalCopyAlert" class="d-none alert alert-primary alert-dismissible fade show" role="alert">
+                                Citation successfully copied.                                
+                            </div>
+
+                            <p>Copy and paste a formatted citation from below or use one of the hyperlinks at the bottom to download a file for import into a bibliography manager.</p>
+
+                            <p id="CiteModalContent" class="w-100 p-3 border"></p>
+
+                            <div id="CiteModalButtons" class="btn-group dropup py-3">
+
+                                <button id="Portlet-MenuItem-CITATION-Copy" type="button" class="btn btn-outline-primary me-1" aria-label="Copy" data-dismiss="alert" data-original-title="Copy to clipboard">Copy <i class="bi bi-copy"></i></button>
+
+
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-primary me-1" type="button" id="dropdownDownload" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Download <i class="bi bi-download"></i> 
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownDownload">
+                                        <li><a class="dropdown-item" href="#" data-cr="cr1" data-ex="ex3">EndNote / ProCite / Reference Manager</a></li>
+                                        <li><a class="dropdown-item" href="#" data-cr="cr1" data-ex="ex2">RIS Format</a></li>
+                                        <li><a class="dropdown-item" href="#" data-cr="cr1" data-ex="ex1">Plain Text</a></li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-primary me-1" type="button" id="dropdownDownloadAbstract" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Download with Abstract <i class="bi bi-download"></i> 
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownDownloadAbstract">
+                                        <li><a class="dropdown-item" href="#" data-cr="cr2" data-ex="ex3">EndNote / ProCite / Reference Manager</a></li>
+                                        <li><a class="dropdown-item" href="#" data-cr="cr2" data-ex="ex2">RIS Format</a></li>
+                                        <li><a class="dropdown-item" href="#" data-cr="cr2" data-ex="ex1">Plain Text</a></li>
+                                    </ul>
+                                </div>                       
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="FigureTableModal" class="modal fade" tabindex="-1">
+                <div class="modal-dialog modal-fullscreen modal-dialog-scrollable mx-auto align-middle">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="SharePermalinkModal" class="d-none z-n1">
+                <div data-name="popover-content" class="z-n1">
+                    <div class="d-flex mb-2">
+                        <div class="me-auto">PERMALINK</div>
+                        <div><!--<button type="button" class="btn-close" data-bs-dismiss="popover" aria-label="Close"></button>--></div>
+                    </div>
+                    <form class="d-flex" role="search">                        
+                        <textarea id="SharePermalinkText" readonly class="copyCliboardText form-control" disabled rows="4"></textarea>
+                        <button id="SharePermalinkCopyClipboardBtn" class="copyclipboard btn btn-primary border" type="btn"><i class="bi bi-clipboard"></i>Copy</button>
+                    </form>
+                </div>
+            </div>
+
+
+            <div class="toast-container position-fixed bottom-0 end-0 p-3">
+                <div id="copyCliboardCompleteToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                        Permalink information copied to clipboard
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>     
+    <div class="abody">
+        <div id="reference-panel" class="d-none">        
+            <a class="close" href="#"><span class="bi bi-x-circle"></span></a>
+            <div id="reference-panel-item"></div>
+        </div>
+    </div>
+
+        </main>
+
+        <footer class="mt-auto"> 
+        <div class="mt-5"></div>
+
+<div class="line"></div>
+
+<div class="container text-center my-3">
+    <div class="row justify-content-md-center adBanner">
+        <div class="col py-2 banner"><a href="https://gbcc.kr" target="_blank"><img height="60" src="../images/banner-GBCC_2026.jpg" alt=""></a></div>
+        <div class="col py-2 banner"><a href="https://www.ekdp.com/main.do" target="_blank"><img src="../images/banner-kwangdong.jpg" width="220"></a></div>
+    </div>
+</div>
+
+            <div class="line"></div>
+
+<div class="container px-4 text-center footer-text footer-data">
+  
+    <div class="row row-cols-md-2 row-cols-2 row-cols-lg-4 g-2 g-lg-3">
+        <div class="col p-3">
+            <b>Publisher</b>
+            <a style="padding-left: 10px; text-indent: -10px;" href="http://www.kbcs.or.kr" target="_blank">Korean Breast Cancer Society</a>                                                   
+            <a class="mt-3 text-start" href="/index.php?body=contact">Contact us</a>
+
+            <a class="mt-3" style="color: #a0a0a0; FONT-SIZE: 100%; font-weight: bold; font-style: italic;" href="https://ejbc.kr/">Open Access</a>
+
+            <a class="mt-3" href="https://www.kofst.or.kr/" target="_blank">KOFST</a> 
+        </div>
+        <div class="col p-3">
+            <b>JBC on</b>
+            <a href="https://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&term=%22J%20Breast%20Cancer%22%5Bjour%5D" target="_blank">PubMed</a>
+            <a href="https://www.ncbi.nlm.nih.gov/pmc/journals/1573" target="_blank">PubMed Central</a>
+            <a href="http://webofknowledge.com/" target="_blank">Web of Science</a>  
+            <a href="https://www.scopus.com/" target="_blank">Scopus</a>  
+            <a href="https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=Journal+of+Breast+Cancer&btnG=" target="_blank">Google Scholar</a>
+            <a href="https://www.crossref.org/" target="_blank">Crossref</a>
+        </div>
+        <div class="col p-3">
+            <b>Information</b>                          
+            <a href="index.php?body=about">Aims and Scope</a>                               
+            <a href="index.php?body=board">Editorial Board</a>
+            <a href="index.php?body=instruction">Instructions for Authors</a>            
+            <a href="index.php?body=j-info">Journal Information</a>
+        </div>
+        <div class="col p-3">
+            <b>Browse</b>
+            <a href="index.php?body=forthcoming">Forthcoming Articles</a>             
+           <a href="index.php?body=current">Current Issue</a>                                
+           <a href="index.php?body=archive">Past Issues</a>      
+        </div>
+    </div> 
+
+</div>
+
+<div class="container-fluid">
+    <div class="bottom row">
+        <div>
+            <a href="https://xmlink.kr/XMLink-Hub.php" target="_blank" style="color: #BBBBBB;"><img src="https://xmlink.kr/images/xmlinkhub-logo-gray-2024.png" style="margin-right: 50px;">&#x00A9; 2026 </a>
+        </div>
+    </div>
+</div>
+        </flooter>        
+
+        <!-- Scripts -->
+        
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>        
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/gh/kartik-v/bootstrap-popover-x@1.5.1/js/bootstrap-popover-x.min.js" type="text/javascript"></script>
+        <script src="js/jquery.twbsPagination.min.js" type="text/javascript"></script>
+        <script src="js/nouislider.min.js" type="text/javascript"></script>
+        <script src="js/wNumb.min.js" type="text/javascript"></script>
+
+        
+    <script src="js/chartist.min.js" type="text/javascript"></script>
+    <script src="js/chartist-plugin-tooltip.js" type="text/javascript"></script>
+
+    <script src="js/commonScript.js" type="text/javascript"></script>
+    <script src="js/sharepopoverScript.js" type="text/javascript"></script>
+    <script src="js/refpopoverScript.js" type="text/javascript"></script>
+    <script>
+
+        jQuery(document).ready(function ($) {
+
+            // Tooltip
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));            
+
+                        $("#SharePermalinkText").val("https://ejbc.kr/DOIx.php?id=10.4048/jbc.2017.20.4.368");
+            
+            // Icons
+            const articleIconCoressp = document.getElementsByClassName("article-icon-corresp");
+            for (let i = 0; i < articleIconCoressp.length; i++) {
+                 articleIconCoressp[i].classList.add('bi', 'bi-envelope' );
+            }
+
+                            // Document Type
+            document.getElementsByClassName("article-type")[0].innerHTML = "Original Article";
+                        
+            //
+            // Relate Articles
+            //
+
+            const aRelateArticleInfo = [];            
+            const articleRelateNode = document.getElementById("article-relate-articles");
+            if  ( articleRelateNode != null ) {
+                articleRelateNode.classList.add('list-group', 'my-3');
+                for (index in aRelateArticleInfo) {
+                    let div = document.createElement('div');
+                    div.setAttribute('class', 'list-group-item');                
+                    div.innerHTML  = aRelateArticleInfo[ index ];
+                    articleRelateNode.appendChild ( div );
+                }
+            }
+
+            //
+            // SCRIPTS
+            //
+
+            //
+            // for Authors and Keywords
+            //
+
+            // Function to transform keywords into links
+            function transformKeywords() {
+                var keywordTitles = document.querySelectorAll('.article-keyword-group-title');
+                keywordTitles.forEach(function (keywordTitle) {
+                    var keywordContainer = keywordTitle.nextElementSibling;
+                    if (keywordContainer) {
+                    var keywordElements = keywordContainer.querySelectorAll('.capture-id');
+                    keywordElements.forEach(function (element) {
+                        var keyword = element.textContent.trim();
+                        var link = document.createElement('a');
+                        link.href = '/search.php?where=asummary&queryfilter=keyword&query=' + encodeURIComponent(keyword);
+                        link.textContent = keyword;
+                        element.innerHTML = '';
+                        element.appendChild(link);
+                        element.classList.add('keyword-group-item');
+                    });
+                    }
+                });
+            }
+
+            // transformKeywords();
+
+            var articleContrib = document.querySelector('.article-contrib');
+            var nodes = articleContrib.childNodes;
+
+            if ($(".article-contrib .capture-id").length > 6) 
+            {
+                for (var i = 0; i < nodes.length; i++) {
+                    if (nodes[i].nodeType === Node.TEXT_NODE && nodes[i].nodeValue.trim() === 'and') {
+                        var span = document.createElement('span');
+                        span.style.display = 'none';
+                        span.className = 'hidden-and-text';
+                        span.textContent = ' and ';
+                        articleContrib.replaceChild(span, nodes[i]);
+                        break;
+                    }
+                }
+            }
+
+            function applyShowMore(selector) {
+                $(selector + " .capture-id").each(function (index) {
+                    if (index > 5) {
+                        $(this).hide();
+                    }
+                });
+
+                if ($(selector + " .capture-id").length > 6) {
+                    $(selector).append('<a href="#" class="show-more show-toggle">view all</a>');
+                }
+
+                $(selector).on("click", ".show-more", function (e) {
+                    e.preventDefault();
+                    $(selector + " .capture-id:hidden").show();
+                    if (selector === ".article-contrib") {
+                        $(".hidden-and-text").show();
+                    }
+                    $(this).text(" view less ").removeClass("show-more").addClass("show-less");
+                });
+
+                $(selector).on("click", ".show-less", function (e) {
+                    e.preventDefault();
+                    $(selector + " .capture-id").slice(6).hide();
+                    if (selector === ".article-contrib") {
+                        $(".hidden-and-text").hide();
+                    }
+                    $(this).text("view all").removeClass("show-less").addClass("show-more");
+                });
+            }
+
+            applyShowMore(".article-contrib");
+            applyShowMore(".article-contrib-ko");            
+
+
+            //
+            // for SECTIONS
+            //
+
+            var	aArticleSection = new  Array();            
+            
+            $( ".__SECTION__" ).each(function( index, elem ){
+                aArticleSection.push(  $(elem).attr('data-section-name') );
+			});
+
+            $( ".__SECTION__" ).each(function( index, elem ){
+                var $dropdownMenuNode = $(elem).children(".dropdown").find(".dropdown-menu");
+                $( aArticleSection ).each(function( index, elem ){
+                    $dropdownMenuNode.append('<a class="dropdown-item" href="#__ID_SECTION_'+index+'">'+ elem +'</a>');
+                });
+            });
+            
+            $( aArticleSection ).each(function( index, elem ){
+                $( '#navbar-goto-item' ).append('<li class="nav-item"><a class="nav-link" href="#__ID_SECTION_'+index+'">'+ elem +'</a></li>');
+                $( '#navbar-article-top-toolbar-goto' ).append('<li><a class="dropdown-item" href="#__ID_SECTION_'+index+'">'+ elem +'</a></li>');
+            });
+
+            function    moveArticleToSection( targetElement ) {
+                var headerHeight = parseInt(getComputedStyle(document.querySelector('header')).height);
+                var navbarArticleTopToolbarHeight = parseInt(getComputedStyle(document.querySelector('#navbar-article-top-toolbar')).height);
+
+                                var scrollDirection = targetElement.offsetTop > window.pageYOffset ? navbarArticleTopToolbarHeight + 15 : headerHeight + 15;
+                window.scrollTo({ 
+                    top: targetElement.offsetTop - scrollDirection ,
+                    behavior: 'auto' 
+                });
+                            }
+
+            document.querySelectorAll('#navbar-article-top-toolbar-goto a[href^="#__ID_SECTION_"]').forEach(anchor => { 
+                anchor.addEventListener('click', function (e) { 
+                    e.preventDefault(); 
+                    const targetElement = document.querySelector(this.getAttribute('href')); 
+                    moveArticleToSection ( targetElement );
+                }); 
+            });
+
+            const moveArticleToSectionNode = document.querySelector('#article-move-supplement-material');
+            if  ( moveArticleToSectionNode != null ) {
+                moveArticleToSectionNode.addEventListener('click', function (e) { 
+                    e.preventDefault(); 
+                    const targetElement = document.querySelector(moveArticleToSectionNode.getAttribute('href')); 
+                    moveArticleToSection ( targetElement );
+                });
+            }
+        
+            const scrollSpyTop = new bootstrap.ScrollSpy(document.body, {
+                target: '#navbar-article-top-toolbar',
+                });
+
+            const scrollSpyPortlet = new bootstrap.ScrollSpy(document.body, {
+                target: '#navbar-goto',
+                });
+
+
+            if  ( aArticleSection.length > 1 ) {
+                $(".navbar-goto-display").removeClass("d-none");
+            }           
+
+            //
+            // for CROSSMARK
+            //
+
+                            $( "#crossref-crossmark a" ).append('<img src="https://crossmark-cdn.crossref.org/widget/v2.0/logos/CROSSMARK_Color_square.svg" width="60" />');
+                $( "#crossref-crossmark" ).show();
+                        
+
+            //
+            //
+            //
+            
+                        
+			var aPageViewCount = {
+					labels: ['Aug/2020','Sep/2020','Oct/2020','Nov/2020','Dec/2020','Jan/2021','Feb/2021','Mar/2021','Apr/2021','May/2021','Jun/2021','Jul/2021','Sep/2021','Oct/2021','Nov/2021','Dec/2021','Jan/2022','Feb/2022','Mar/2022','Apr/2022','May/2022','Jun/2022','Jul/2022','Sep/2022','Oct/2022','Nov/2022','Jan/2023','Apr/2023','May/2023','Jun/2023','Jul/2023','Aug/2023','Sep/2023','Nov/2023','Dec/2023','Jan/2024','Apr/2024','Jun/2024','Aug/2024','Oct/2024','Dec/2024','Jan/2025','Feb/2025','Mar/2025','Apr/2025','May/2025','Jun/2025','Jul/2025','Aug/2025','Sep/2025','Oct/2025','Dec/2025','Jan/2026','Feb/2026','Mar/2026','Apr/2026'],
+					series: [
+						[{meta:'Aug/2020', value: 1},{meta:'Sep/2020', value: 1},{meta:'Oct/2020', value: 1},{meta:'Nov/2020', value: 4},{meta:'Dec/2020', value: 1},{meta:'Jan/2021', value: 2},{meta:'Feb/2021', value: 1},{meta:'Mar/2021', value: 4},{meta:'Apr/2021', value: 1},{meta:'May/2021', value: 2},{meta:'Jun/2021', value: 2},{meta:'Jul/2021', value: 6},{meta:'Sep/2021', value: 2},{meta:'Oct/2021', value: 4},{meta:'Nov/2021', value: 3},{meta:'Dec/2021', value: 4},{meta:'Jan/2022', value: 5},{meta:'Feb/2022', value: 1},{meta:'Mar/2022', value: 2},{meta:'Apr/2022', value: 2},{meta:'May/2022', value: 2},{meta:'Jun/2022', value: 3},{meta:'Jul/2022', value: 1},{meta:'Sep/2022', value: 1},{meta:'Oct/2022', value: 3},{meta:'Nov/2022', value: 2},{meta:'Jan/2023', value: 1},{meta:'Apr/2023', value: 4},{meta:'May/2023', value: 1},{meta:'Jun/2023', value: 1},{meta:'Jul/2023', value: 2},{meta:'Aug/2023', value: 3},{meta:'Sep/2023', value: 4},{meta:'Nov/2023', value: 2},{meta:'Dec/2023', value: 2},{meta:'Jan/2024', value: 0},{meta:'Apr/2024', value: 1},{meta:'Jun/2024', value: 1},{meta:'Aug/2024', value: 2},{meta:'Oct/2024', value: 2},{meta:'Dec/2024', value: 1},{meta:'Jan/2025', value: 2},{meta:'Feb/2025', value: 2},{meta:'Mar/2025', value: 2},{meta:'Apr/2025', value: 1},{meta:'May/2025', value: 1},{meta:'Jun/2025', value: 3},{meta:'Jul/2025', value: 2},{meta:'Aug/2025', value: 4},{meta:'Sep/2025', value: 1},{meta:'Oct/2025', value: 5},{meta:'Dec/2025', value: 1},{meta:'Jan/2026', value: 2},{meta:'Feb/2026', value: 3},{meta:'Mar/2026', value: 2},{meta:'Apr/2026', value: 7}],						
+					]
+				};
+
+            var aPDFDownloadCount = {
+                labels: ['Aug/2020','Sep/2020','Oct/2020','Nov/2020','Dec/2020','Jan/2021','Feb/2021','Mar/2021','Apr/2021','May/2021','Jun/2021','Jul/2021','Sep/2021','Oct/2021','Nov/2021','Dec/2021','Jan/2022','Feb/2022','Mar/2022','Apr/2022','May/2022','Jun/2022','Jul/2022','Sep/2022','Oct/2022','Nov/2022','Jan/2023','Apr/2023','May/2023','Jun/2023','Jul/2023','Aug/2023','Sep/2023','Nov/2023','Dec/2023','Jan/2024','Apr/2024','Jun/2024','Aug/2024','Oct/2024','Dec/2024','Jan/2025','Feb/2025','Mar/2025','Apr/2025','May/2025','Jun/2025','Jul/2025','Aug/2025','Sep/2025','Oct/2025','Dec/2025','Jan/2026','Feb/2026','Mar/2026','Apr/2026'],
+                series: [
+                    [{meta:'Aug/2020', value: 1},{meta:'Sep/2020', value: 0},{meta:'Oct/2020', value: 1},{meta:'Nov/2020', value: 2},{meta:'Dec/2020', value: 0},{meta:'Jan/2021', value: 1},{meta:'Feb/2021', value: 0},{meta:'Mar/2021', value: 1},{meta:'Apr/2021', value: 1},{meta:'May/2021', value: 0},{meta:'Jun/2021', value: 0},{meta:'Jul/2021', value: 2},{meta:'Sep/2021', value: 1},{meta:'Oct/2021', value: 2},{meta:'Nov/2021', value: 1},{meta:'Dec/2021', value: 1},{meta:'Jan/2022', value: 4},{meta:'Feb/2022', value: 0},{meta:'Mar/2022', value: 1},{meta:'Apr/2022', value: 2},{meta:'May/2022', value: 1},{meta:'Jun/2022', value: 1},{meta:'Jul/2022', value: 1},{meta:'Sep/2022', value: 0},{meta:'Oct/2022', value: 2},{meta:'Nov/2022', value: 1},{meta:'Jan/2023', value: 1},{meta:'Apr/2023', value: 0},{meta:'May/2023', value: 0},{meta:'Jun/2023', value: 0},{meta:'Jul/2023', value: 0},{meta:'Aug/2023', value: 0},{meta:'Sep/2023', value: 3},{meta:'Nov/2023', value: 0},{meta:'Dec/2023', value: 2},{meta:'Jan/2024', value: 6},{meta:'Apr/2024', value: 0},{meta:'Jun/2024', value: 0},{meta:'Aug/2024', value: 1},{meta:'Oct/2024', value: 0},{meta:'Dec/2024', value: 0},{meta:'Jan/2025', value: 0},{meta:'Feb/2025', value: 0},{meta:'Mar/2025', value: 0},{meta:'Apr/2025', value: 0},{meta:'May/2025', value: 0},{meta:'Jun/2025', value: 0},{meta:'Jul/2025', value: 0},{meta:'Aug/2025', value: 0},{meta:'Sep/2025', value: 1},{meta:'Oct/2025', value: 1},{meta:'Dec/2025', value: 1},{meta:'Jan/2026', value: 0},{meta:'Feb/2026', value: 0},{meta:'Mar/2026', value: 0},{meta:'Apr/2026', value: 1}],						
+                ]
+            };
+
+            $(".PageViewLink").on("click", function(){
+
+                new Chartist.Line('#my-chart', aPageViewCount, {
+                    plugins: [
+                        Chartist.plugins.tooltip({
+                            pointClass: 'ct-point',
+                            tooltipOffset: {
+                                x: 15,
+                                y: 35
+                            },
+                            transformTooltipTextFnc: function(value){
+                                return	'Counts: ' + value;
+                            }
+                        })
+                    ],
+                    fullWidth: false,
+                    lineSmooth: Chartist.Interpolation.cardinal({
+                        tension: 0
+                    }),						
+                    low: 0,
+                    showArea: true,
+                    axisY: {
+                        onlyInteger: true,
+                        }
+                    });
+
+                $('#myModalLabel').html('Page Views');
+                $('#myModalTotalLinkLabel').html('<div class="d-flex">\
+                    <div class="flex-grow-1">Total Page Views: 126</div><div><a href="/export/count/view/article/10.4048/jbc.2017.20.4.368"><img src="image/icon-excel.png"> Download as Excel file</a></div>\
+                    </div>\
+                ');
+
+                var myModal = new bootstrap.Modal(document.getElementById('myModal'));                
+                myModal.show();
+
+                return	false;
+            });
+
+            $(".PDFDownloadLink").on("click", function(){
+                new Chartist.Line('#my-chart', aPDFDownloadCount, {
+                    fullWidth: false,
+                    low: 0,
+                    lineSmooth: Chartist.Interpolation.cardinal({
+                        tension: 0
+                    }),
+                    showArea: true,
+                    axisY: {
+                        onlyInteger: true,							
+                    },
+                    plugins: [
+                        Chartist.plugins.tooltip({
+                            pointClass: 'ct-point',
+                            tooltipOffset: {
+                                x: 15,
+                                y: 35
+                            },
+                            transformTooltipTextFnc: function(value){
+                                return	'Counts: ' + value;
+                            }
+                        })
+                    ],
+                    });
+
+                $('#myModalLabel').html('PDF Downloads');
+                $('#myModalTotalLinkLabel').html('<div class="d-flex"><div class="flex-grow-1">Total PDF Downloads: 44</div><div><a href="/export/count/download/pdf/10.4048/jbc.2017.20.4.368"><img src="image/icon-excel.png"> Download as Excel file</a></div></div>');
+
+                var myModal = new bootstrap.Modal(document.getElementById('myModal'));                
+                myModal.show();
+
+                return	false;
+            });
+
+
+            $("#item-list li").click(function(e) {
+	            e.preventDefault();
+	            e.stopPropagation();
+            });
+
+            $('.bm-ref-list-ol > li').css("cursor", "pointer"); //addClass('link');
+
+            $(".bm-ref-list-ol li").on( "click", function() {                
+                return false;
+            }).children().click(function(e) {
+                return false;
+            }); 
+        });
+
+
+        var trackDownloadLink = function(category, doi) {
+            gtag('event', 'download', {
+                    'event_category': category,
+                    'event_label': doi
+                    });
+        }
+
+
+    </script>
+
+        <script src="https://crossmark-cdn.crossref.org/widget/v2.0/widget.js" type="text/javascript"></script>
+       
+    
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+        <script type="text/javascript">
+
+
+
+</script>
+<script src="js/ga_modal.js"></script>
+<script src="js/article_modal.js"></script>
+<script src="js/forthcomingAdd.js"></script>
+<script src="js/scroll_change_menu.js"></script>
+<script src="https://xmlink.kr/js/sliderControl.js"></script>
+<script src="https://xmlink.kr/js/image_slider.js"></script>
+
+    </body>
+</html>
