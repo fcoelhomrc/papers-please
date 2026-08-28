@@ -1,16 +1,26 @@
 """Runs a Pipeline against eval/dataset.jsonl and scores it with Ragas.
 
-Costs real LLM judge calls (one call per metric per question, roughly) -
-not wired into pytest/CI. Run on demand:
+MANUAL ONLY. Costs real Anthropic API calls (your ANTHROPIC_API_KEY - Ragas
+has no key of its own, it just calls whatever LLM object you hand it): one
+call per question for the pipeline's own answer, plus roughly one judge
+call per metric per question. This is never invoked automatically - not
+from compose.yaml, not from any CI workflow (there isn't one), not from any
+stage worker. It only runs when a human types the command below.
 
     uv run python -m eval.run --variant fixed
     uv run python -m eval.run --variant agentic
 
-Judge LLM is Claude (via ragas' LangchainLLMWrapper around our own
-make_llm()) - no OpenAI key needed, consistent with the rest of the stack.
-Judge embeddings reuse the same bge-small model already used for search
-(wrapped for ragas via langchain_community's HuggingFaceEmbeddings) - local,
-no extra API cost.
+Judge LLM is Claude (via ragas' LangchainLLMWrapper) - no OpenAI key
+needed, consistent with the rest of the stack. Judge embeddings reuse the
+same bge-small model already used for search (wrapped for ragas via
+langchain_community's HuggingFaceEmbeddings) - local, no extra API cost.
+
+Every run writes two artifacts:
+  - eval/results/{variant}-{timestamp}.json - full raw output (gitignored,
+    scratch/debugging use)
+  - eval/reports/{variant}-{timestamp}.md - human-readable markdown report
+    with summary + per-question tables (NOT gitignored - meant to be
+    committed and reviewed)
 """
 import argparse
 import json
@@ -24,6 +34,7 @@ from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import answer_relevancy, context_precision, context_recall, faithfulness
 
 from eval.pipeline import AgenticPipeline, FixedPipeline, Pipeline
+from eval.report import write_markdown_report
 
 RESULTS_DIR = Path(__file__).parent / "results"
 DATASET_PATH = Path(__file__).parent / "dataset.jsonl"
@@ -41,7 +52,15 @@ def load_dataset(path: Path) -> list[dict]:
     return rows
 
 
-def run_eval(pipeline: Pipeline, dataset_path: Path, variant_name: str, judge_llm, judge_embeddings) -> dict:
+def run_eval(
+    pipeline: Pipeline,
+    dataset_path: Path,
+    variant_name: str,
+    judge_llm,
+    judge_embeddings,
+    model_name: str = "",
+    judge_model_name: str = "",
+) -> dict:
     rows = load_dataset(dataset_path)
     records = []
     for row in rows:
@@ -77,6 +96,9 @@ def run_eval(pipeline: Pipeline, dataset_path: Path, variant_name: str, judge_ll
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_path = RESULTS_DIR / f"{variant_name}-{timestamp}.json"
     out_path.write_text(json.dumps(output, indent=2, default=str))
+
+    report_path = write_markdown_report(output, rows, model_name, judge_model_name)
+    output["report_path"] = str(report_path)
 
     return output
 
@@ -127,11 +149,20 @@ def main():
     ensure_fixtures_seeded()
 
     pipeline = _build_pipeline(args.variant)
-    output = run_eval(pipeline, Path(args.dataset), args.variant, judge_llm, judge_embeddings)
+    output = run_eval(
+        pipeline,
+        Path(args.dataset),
+        args.variant,
+        judge_llm,
+        judge_embeddings,
+        model_name=cfg.llm.model,
+        judge_model_name=cfg.llm.model,
+    )
 
     print(f"variant: {output['variant']}")
     for name, score in output["means"].items():
         print(f"  {name}: {score:.3f}")
+    print(f"report: {output['report_path']}")
 
 
 if __name__ == "__main__":

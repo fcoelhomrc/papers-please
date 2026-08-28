@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from eval.fixtures import FIXTURES
 from eval.seed import ensure_fixtures_seeded
 
 
@@ -14,10 +15,7 @@ class TestEnsureFixturesSeededUnit:
     def test_skips_entirely_when_all_fixtures_already_present(self):
         session = MagicMock()
         session.execute.return_value.scalars.return_value.all.return_value = [
-            "eval-fixture-icub-promp",
-            "eval-fixture-muscle-synergy-rl",
-            "eval-fixture-fall-recovery-wheeled",
-            "eval-fixture-supervisory-control-review",
+            f["source_id"] for f in FIXTURES
         ]
 
         with (

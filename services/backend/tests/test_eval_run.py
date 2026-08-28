@@ -51,6 +51,7 @@ def test_run_eval_shapes_pipeline_output_into_ragas_records(tmp_path):
         patch("eval.run.RESULTS_DIR", tmp_path / "results"),
         patch("eval.run.EvaluationDataset") as MockDataset,
         patch("eval.run.evaluate", return_value=fake_eval_result) as mock_evaluate,
+        patch("eval.run.write_markdown_report", return_value=tmp_path / "report.md") as mock_report,
     ):
         output = run_eval(pipeline, dataset_path, "fixed", judge_llm=MagicMock(), judge_embeddings=MagicMock())
 
@@ -67,6 +68,8 @@ def test_run_eval_shapes_pipeline_output_into_ragas_records(tmp_path):
     mock_evaluate.assert_called_once()
     assert output["variant"] == "fixed"
     assert output["means"]["faithfulness"] == 0.9
+    assert output["report_path"] == str(tmp_path / "report.md")
+    mock_report.assert_called_once()
 
     # a results file was actually written, to the patched (tmp) dir, not the real one
     result_files = list((tmp_path / "results").glob("*.json"))
@@ -87,6 +90,7 @@ def test_run_eval_substitutes_placeholder_when_no_context_retrieved(tmp_path):
         patch("eval.run.RESULTS_DIR", tmp_path / "results"),
         patch("eval.run.EvaluationDataset") as MockDataset,
         patch("eval.run.evaluate", return_value=fake_eval_result),
+        patch("eval.run.write_markdown_report", return_value=tmp_path / "report.md"),
     ):
         run_eval(pipeline, dataset_path, "agentic", judge_llm=MagicMock(), judge_embeddings=MagicMock())
 
