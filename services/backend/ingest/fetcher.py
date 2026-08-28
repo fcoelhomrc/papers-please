@@ -53,14 +53,22 @@ class SemanticScholarFetcher(PostgresInterface):
                 break
             self.rate_limit(1)
 
-    def _write(self, documents: list[dict]):
+    def _write(self, documents: list[dict]) -> int:
+        """Insert, skipping documents whose source_id already exists (dedup
+        guard - source_id is UNIQUE). Returns the count actually inserted,
+        not len(documents), so callers can tell real new papers from
+        duplicates silently skipped."""
         rows = [DocumentTemplate.from_s2(d).model_dump() for d in documents]
         with Session(self.engine) as session:
-            session.execute(
-                insert(Document).on_conflict_do_nothing(index_elements=["source_id"]),
+            result = session.execute(
+                insert(Document)
+                .on_conflict_do_nothing(index_elements=["source_id"])
+                .returning(Document.id),
                 rows,
             )
+            inserted = len(result.fetchall())
             session.commit()
+        return inserted
 
     def fetch(
         self,
@@ -69,6 +77,9 @@ class SemanticScholarFetcher(PostgresInterface):
         year: str | None = None,
         max_papers: int = 500,
     ) -> int:
+        """Returns the count of genuinely new papers added - not the count
+        of API results processed. Re-fetching an already-known query returns
+        0, rather than reporting max_papers as if all of them were new."""
         params = {"fields": FIELDS, "limit": 1000}
         if query:
             params["query"] = query
@@ -77,16 +88,21 @@ class SemanticScholarFetcher(PostgresInterface):
         if year:
             params["year"] = year
 
-        total = 0
+        processed = 0
+        new_count = 0
         for batch in self._paginate(params):
-            batch = batch[: max_papers - total]
+            batch = batch[: max_papers - processed]
             if batch:
-                self._write(batch)
-                total += len(batch)
-            if total >= max_papers:
+                new_count += self._write(batch)
+                processed += len(batch)
+            if processed >= max_papers:
                 break
-        logger.info(f"Fetched {total} papers (venue={venue}, query={query})")
-        return total
+        skipped = processed - new_count
+        logger.info(
+            f"Fetched {new_count} new papers ({skipped} already known, "
+            f"venue={venue}, query={query})"
+        )
+        return new_count
 
 
 class PdfFetcher(PostgresInterface):
