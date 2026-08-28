@@ -21,4 +21,4 @@ data/**
 node_modules/
 dist/
 .npm
-eval/results/*.json
+**/eval/results/*.json

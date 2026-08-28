@@ -17,6 +17,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from langchain_anthropic import ChatAnthropic
 from ragas import EvaluationDataset, evaluate
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
@@ -94,6 +95,15 @@ def _build_pipeline(variant: str) -> Pipeline:
     raise ValueError(f"unknown variant: {variant!r}")
 
 
+def _judge_llm(cfg):
+    # Ragas' judge needs more room than the chat agent's UX-tuned 512 - its
+    # metrics prompt for reasoning before a verdict, and briefer completions
+    # were hitting LLMDidNotFinishException (truncated before it could
+    # finish). A separate, judge-specific construction rather than reusing
+    # make_llm()'s max_tokens=512.
+    return ChatAnthropic(model=cfg.llm.model, max_tokens=2048)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--variant", choices=["fixed", "agentic"], required=True)
@@ -102,12 +112,19 @@ def main():
 
     from config import load
     from langchain_community.embeddings import HuggingFaceEmbeddings
-    from orchestrator.llm import make_llm
     from process.embedder import MODELS
 
     cfg = load()
-    judge_llm = make_llm(cfg)
+    judge_llm = _judge_llm(cfg)
     judge_embeddings = HuggingFaceEmbeddings(model_name=MODELS[cfg.embedder.model]["hf_name"])
+
+    # Makes eval reproducible regardless of the dev DB's current state (a
+    # wipe, a fresh clone, whatever's been manually fetched) - the dataset's
+    # questions are grounded in eval/fixtures.py, not in whatever happens
+    # to already be ingested.
+    from eval.seed import ensure_fixtures_seeded
+
+    ensure_fixtures_seeded()
 
     pipeline = _build_pipeline(args.variant)
     output = run_eval(pipeline, Path(args.dataset), args.variant, judge_llm, judge_embeddings)
