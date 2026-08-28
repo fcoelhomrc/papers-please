@@ -28,6 +28,9 @@ dependencies = [
     "langchain-core>=0.3.0",
     "langgraph>=0.2.0",
     "langchain>=1.0.0",
+    "ragas>=0.2.0,<0.3.0",
+    "langchain-community<0.4",
+    "datasets>=3.0.0",
     "langchain-anthropic>=0.3.0",
     "langchain-openai>=0.3.0",
 ]
@@ -41,8 +44,9 @@ dev = [
 [tool.pytest.ini_options]
 markers = [
     "integration: hits real Postgres (podman container) and/or real Pinecone (test namespace); needs network + a container runtime, run explicitly with `-m integration`",
+    "eval: exercises eval/ (ragas harness) - ragas.executor calls nest_asyncio.apply() at import time, which poisons the asyncio event loop for the rest of the process and breaks FastAPI TestClient tests (anyio-based) if run in the same pytest invocation. Must run separately: `-m eval`.",
 ]
-addopts = "-m 'not integration'"
+addopts = "-m 'not integration and not eval' --ignore=tests/test_eval_run.py"
 
 [tool.uv.sources]
 torch = [
