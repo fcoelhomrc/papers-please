@@ -22,6 +22,17 @@ class TestFetchPapers:
             )
             assert result == "fetched 7 papers"
 
+    def test_invoke_catches_exceptions_instead_of_crashing_the_graph(self):
+        """Regression test for a real incident: an uncaught tool exception
+        crashed mid-turn, leaving a tool_use with no tool_result checkpointed
+        - Anthropic then rejected every future call on that thread. Every
+        tool must return an error value, never raise."""
+        with patch("orchestrator.tools.SemanticScholarFetcher") as MockFetcher:
+            MockFetcher.return_value.fetch.side_effect = RuntimeError("too many clients")
+            result = tools.fetch_papers.invoke({"query": "x"})
+
+        assert "error" in result.lower()
+
 
 class TestGetStatus:
     def test_invoke_delegates_to_pipeline_status(self):
@@ -32,6 +43,12 @@ class TestGetStatus:
             result = tools.get_status.invoke({})
 
         assert result == fake_status
+
+    def test_invoke_catches_exceptions_instead_of_crashing_the_graph(self):
+        with patch("orchestrator.tools.pipeline_status", side_effect=RuntimeError("too many clients")):
+            result = tools.get_status.invoke({})
+
+        assert "error" in result
 
 
 class TestSearchChunks:
@@ -79,6 +96,15 @@ class TestSearchChunks:
             }
         ]
 
+    def test_invoke_catches_exceptions_instead_of_crashing_the_graph(self):
+        mock_engine = MagicMock()
+        mock_engine.search.side_effect = RuntimeError("too many clients")
+
+        with patch("orchestrator.tools.get_search_engine", return_value=mock_engine):
+            result = tools.search_chunks.invoke({"query": "x"})
+
+        assert "error" in result[0]
+
 
 class TestGetDocument:
     def test_invoke_returns_metadata_for_known_doc(self):
@@ -119,5 +145,14 @@ class TestGetDocument:
         ):
             MockSession.return_value.__enter__.return_value = session
             result = tools.get_document.invoke({"doc_id": 404})
+
+        assert "error" in result
+
+    def test_invoke_catches_exceptions_instead_of_crashing_the_graph(self):
+        with patch(
+            "orchestrator.tools.PostgresInterface.connect",
+            side_effect=RuntimeError("too many clients"),
+        ):
+            result = tools.get_document.invoke({"doc_id": 9})
 
         assert "error" in result

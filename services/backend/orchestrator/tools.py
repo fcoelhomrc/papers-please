@@ -20,12 +20,26 @@ from search import get_search_engine
 from sqlalchemy.orm import Session
 from status import pipeline_status
 
+# Every tool below catches its own exceptions rather than letting them
+# propagate out of the graph's tools node - a real incident showed why: an
+# uncaught exception (Postgres connection exhaustion) crashed the request
+# mid-turn, leaving a tool_use message checkpointed with no matching
+# tool_result. Every subsequent call on that thread_id then got rejected by
+# Anthropic ("tool_use ids were found without tool_result blocks"),
+# permanently corrupting that conversation. Returning an error dict instead
+# keeps the message sequence valid either way - the agent sees the failure
+# and can report it, rather than the whole turn (and the thread's future)
+# blowing up.
+
 
 @tool
 def fetch_papers(query: str, max_papers: int = 100) -> str:
     """Fetch new paper metadata from Semantic Scholar for a search query."""
-    n = SemanticScholarFetcher().fetch(query=query, max_papers=max_papers)
-    return f"fetched {n} papers"
+    try:
+        n = SemanticScholarFetcher().fetch(query=query, max_papers=max_papers)
+        return f"fetched {n} papers"
+    except Exception as e:
+        return f"error: fetch failed ({e})"
 
 
 @tool
@@ -37,7 +51,10 @@ def get_status() -> dict:
     on its own deterministic schedule (stages/*.py). Same query the REST
     /status endpoint uses (status.pipeline_status), for the Queue dashboard.
     """
-    return pipeline_status()
+    try:
+        return pipeline_status()
+    except Exception as e:
+        return {"error": f"status check failed: {e}"}
 
 
 @tool
@@ -48,33 +65,41 @@ def search_chunks(query: str, top_k: int = 5, rerank: bool = True) -> list[dict]
     when answering so the user can find the source. Use get_document for
     more of a paper's context (e.g. its abstract) once you've found it here.
     """
-    response = get_search_engine().search(query, top_k=top_k, rerank=rerank, rerank_top_k=top_k)
-    return [
-        {
-            "doc_id": r.doc_id,
-            "title": r.title,
-            "authors": r.authors,
-            "year": r.year,
-            "page_num": r.page_num,
-            "text": r.text,
-            "score": r.score,
-        }
-        for r in response.results
-    ]
+    try:
+        response = get_search_engine().search(
+            query, top_k=top_k, rerank=rerank, rerank_top_k=top_k
+        )
+        return [
+            {
+                "doc_id": r.doc_id,
+                "title": r.title,
+                "authors": r.authors,
+                "year": r.year,
+                "page_num": r.page_num,
+                "text": r.text,
+                "score": r.score,
+            }
+            for r in response.results
+        ]
+    except Exception as e:
+        return [{"error": f"search failed: {e}"}]
 
 
 @tool
 def get_document(doc_id: int) -> dict:
     """Look up a paper's metadata (title, authors, year, abstract) by doc_id."""
-    with Session(PostgresInterface.connect()) as session:
-        doc = session.get(Document, doc_id)
-    if doc is None:
-        return {"error": f"no document with doc_id={doc_id}"}
-    return {
-        "doc_id": doc.id,
-        "title": doc.title,
-        "authors": doc.authors,
-        "venue": doc.venue,
-        "year": doc.year,
-        "abstract": doc.abstract,
-    }
+    try:
+        with Session(PostgresInterface.connect()) as session:
+            doc = session.get(Document, doc_id)
+        if doc is None:
+            return {"error": f"no document with doc_id={doc_id}"}
+        return {
+            "doc_id": doc.id,
+            "title": doc.title,
+            "authors": doc.authors,
+            "venue": doc.venue,
+            "year": doc.year,
+            "abstract": doc.abstract,
+        }
+    except Exception as e:
+        return {"error": f"lookup failed: {e}"}

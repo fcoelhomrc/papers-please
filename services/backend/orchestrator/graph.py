@@ -42,7 +42,14 @@ Be concise. Answer directly - no preambles ("I'll check that for you", "Let
 me search..."), no restating the question, no filler or hedging, no summary
 recap at the end. If a short answer fully answers it, give the short
 answer. Markdown is fine for structure (bold, lists) when it actually helps
-readability, not as decoration."""
+readability, not as decoration.
+
+Use the fewest tool calls that get a correct answer. One search_chunks call
+is usually enough - only call it again with a refined query if the first
+result set is genuinely insufficient, not to double-check a good result.
+Don't call get_status before every single fetch_papers - only when it's
+actually unclear whether we already have relevant papers. Every tool call
+costs real money; don't make one out of habit."""
 
 TOOLS = [fetch_papers, get_status, search_chunks, get_document]
 
