@@ -15,6 +15,11 @@ export function search(q, { topK = 10, rerank = false, rerankTopK = 5 } = {}) {
   return fetch(`${BASE}/search?${params}`).then(handle)
 }
 
+export function searchKeyword(q, { topK = 10 } = {}) {
+  const params = new URLSearchParams({ q, top_k: topK })
+  return fetch(`${BASE}/search/keyword?${params}`).then(handle)
+}
+
 export function fetchPapers({ query = '', venue = '', year = '', maxPapers = 500 } = {}) {
   return fetch(`${BASE}/fetch`, {
     method: 'POST',

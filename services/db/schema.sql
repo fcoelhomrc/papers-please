@@ -45,3 +45,7 @@ CREATE TABLE chunk_embeddings (
 CREATE INDEX idx_documents_has_pdf ON documents(pdf_url) WHERE pdf_url IS NOT NULL;
 CREATE INDEX idx_objects_pending ON objects(status) WHERE status = 'pending';
 CREATE INDEX idx_chunk_embeddings_model ON chunk_embeddings(model_id);
+
+-- Keyword search (plain Postgres full-text, not a separate search service -
+-- expression index means no extra column/trigger to keep in sync).
+CREATE INDEX idx_chunks_text_fts ON chunks USING GIN (to_tsvector('english', chunk_text));

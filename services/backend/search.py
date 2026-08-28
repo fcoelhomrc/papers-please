@@ -6,7 +6,7 @@ from pinecone.grpc import PineconeGRPC as Pinecone
 from process.embedder import MODELS, Reranker
 from schemas import ChunkResult, SearchResponse
 from sentence_transformers import SentenceTransformer
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 
@@ -96,6 +96,53 @@ class SearchEngine(PostgresInterface):
             reranked=rerank,
             results=[ChunkResult(**c) for c in chunks],
         )
+
+
+def keyword_search(query: str, top_k: int = 10) -> SearchResponse:
+    """Plain full-text search over chunk_text (Postgres tsvector/GIN, not a
+    separate search service) - complements the semantic/vector search above
+    for when you know the literal words you're looking for.
+    """
+    tsquery = func.plainto_tsquery("english", query)
+    tsvector = func.to_tsvector("english", Chunk.chunk_text)
+    rank = func.ts_rank(tsvector, tsquery)
+
+    stmt = (
+        select(
+            Chunk.id,
+            Chunk.chunk_text,
+            Chunk.page_num,
+            Object.path,
+            Document.id.label("doc_id"),
+            Document.title,
+            Document.authors,
+            Document.year,
+            rank.label("score"),
+        )
+        .join(Object, Chunk.obj_id == Object.id)
+        .join(Document, Object.doc_id == Document.id)
+        .where(tsvector.op("@@")(tsquery))
+        .order_by(rank.desc())
+        .limit(top_k)
+    )
+    with Session(PostgresInterface.connect()) as session:
+        rows = session.execute(stmt).all()
+
+    results = [
+        ChunkResult(
+            chunk_id=r.id,
+            doc_id=r.doc_id,
+            text=r.chunk_text,
+            page_num=r.page_num,
+            pdf_path=r.path,
+            title=r.title,
+            authors=r.authors,
+            year=r.year,
+            score=float(r.score),
+        )
+        for r in rows
+    ]
+    return SearchResponse(query=query, model="keyword", reranked=False, results=results)
 
 
 _engine: SearchEngine | None = None

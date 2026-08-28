@@ -1,5 +1,6 @@
+import * as Tabs from '@radix-ui/react-tabs'
 import { useState } from 'react'
-import { search } from '../api'
+import { search, searchKeyword } from '../api'
 import PdfPreview from '../components/PdfPreview'
 
 function ResultCard({ r }) {
@@ -29,6 +30,7 @@ function ResultCard({ r }) {
 }
 
 export default function Search() {
+  const [mode, setMode] = useState('semantic')
   const [query, setQuery] = useState('')
   const [rerank, setRerank] = useState(false)
   const [topK, setTopK] = useState(10)
@@ -42,7 +44,11 @@ export default function Search() {
     setLoading(true)
     setError(null)
     try {
-      setResults(await search(query, { topK, rerank, rerankTopK: 5 }))
+      const data =
+        mode === 'semantic'
+          ? await search(query, { topK, rerank, rerankTopK: 5 })
+          : await searchKeyword(query, { topK })
+      setResults(data)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -54,8 +60,29 @@ export default function Search() {
     <div className="max-w-3xl space-y-6">
       <div>
         <h1 className="text-lg font-semibold">Search</h1>
-        <p className="text-[13px] text-muted mt-0.5">Semantic search over indexed paper chunks.</p>
+        <p className="text-[13px] text-muted mt-0.5">
+          {mode === 'semantic'
+            ? 'Semantic search over indexed paper chunks - meaning, not exact words.'
+            : 'Keyword search - literal word matches, ranked by relevance.'}
+        </p>
       </div>
+
+      <Tabs.Root value={mode} onValueChange={setMode}>
+        <Tabs.List className="inline-flex rounded-lg border border-border bg-surface p-0.5 mb-4">
+          <Tabs.Trigger
+            value="semantic"
+            className="px-3.5 py-1.5 rounded-md text-[13px] font-medium text-muted data-[state=active]:bg-canvas data-[state=active]:text-ink"
+          >
+            Semantic
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="keyword"
+            className="px-3.5 py-1.5 rounded-md text-[13px] font-medium text-muted data-[state=active]:bg-canvas data-[state=active]:text-ink"
+          >
+            Keyword
+          </Tabs.Trigger>
+        </Tabs.List>
+      </Tabs.Root>
 
       <form onSubmit={handleSearch} className="space-y-3">
         <div className="flex gap-2">
@@ -63,7 +90,7 @@ export default function Search() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search research papers…"
+            placeholder={mode === 'semantic' ? 'Search research papers…' : 'Search exact words…'}
             className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ink/20"
           />
           <button
@@ -75,10 +102,12 @@ export default function Search() {
           </button>
         </div>
         <div className="flex items-center gap-5 text-[13px] text-muted">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input type="checkbox" checked={rerank} onChange={(e) => setRerank(e.target.checked)} />
-            Rerank results
-          </label>
+          {mode === 'semantic' && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={rerank} onChange={(e) => setRerank(e.target.checked)} />
+              Rerank results
+            </label>
+          )}
           <label className="flex items-center gap-2">
             Top
             <select

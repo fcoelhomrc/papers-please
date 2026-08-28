@@ -18,7 +18,7 @@ from schemas import (
     SearchResponse,
     StatusResponse,
 )
-from search import SearchEngine, get_search_engine
+from search import SearchEngine, get_search_engine, keyword_search
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from status import pipeline_status
@@ -97,6 +97,11 @@ def search(
     engine: SearchEngine = Depends(get_engine),
 ):
     return engine.search(q, top_k=top_k, rerank=rerank, rerank_top_k=rerank_top_k)
+
+
+@app.get("/search/keyword", response_model=SearchResponse)
+def search_keyword(q: str, top_k: int = Query(default=10, ge=1, le=50)):
+    return keyword_search(q, top_k=top_k)
 
 
 @app.get("/documents/{doc_id}", response_model=DocumentOut)
