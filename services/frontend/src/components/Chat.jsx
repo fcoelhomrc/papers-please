@@ -1,7 +1,23 @@
 import * as ScrollArea from '@radix-ui/react-scroll-area'
-import { ArrowUp, MessageCircle, X } from 'lucide-react'
+import { ArrowUp, MessageCircle, RotateCcw, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { chat as sendChat } from '../api'
+
+const THREAD_KEY = 'pp-chat-thread-id'
+
+function newThreadId() {
+  return crypto.randomUUID()
+}
+
+function getThreadId() {
+  let id = localStorage.getItem(THREAD_KEY)
+  if (!id) {
+    id = newThreadId()
+    localStorage.setItem(THREAD_KEY, id)
+  }
+  return id
+}
 
 function Bubble({ role, content, toolCalls }) {
   if (role === 'user') {
@@ -17,13 +33,19 @@ function Bubble({ role, content, toolCalls }) {
   return (
     <div className="flex justify-start">
       <div
-        className={`max-w-[90%] rounded-2xl rounded-bl-sm px-3.5 py-2 text-[13.5px] leading-relaxed whitespace-pre-wrap ${
+        className={`max-w-[90%] rounded-2xl rounded-bl-sm px-3.5 py-2 text-[13.5px] leading-relaxed ${
           isError
             ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400'
             : 'bg-canvas border border-border text-ink'
         }`}
       >
-        {content}
+        {isError ? (
+          <span className="whitespace-pre-wrap">{content}</span>
+        ) : (
+          <div className="prose-chat">
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
+        )}
         {toolCalls?.length > 0 && (
           <div className="mt-1.5 text-[11px] text-faint">used: {toolCalls.join(', ')}</div>
         )}
@@ -37,6 +59,7 @@ export default function Chat() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [threadId, setThreadId] = useState(getThreadId)
   const viewportRef = useRef(null)
 
   useEffect(() => {
@@ -55,7 +78,7 @@ export default function Chat() {
     setSending(true)
 
     try {
-      const data = await sendChat(text)
+      const data = await sendChat(text, threadId)
       setMessages((m) => [...m, { role: 'agent', content: data.reply, toolCalls: data.tool_calls }])
     } catch (err) {
       setMessages((m) => [...m, { role: 'error', content: err.message }])
@@ -69,6 +92,13 @@ export default function Chat() {
       e.preventDefault()
       handleSend(e)
     }
+  }
+
+  function handleReset() {
+    const id = newThreadId()
+    localStorage.setItem(THREAD_KEY, id)
+    setThreadId(id)
+    setMessages([])
   }
 
   if (!open) {
@@ -87,9 +117,14 @@ export default function Chat() {
     <div className="fixed bottom-6 right-6 w-[380px] h-[560px] max-h-[80vh] rounded-2xl border border-border bg-surface shadow-2xl flex flex-col overflow-hidden">
       <div className="h-12 flex items-center justify-between px-4 border-b border-border shrink-0">
         <span className="text-[13.5px] font-semibold">Agent</span>
-        <button onClick={() => setOpen(false)} className="text-muted hover:text-ink" aria-label="Close chat">
-          <X size={16} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={handleReset} className="text-muted hover:text-ink" aria-label="New conversation" title="New conversation">
+            <RotateCcw size={15} />
+          </button>
+          <button onClick={() => setOpen(false)} className="text-muted hover:text-ink" aria-label="Close chat">
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       <ScrollArea.Root className="flex-1 overflow-hidden">

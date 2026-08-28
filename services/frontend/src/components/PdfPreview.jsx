@@ -3,7 +3,12 @@ import { Download, FileText, X } from 'lucide-react'
 import { pdfUrl } from '../api'
 
 export default function PdfPreview({ docId, title }) {
-  const url = pdfUrl(docId)
+  // Inline for the iframe (renders in place); download=true forces the
+  // browser to save the file instead - the backend defaults to inline
+  // Content-Disposition, which is what makes this button distinct.
+  const previewUrl = pdfUrl(docId)
+  const downloadUrl = pdfUrl(docId, { download: true })
+
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
@@ -19,8 +24,7 @@ export default function PdfPreview({ docId, title }) {
               <Dialog.Title className="text-[13.5px] font-medium truncate pr-4">{title}</Dialog.Title>
               <div className="flex items-center gap-3 shrink-0">
                 <a
-                  href={url}
-                  download
+                  href={downloadUrl}
                   className="inline-flex items-center gap-1.5 text-xs font-medium border border-border rounded-md px-2.5 py-1 hover:border-faint transition-colors"
                 >
                   <Download size={13} /> Download
@@ -32,7 +36,7 @@ export default function PdfPreview({ docId, title }) {
                 </Dialog.Close>
               </div>
             </div>
-            <iframe src={url} title={title} className="flex-1 w-full" />
+            <iframe src={previewUrl} title={title} className="flex-1 w-full" />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

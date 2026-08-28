@@ -28,23 +28,37 @@ export function fetchPapers({ query = '', venue = '', year = '', maxPapers = 500
   }).then(handle)
 }
 
-export function listDocuments({ offset = 0, limit = 20 } = {}) {
-  const params = new URLSearchParams({ offset, limit })
+export function listDocuments({
+  offset = 0,
+  limit = 20,
+  q = '',
+  onlyAvailable = false,
+  onlyProcessed = false,
+  sort = 'newest',
+} = {}) {
+  const params = new URLSearchParams({
+    offset,
+    limit,
+    only_available: onlyAvailable,
+    only_processed: onlyProcessed,
+    sort,
+  })
+  if (q) params.set('q', q)
   return fetch(`${BASE}/documents?${params}`).then(handle)
 }
 
-export function pdfUrl(docId) {
-  return `${BASE}/documents/${docId}/pdf`
+export function pdfUrl(docId, { download = false } = {}) {
+  return `${BASE}/documents/${docId}/pdf${download ? '?download=true' : ''}`
 }
 
 export function getStatus() {
   return fetch(`${BASE}/status`).then(handle)
 }
 
-export function chat(message) {
+export function chat(message, threadId) {
   return fetch(`${BASE}/agent/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, thread_id: threadId }),
   }).then(handle)
 }

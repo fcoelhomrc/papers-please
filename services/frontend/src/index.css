@@ -34,3 +34,32 @@ body {
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* Chat markdown - scoped instead of the Tailwind typography plugin, sized
+   for the chat bubble's 13.5px base rather than prose defaults. */
+.prose-chat p { margin: 0 0 0.5em; }
+.prose-chat p:last-child { margin-bottom: 0; }
+.prose-chat strong { font-weight: 600; }
+.prose-chat em { font-style: italic; }
+.prose-chat code {
+  @apply bg-border/50 rounded px-1 py-0.5;
+  font-size: 0.9em;
+  font-family: ui-monospace, monospace;
+}
+.prose-chat pre {
+  @apply bg-canvas border border-border rounded-lg;
+  padding: 0.6em 0.8em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.prose-chat pre code { background: none; padding: 0; }
+.prose-chat ul, .prose-chat ol { margin: 0.4em 0; padding-left: 1.3em; }
+.prose-chat li { margin: 0.15em 0; }
+.prose-chat ul { list-style: disc; }
+.prose-chat ol { list-style: decimal; }
+.prose-chat a { text-decoration: underline; text-underline-offset: 2px; }
+.prose-chat h1, .prose-chat h2, .prose-chat h3 {
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+}
+.prose-chat h1:first-child, .prose-chat h2:first-child, .prose-chat h3:first-child { margin-top: 0; }
