@@ -2,7 +2,11 @@ database:
   host: db
 
 storage:
-  root: data
+  # Must match compose.yaml's papers_data volume mount point (/data). A
+  # relative path here resolves against /app, which is bind-mounted to the
+  # host repo for live-reload - PDFs would land on disk in the repo instead
+  # of the named volume, bypassing "tear down and nuke volumes" cleanup.
+  root: /data
 
 devices:
   chunker: cpu

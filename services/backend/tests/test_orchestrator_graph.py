@@ -109,3 +109,45 @@ class TestBuildAgent:
             )
 
         assert result["messages"][-1].content == "Fetched new papers on transformers."
+
+    def test_answers_from_search_chunks_instead_of_fetching(self):
+        """Scripts the LLM to search existing papers and answer from them -
+        the retrieval half of the agent, not the fetch half."""
+        resp1 = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "search_chunks",
+                    "args": {"query": "transformers for cervical cancer survival", "top_k": 5},
+                    "id": "call_1",
+                }
+            ],
+        )
+        resp2 = AIMessage(
+            content='Yes - doc_id 9, page 3 used a transformer to predict survival.'
+        )
+        llm = FakeToolCallingModel(responses=[resp1, resp2])
+
+        search_result = [
+            {
+                "doc_id": 9,
+                "title": "Deep Learning for Cervical Cancer Survival",
+                "authors": ["A. Author"],
+                "year": 2022,
+                "page_num": 3,
+                "text": "We used a transformer model to predict survival...",
+                "score": 0.87,
+            }
+        ]
+
+        with patch("orchestrator.tools.search_chunks.func", return_value=search_result):
+            agent = build_agent(llm)
+            result = agent.invoke({
+                "messages": [HumanMessage(
+                    "has anyone used transformers to predict cervical cancer survival?"
+                )]
+            })
+
+        messages = result["messages"]
+        assert messages[1].tool_calls[0]["name"] == "search_chunks"
+        assert "doc_id" in messages[-1].content and "9" in messages[-1].content

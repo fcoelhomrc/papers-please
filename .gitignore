@@ -15,6 +15,7 @@ wheels/
 
 # Data
 data/**
+**/data/**
 
 # Node / npm
 node_modules/

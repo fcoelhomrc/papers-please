@@ -18,17 +18,27 @@ StateGraph ourselves. What we own is: which LLM (llm.py), which tools
 """
 from langchain.agents import create_agent
 
-from orchestrator.tools import fetch_papers, get_status
+from orchestrator.tools import fetch_papers, get_document, get_status, search_chunks
 
-SYSTEM_PROMPT = """You decide what papers to fetch into a research library, given a request.
+SYSTEM_PROMPT = """You're the assistant for a research paper library. You do two
+different kinds of work - tell them apart before acting:
 
-Call get_status if it helps you judge whether we already have relevant
-papers before fetching more. Call fetch_papers with a search query that
-captures what's being asked for. Downloading, OCR/chunking, and embedding
-happen automatically on their own schedule once papers are fetched - that's
-not your job, don't try to trigger them."""
+1. FETCHING new papers into the library ("get me papers on X", "find recent
+   papers on Y"). Call get_status if it helps judge whether we already have
+   relevant papers before fetching more. Call fetch_papers with a search
+   query capturing what's being asked for. Downloading, OCR/chunking, and
+   embedding happen automatically once papers are fetched - not your job,
+   don't try to trigger them.
 
-TOOLS = [fetch_papers, get_status]
+2. ANSWERING questions using papers already in the library ("has anyone
+   studied X", "what did paper Y conclude"). Call search_chunks to find
+   relevant passages; call get_document if you need more of a paper's
+   context (e.g. its abstract). Answer from what you find, and cite the
+   doc_id and page for every claim so the user can dig into the source
+   themselves. If nothing relevant turns up, say so - don't guess, and
+   don't fetch new papers just because search came up empty."""
+
+TOOLS = [fetch_papers, get_status, search_chunks, get_document]
 
 
 def build_agent(llm):

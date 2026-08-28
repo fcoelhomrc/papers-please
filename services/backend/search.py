@@ -96,3 +96,24 @@ class SearchEngine(PostgresInterface):
             reranked=rerank,
             results=[ChunkResult(**c) for c in chunks],
         )
+
+
+_engine: SearchEngine | None = None
+
+
+def get_search_engine() -> SearchEngine:
+    """Lazy singleton, shared between the /search endpoint and the
+    orchestrator's RAG tools - the encoder + reranker are expensive to load,
+    loading them twice (once per caller) would be wasteful."""
+    global _engine
+    if _engine is None:
+        from config import load
+
+        cfg = load()
+        model_key = cfg.embedder.model
+        encoder = SentenceTransformer(
+            MODELS[model_key]["hf_name"], device=cfg.devices.embedder
+        )
+        reranker = Reranker(device=cfg.devices.reranker)
+        _engine = SearchEngine(encoder=encoder, reranker=reranker, model_key=model_key)
+    return _engine

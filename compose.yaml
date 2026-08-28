@@ -3,7 +3,7 @@ services:
     image: docker.io/library/postgres:16
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./services/db:/docker-entrypoint-initdb.d
@@ -23,11 +23,13 @@ services:
     build:
       context: ./services/backend
       dockerfile: Dockerfile
+    image: papers-please-backend:latest
     ports:
       - "8000:8000"
     volumes:
       - papers_data:/data
       - ./services/backend:/app
+      - backend_venv:/app/.venv
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -40,12 +42,11 @@ services:
     command: python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 
   worker-download:
-    build:
-      context: ./services/backend
-      dockerfile: Dockerfile
+    image: papers-please-backend:latest
     volumes:
       - papers_data:/data
       - ./services/backend:/app
+      - backend_venv:/app/.venv
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -57,12 +58,11 @@ services:
     command: python -m stages.download
 
   worker-chunk:
-    build:
-      context: ./services/backend
-      dockerfile: Dockerfile
+    image: papers-please-backend:latest
     volumes:
       - papers_data:/data
       - ./services/backend:/app
+      - backend_venv:/app/.venv
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -74,12 +74,11 @@ services:
     command: python -m stages.chunk
 
   worker-embed:
-    build:
-      context: ./services/backend
-      dockerfile: Dockerfile
+    image: papers-please-backend:latest
     volumes:
       - papers_data:/data
       - ./services/backend:/app
+      - backend_venv:/app/.venv
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -102,3 +101,4 @@ services:
 volumes:
   postgres_data:
   papers_data:
+  backend_venv:

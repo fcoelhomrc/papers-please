@@ -7,10 +7,10 @@ deciding whether to call a tool. An agent has no business being a queue
 manager for that - it adds latency/cost/a new way to silently skip a step,
 for a decision that was never actually being made.
 
-What's left is where an LLM's judgment is real: what to search for (fetch)
-and, later, what/how to query for retrieval. get_status stays because it's
-useful context for a fetch decision (e.g. "we already have papers on this",
-don't refetch), not because it routes between pipeline stages anymore.
+What's left is where an LLM's judgment is real: what to search for (fetch),
+what/how to query for retrieval (search_chunks/get_document), and get_status
+as context for a fetch decision (e.g. "we already have papers on this",
+don't refetch) - not a router between pipeline stages.
 """
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -21,6 +21,7 @@ from db.models import Chunk, ChunkEmbedding, Document, Object
 from ingest.fetcher import SemanticScholarFetcher
 from langchain_core.tools import tool
 from process.embedder import MODELS
+from search import get_search_engine
 
 
 @tool
@@ -75,4 +76,44 @@ def get_status() -> dict:
         "objects_by_status": objects_by_status,
         "chunks_pending_embed": chunks_pending_embed,
         "embed_model": model_hf_name,
+    }
+
+
+@tool
+def search_chunks(query: str, top_k: int = 5, rerank: bool = True) -> list[dict]:
+    """Search the paper library for chunks relevant to a question.
+
+    Returns chunk text with its doc_id, title, and page - cite doc_id/page
+    when answering so the user can find the source. Use get_document for
+    more of a paper's context (e.g. its abstract) once you've found it here.
+    """
+    response = get_search_engine().search(query, top_k=top_k, rerank=rerank, rerank_top_k=top_k)
+    return [
+        {
+            "doc_id": r.doc_id,
+            "title": r.title,
+            "authors": r.authors,
+            "year": r.year,
+            "page_num": r.page_num,
+            "text": r.text,
+            "score": r.score,
+        }
+        for r in response.results
+    ]
+
+
+@tool
+def get_document(doc_id: int) -> dict:
+    """Look up a paper's metadata (title, authors, year, abstract) by doc_id."""
+    with Session(PostgresInterface.connect()) as session:
+        doc = session.get(Document, doc_id)
+    if doc is None:
+        return {"error": f"no document with doc_id={doc_id}"}
+    return {
+        "doc_id": doc.id,
+        "title": doc.title,
+        "authors": doc.authors,
+        "venue": doc.venue,
+        "year": doc.year,
+        "abstract": doc.abstract,
     }

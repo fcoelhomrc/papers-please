@@ -10,29 +10,19 @@ from ingest.fetcher import SemanticScholarFetcher
 from langchain_core.messages import AIMessage, HumanMessage
 from orchestrator.graph import build_agent
 from orchestrator.llm import make_llm
-from process.embedder import MODELS, Reranker
 from schemas import ChatRequest, ChatResponse, DocumentOut, FetchRequest, SearchResponse
-from search import SearchEngine
-from sentence_transformers import SentenceTransformer
+from search import SearchEngine, get_search_engine
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 log.setup()
 
-_engine: SearchEngine | None = None
 _agent = None  # built lazily - needs ANTHROPIC_API_KEY, shouldn't block startup without it
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _engine
-    cfg = load()
-    model_key = cfg.embedder.model
-    encoder = SentenceTransformer(
-        MODELS[model_key]["hf_name"], device=cfg.devices.embedder
-    )
-    reranker = Reranker(device=cfg.devices.reranker)
-    _engine = SearchEngine(encoder=encoder, reranker=reranker, model_key=model_key)
+    get_search_engine()  # pre-warm at startup rather than on the first request
     yield
 
 
@@ -40,8 +30,7 @@ app = FastAPI(title="Papers Please", lifespan=lifespan)
 
 
 def get_engine() -> SearchEngine:
-    assert _engine is not None
-    return _engine
+    return get_search_engine()
 
 
 def get_agent():
