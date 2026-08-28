@@ -32,6 +32,10 @@ export function pdfUrl(docId) {
   return `${BASE}/documents/${docId}/pdf`
 }
 
+export function getStatus() {
+  return fetch(`${BASE}/status`).then(handle)
+}
+
 export function chat(message) {
   return fetch(`${BASE}/agent/chat`, {
     method: 'POST',

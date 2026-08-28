@@ -10,10 +10,18 @@ from ingest.fetcher import SemanticScholarFetcher
 from langchain_core.messages import AIMessage, HumanMessage
 from orchestrator.graph import build_agent
 from orchestrator.llm import make_llm
-from schemas import ChatRequest, ChatResponse, DocumentOut, FetchRequest, SearchResponse
+from schemas import (
+    ChatRequest,
+    ChatResponse,
+    DocumentOut,
+    FetchRequest,
+    SearchResponse,
+    StatusResponse,
+)
 from search import SearchEngine, get_search_engine
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from status import pipeline_status
 
 log.setup()
 
@@ -60,6 +68,11 @@ def fetch(req: FetchRequest):
         max_papers=req.max_papers,
     )
     return {"fetched": total}
+
+
+@app.get("/status", response_model=StatusResponse)
+def status():
+    return pipeline_status()
 
 
 @app.post("/agent/chat", response_model=ChatResponse)

@@ -24,31 +24,14 @@ class TestFetchPapers:
 
 
 class TestGetStatus:
-    def test_invoke_shapes_counts_from_db(self):
-        cfg = MagicMock()
-        cfg.embedder.model = "bge-small"
-
-        session = MagicMock()
-        session.execute.return_value.scalar_one.side_effect = [
-            42,  # documents_total
-            5,   # pending_download
-            3,   # chunks_pending_embed
-        ]
-        session.execute.return_value.all.return_value = [("pending", 2), ("chunked", 10)]
-
-        with (
-            patch("orchestrator.tools.load", return_value=cfg),
-            patch("orchestrator.tools.PostgresInterface.connect", return_value=MagicMock()),
-            patch("orchestrator.tools.Session") as MockSession,
-        ):
-            MockSession.return_value.__enter__.return_value = session
+    def test_invoke_delegates_to_pipeline_status(self):
+        """get_status is a thin wrapper - the actual query logic (and its
+        test coverage) lives in status.py, shared with the REST endpoint."""
+        fake_status = {"documents_total": 42, "embed_model": "BAAI/bge-small-en-v1.5"}
+        with patch("orchestrator.tools.pipeline_status", return_value=fake_status):
             result = tools.get_status.invoke({})
 
-        assert result["documents_total"] == 42
-        assert result["pending_download"] == 5
-        assert result["objects_by_status"] == {"pending": 2, "chunked": 10}
-        assert result["chunks_pending_embed"] == 3
-        assert result["embed_model"] == "BAAI/bge-small-en-v1.5"
+        assert result == fake_status
 
 
 class TestSearchChunks:
