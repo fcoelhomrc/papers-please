@@ -1,5 +1,14 @@
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY package.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm install
+
+COPY . .
+RUN npm run build
+
 FROM nginx:alpine
-COPY index.html /usr/share/nginx/html/index.html
-COPY css/ /usr/share/nginx/html/css/
-COPY js/ /usr/share/nginx/html/js/
+COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
