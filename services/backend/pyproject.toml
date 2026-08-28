@@ -34,6 +34,8 @@ dependencies = [
     "langchain-anthropic>=0.3.0",
     "langchain-openai>=0.3.0",
     "nest-asyncio2>=1.7.2",
+    "arize-phoenix-otel>=0.6.0",
+    "openinference-instrumentation-langchain>=0.1.29",
 ]
 
 

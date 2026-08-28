@@ -132,6 +132,10 @@ def main():
     parser.add_argument("--dataset", default=str(DATASET_PATH))
     args = parser.parse_args()
 
+    from observability import setup_observability
+
+    setup_observability(f"papers-please-eval-{args.variant}")
+
     from config import load
     from langchain_community.embeddings import HuggingFaceEmbeddings
     from process.embedder import MODELS

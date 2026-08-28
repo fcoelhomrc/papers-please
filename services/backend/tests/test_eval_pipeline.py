@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from eval.pipeline import AgenticPipeline, FixedPipeline
+from orchestrator.graph import MAX_AGENT_RECURSION
 
 
 class TestFixedPipeline:
@@ -67,3 +68,13 @@ class TestAgenticPipeline:
 
         assert result["answer"] == "Fetched 3 new papers."
         assert result["contexts"] == []
+
+    def test_answer_caps_recursion_limit(self):
+        """Guardrail added after a real credit-exhaustion incident."""
+        agent = MagicMock()
+        agent.invoke.return_value = {"messages": [AIMessage(content="done")]}
+
+        AgenticPipeline(agent).answer("anything")
+
+        _, kwargs = agent.invoke.call_args
+        assert kwargs["config"]["recursion_limit"] == MAX_AGENT_RECURSION

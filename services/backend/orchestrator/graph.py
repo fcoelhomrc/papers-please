@@ -46,6 +46,14 @@ readability, not as decoration."""
 
 TOOLS = [fetch_papers, get_status, search_chunks, get_document]
 
+# LangGraph's default recursion_limit is 25 - way more than this 4-tool
+# agent legitimately needs (get_status -> one action tool -> maybe
+# get_document -> final answer is ~4 real turns, ~8 graph steps). Every
+# caller must pass this in invoke()'s config - a runaway loop (e.g. the
+# LLM repeatedly calling a tool without converging) should hit a wall well
+# before 25 steps' worth of API calls.
+MAX_AGENT_RECURSION = 10
+
 
 def build_agent(llm, checkpointer=None):
     return create_agent(llm, TOOLS, system_prompt=SYSTEM_PROMPT, checkpointer=checkpointer)

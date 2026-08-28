@@ -17,6 +17,8 @@ from typing import Protocol, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
+from orchestrator.graph import MAX_AGENT_RECURSION
+
 
 class AnswerResult(TypedDict):
     answer: str
@@ -62,7 +64,10 @@ class AgenticPipeline:
         self._agent = agent
 
     def answer(self, question: str) -> AnswerResult:
-        result = self._agent.invoke({"messages": [HumanMessage(question)]})
+        result = self._agent.invoke(
+            {"messages": [HumanMessage(question)]},
+            config={"recursion_limit": MAX_AGENT_RECURSION},
+        )
         messages = result["messages"]
 
         # search_chunks tool_call id -> its ToolMessage result, so we can

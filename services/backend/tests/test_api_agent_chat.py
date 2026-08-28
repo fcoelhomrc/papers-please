@@ -13,7 +13,7 @@ from langchain_core.messages import AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 
 import api
-from orchestrator.graph import build_agent
+from orchestrator.graph import MAX_AGENT_RECURSION, build_agent
 from tests.fakes import FakeToolCallingModel
 
 
@@ -70,6 +70,26 @@ def test_chat_remembers_prior_turns_in_same_thread():
     state = fake_agent.get_state({"configurable": {"thread_id": "t1"}})
     # 2 human + 2 AI = 4 messages retained across both turns
     assert len(state.values["messages"]) == 4
+
+
+def test_chat_caps_recursion_so_a_runaway_loop_cant_burn_unbounded_credits():
+    """Guardrail added after a real credit-exhaustion incident: every
+    agent.invoke() call must pass recursion_limit, not rely on LangGraph's
+    default (25 - way more than this agent legitimately needs)."""
+    resp = AIMessage(content="done")
+    llm = FakeToolCallingModel(responses=[resp])
+    fake_agent = build_agent(llm, checkpointer=MemorySaver())
+
+    api.app.dependency_overrides[api.get_agent] = lambda: fake_agent
+    try:
+        with patch.object(fake_agent, "invoke", wraps=fake_agent.invoke) as spy_invoke:
+            client = TestClient(api.app)
+            client.post("/agent/chat", json={"message": "hi"})
+    finally:
+        api.app.dependency_overrides.clear()
+
+    _, kwargs = spy_invoke.call_args
+    assert kwargs["config"]["recursion_limit"] == MAX_AGENT_RECURSION
 
 
 def test_chat_503s_when_agent_cannot_be_built():

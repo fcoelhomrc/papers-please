@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from ingest.fetcher import SemanticScholarFetcher
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
-from orchestrator.graph import build_agent
+from orchestrator.graph import MAX_AGENT_RECURSION, build_agent
 from orchestrator.llm import make_llm
 from schemas import (
     ChatRequest,
@@ -31,6 +31,14 @@ _agent = None  # built lazily - needs ANTHROPIC_API_KEY, shouldn't block startup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Deferred to lifespan (not module import time) same as get_search_engine
+    # below - plain TestClient(app) instantiation skips lifespan entirely, so
+    # tests never attempt a real OTel connection. Learned this the hard way:
+    # calling it at import time hung every test that imports api.py trying to
+    # reach an OTel collector nothing was running.
+    from observability import setup_observability
+
+    setup_observability("papers-please-backend")
     get_search_engine()  # pre-warm at startup rather than on the first request
     yield
 
@@ -81,7 +89,7 @@ def status():
 
 @app.post("/agent/chat", response_model=ChatResponse)
 def agent_chat(req: ChatRequest, agent=Depends(get_agent)):
-    config = {"configurable": {"thread_id": req.thread_id}}
+    config = {"configurable": {"thread_id": req.thread_id}, "recursion_limit": MAX_AGENT_RECURSION}
 
     # With memory, result["messages"] holds the *whole* conversation - need
     # to know how many messages existed before this turn so tool_calls only
