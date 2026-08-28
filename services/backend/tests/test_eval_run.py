@@ -96,3 +96,47 @@ def test_run_eval_substitutes_placeholder_when_no_context_retrieved(tmp_path):
 
     records_passed = MockDataset.from_list.call_args.args[0]
     assert records_passed[0]["retrieved_contexts"] == ["(no context retrieved)"]
+
+
+def test_run_eval_survives_one_question_failing(tmp_path):
+    """Regression test for a real incident: one question hit LangGraph's
+    recursion limit (uncaught GraphRecursionError), which crashed the whole
+    loop before anything reached disk - discarding ~40 other questions'
+    worth of real, already-paid-for answers. One failure must not cost the
+    rest."""
+    dataset_path = tmp_path / "ds.jsonl"
+    dataset_path.write_text(
+        '{"question": "q1", "ground_truth": "a1"}\n'
+        '{"question": "q2 (this one blows up)", "ground_truth": "a2"}\n'
+        '{"question": "q3", "ground_truth": "a3"}\n'
+    )
+
+    pipeline = MagicMock()
+    pipeline.answer.side_effect = [
+        {"answer": "answer 1", "contexts": ["ctx1"]},
+        RuntimeError("recursion limit hit"),
+        {"answer": "answer 3", "contexts": ["ctx3"]},
+    ]
+
+    fake_eval_result = MagicMock()
+    fake_eval_result.to_pandas.return_value = pd.DataFrame([{"faithfulness": 1.0}] * 3)
+
+    with (
+        patch("eval.run.RESULTS_DIR", tmp_path / "results"),
+        patch("eval.run.EvaluationDataset") as MockDataset,
+        patch("eval.run.evaluate", return_value=fake_eval_result),
+        patch("eval.run.write_markdown_report", return_value=tmp_path / "report.md"),
+    ):
+        output = run_eval(pipeline, dataset_path, "agentic", judge_llm=MagicMock(), judge_embeddings=MagicMock())
+
+    # all 3 questions made it into the ragas dataset - q2 as a recorded
+    # failure, not silently dropped and not crashing the other two
+    records_passed = MockDataset.from_list.call_args.args[0]
+    assert len(records_passed) == 3
+    assert records_passed[0]["response"] == "answer 1"
+    assert "recursion limit hit" in records_passed[1]["response"]
+    assert records_passed[1]["retrieved_contexts"] == ["(no context retrieved)"]
+    assert records_passed[2]["response"] == "answer 3"
+
+    # and the run still completed and wrote output, not aborted
+    assert output["variant"] == "agentic"

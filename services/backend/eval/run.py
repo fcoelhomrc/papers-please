@@ -63,8 +63,21 @@ def run_eval(
 ) -> dict:
     rows = load_dataset(dataset_path)
     records = []
-    for row in rows:
-        result = pipeline.answer(row["question"])
+    for i, row in enumerate(rows, 1):
+        # A single question's pipeline.answer() must never take the other
+        # N-1 down with it - a real incident showed why: one question hit
+        # LangGraph's recursion limit (an uncaught GraphRecursionError),
+        # which crashed this whole loop before anything reached disk,
+        # discarding ~40 other questions' worth of real, already-paid-for
+        # answers. Catch, record the failure as the answer, keep going.
+        try:
+            result = pipeline.answer(row["question"])
+        except Exception as e:
+            print(f"[{i}/{len(rows)}] FAILED: {row['question'][:60]!r} - {e}")
+            result = {"answer": f"error: pipeline failed ({e})", "contexts": []}
+        else:
+            print(f"[{i}/{len(rows)}] ok: {row['question'][:60]!r}")
+
         records.append(
             {
                 "user_input": row["question"],
