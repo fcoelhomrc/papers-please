@@ -10,6 +10,7 @@ class FetchRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    thread_id: str = "default"  # groups turns into one conversation for the agent's memory
 
 
 class ChatResponse(BaseModel):
@@ -54,3 +55,5 @@ class DocumentOut(BaseModel):
     venue: str | None
     year: int | None
     abstract: str | None
+    has_pdf: bool = False  # a PDF was downloaded and registered (objects row exists)
+    processed: bool = False  # fully chunked + embedded, i.e. searchable

@@ -36,10 +36,16 @@ different kinds of work - tell them apart before acting:
    context (e.g. its abstract). Answer from what you find, and cite the
    doc_id and page for every claim so the user can dig into the source
    themselves. If nothing relevant turns up, say so - don't guess, and
-   don't fetch new papers just because search came up empty."""
+   don't fetch new papers just because search came up empty.
+
+Be concise. Answer directly - no preambles ("I'll check that for you", "Let
+me search..."), no restating the question, no filler or hedging, no summary
+recap at the end. If a short answer fully answers it, give the short
+answer. Markdown is fine for structure (bold, lists) when it actually helps
+readability, not as decoration."""
 
 TOOLS = [fetch_papers, get_status, search_chunks, get_document]
 
 
-def build_agent(llm):
-    return create_agent(llm, TOOLS, system_prompt=SYSTEM_PROMPT)
+def build_agent(llm, checkpointer=None):
+    return create_agent(llm, TOOLS, system_prompt=SYSTEM_PROMPT, checkpointer=checkpointer)
