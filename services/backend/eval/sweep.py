@@ -248,6 +248,14 @@ def main():
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_path = RESULTS_DIR / f"sweep-{stamp}.json"
     out_path.write_text(json.dumps(output, indent=2))
+
+    # The JSON is gitignored scratch; the ledger line is the durable record,
+    # so the run still shows in the summary table after the JSON is cleaned up.
+    from eval.ingest import parse_sweep
+    from eval.ledger import append
+
+    if append(parse_sweep(out_path)):
+        print("recorded in eval/ledger.jsonl")
     print(f"\nwrote {out_path}  ({len(results)} configs)")
     return out_path
 

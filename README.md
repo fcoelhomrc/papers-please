@@ -89,12 +89,19 @@ uv run python -m eval.sweep                      # every mode x top_k x rerank_t
 uv run python -m eval.sweep --modes hybrid --top-k 5,10
 uv run python -m eval.plot                       # -> eval/reports/sweep-*.html
 uv run python -m eval.thresholds                 # score-floor / abstention curve
+uv run python -m eval.summary                    # -> eval/reports/summary.html
 
 # End-to-end with an LLM judge (Ragas). Costs real API tokens: one call per
 # question for the answer, plus roughly one judge call per metric per question.
 uv run python -m eval.run --variant fixed
 uv run python -m eval.run --variant agentic --prompt-version orchestrator=v2
 ```
+
+Every run appends a line to `eval/ledger.jsonl` (committed), and
+`eval.summary` renders it as one table covering judged and retrieval runs
+together, plus the precision-recall operating curves. The ledger is the durable
+record - `eval/results/*.json` is gitignored scratch, so a run still shows in the
+table after its raw output is cleaned up.
 
 Retrieval metrics are also recorded by the judged run, so a report says whether a
 bad answer came from retrieval missing the paper or from the model ignoring it -

@@ -152,6 +152,19 @@ def run_eval(
     report_path = write_markdown_report(output, rows, model_name, judge_model_name)
     output["report_path"] = str(report_path)
 
+    # Bookkeeping must never fail a run that has already been paid for: by
+    # this point every judge call is spent and the report is on disk, so a
+    # ledger problem is a note to stderr, not an exception.
+    try:
+        from eval.ingest import parse_judged_report
+        from eval.ledger import append
+
+        record = parse_judged_report(report_path)
+        if record and append(record):
+            print("recorded in eval/ledger.jsonl")
+    except Exception as e:
+        print(f"warning: could not record run in the ledger ({e})")
+
     return output
 
 

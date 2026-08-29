@@ -127,6 +127,12 @@ def main():
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     path = RESULTS_DIR / f"thresholds-{stamp}.json"
     path.write_text(json.dumps(out, indent=2))
+
+    from eval.ingest import parse_thresholds
+    from eval.ledger import append
+
+    if append(parse_thresholds(path)):
+        print("recorded in eval/ledger.jsonl")
     print(f"\nwrote {path}")
     return path
 
