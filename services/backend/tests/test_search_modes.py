@@ -88,7 +88,7 @@ class TestSearchModeDispatch:
 
         resp = engine.search("q", top_k=5, mode=SEMANTIC)
 
-        engine._vector_candidates.assert_called_once_with("q", 5)
+        engine._vector_candidates.assert_called_once_with("q", 5, None)  # None = no floor
         engine._keyword_candidates.assert_not_called()
         assert resp.mode == "semantic"
         assert [r.chunk_id for r in resp.results] == [1]
@@ -100,7 +100,7 @@ class TestSearchModeDispatch:
 
         resp = engine.search("q", top_k=5, mode=KEYWORD)
 
-        engine._keyword_candidates.assert_called_once_with("q", 5)
+        engine._keyword_candidates.assert_called_once_with("q", 5, None)
         engine._vector_candidates.assert_not_called()
         assert [r.chunk_id for r in resp.results] == [2]
 
@@ -183,3 +183,170 @@ class TestRerankInteraction:
         engine._reranker.rerank.assert_not_called()
         assert resp.reranked is False
         assert resp.results == []
+
+
+class TestThresholds:
+    """Score floors let retrieval return nothing - the correct answer when the
+    library has nothing relevant. Without them abstention_precision measured
+    0.000: top_k came back regardless."""
+
+    def test_vector_floor_drops_low_scoring_candidates(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[])
+        engine._keyword_candidates = MagicMock(return_value=[])
+
+        engine.search("q", top_k=5, mode=SEMANTIC, thresholds={"min_vector_score": 0.6})
+
+        assert engine._vector_candidates.call_args.args[2] == 0.6
+
+    def test_keyword_floor_passed_through(self):
+        engine = make_engine()
+        engine._keyword_candidates = MagicMock(return_value=[])
+
+        engine.search("q", top_k=5, mode=KEYWORD, thresholds={"min_keyword_score": 0.05})
+
+        assert engine._keyword_candidates.call_args.args[2] == 0.05
+
+    def test_hybrid_applies_floors_per_source_before_fusion(self):
+        """An RRF score is a rank artefact with no notion of 'relevant
+        enough', so a post-fusion filter could not express this."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[])
+        engine._keyword_candidates = MagicMock(return_value=[])
+
+        engine.search(
+            "q", top_k=5, mode=HYBRID,
+            thresholds={"min_vector_score": 0.6, "min_keyword_score": 0.05},
+        )
+
+        assert engine._vector_candidates.call_args.args[2] == 0.6
+        assert engine._keyword_candidates.call_args.args[2] == 0.05
+
+    def test_rerank_floor_can_empty_the_result(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._reranker.rerank.return_value = [chunk(1, score=-8.0)]
+
+        resp = engine.search(
+            "q", top_k=5, rerank=True, mode=SEMANTIC,
+            thresholds={"min_rerank_score": 0.0},
+        )
+
+        assert resp.results == []
+
+    def test_rerank_floor_keeps_confident_hits(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._reranker.rerank.return_value = [chunk(1, score=5.0)]
+
+        resp = engine.search(
+            "q", top_k=5, rerank=True, mode=SEMANTIC,
+            thresholds={"min_rerank_score": 0.0},
+        )
+
+        assert [r.chunk_id for r in resp.results] == [1]
+
+    def test_default_floors_match_the_measured_curve(self):
+        """Only the rerank floor is on by default, and only because it was
+        measured free: abstention 0.000 -> 0.500 at identical recall. The
+        bi-encoder floors stay off - their score distributions for relevant
+        and irrelevant queries overlap, so any floor there costs recall."""
+        from config import Config
+
+        c = Config().search
+        assert c.min_vector_score is None
+        assert c.min_keyword_score is None
+        assert c.min_rerank_score == -8.0
+
+    def test_default_mode_is_hybrid(self):
+        from config import Config
+
+        assert Config().search.mode == "hybrid"
+
+
+class TestWeightedFusion:
+    """Plain RRF weights sources equally, which assumes they're comparably
+    good rankers. Ours aren't - keyword alone scores nDCG 0.598 vs dense's
+    0.787, and equal weighting measured worse than dense alone."""
+
+    def test_weights_default_to_equal(self):
+        fused = rrf_fuse([[chunk(1)], [chunk(2)]], k=60)
+        assert fused[0]["score"] == fused[1]["score"]
+
+    def test_down_weighted_source_cannot_outvote_the_stronger_one(self):
+        """A document the strong ranker put 20th, that the weak ranker put
+        first. Unweighted, the weak source's vote is enough to promote it over
+        the strong ranker's own top hit - which is the dilution measured on
+        the eval set. Down-weighted, it can't."""
+        strong = [chunk(i) for i in range(1, 21)]
+        weak = [chunk(20)]
+
+        assert rrf_fuse([strong, weak], k=60)[0]["chunk_id"] == 20
+        assert rrf_fuse([strong, weak], k=60, weights=[1.0, 0.1])[0]["chunk_id"] == 1
+
+    def test_weight_scales_contribution_linearly(self):
+        fused = rrf_fuse([[chunk(1)]], k=60, weights=[0.5])
+        assert fused[0]["score"] == pytest.approx(0.5 / 61)
+
+    def test_zero_weight_still_contributes_the_document(self):
+        """Weight 0 must not silently drop a source's documents - they're
+        still candidates, just with no rank credit from that list."""
+        fused = rrf_fuse([[chunk(1)], [chunk(2)]], k=60, weights=[1.0, 0.0])
+        assert {c["chunk_id"] for c in fused} == {1, 2}
+        assert fused[0]["chunk_id"] == 1
+
+    def test_hybrid_passes_the_configured_weight(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._keyword_candidates = MagicMock(return_value=[chunk(2)])
+
+        cfg = MagicMock()
+        cfg.search.mode = "hybrid"
+        cfg.search.rrf_k = 60
+        cfg.search.hybrid_candidates = 20
+        cfg.search.keyword_weight = 0.1
+        cfg.search.min_vector_score = None
+        cfg.search.min_keyword_score = None
+        cfg.search.min_rerank_score = None
+        with patch("config.load", return_value=cfg):
+            resp = engine.search("q", top_k=5, mode=HYBRID)
+
+        # the down-weighted keyword hit must rank below the dense hit
+        assert [r.chunk_id for r in resp.results] == [1, 2]
+
+
+class TestRerankerScore:
+    def test_rerank_reports_the_cross_encoder_score_not_the_old_one(self):
+        """Regression: the result dict was built as {"score": new, **chunk},
+        and chunk already carries a "score" - so the spread overwrote the
+        cross-encoder score with the pre-rerank one. Ordering was unaffected
+        (it sorts on the raw scores), but the reported number was wrong,
+        which made it useless to threshold on or show."""
+        from unittest.mock import MagicMock as MM
+
+        from process.embedder import Reranker
+
+        r = Reranker.__new__(Reranker)  # skip loading a real model
+        r._model = MM()
+        r._model.predict.return_value = [0.9, 0.1]
+
+        out = r.rerank("q", [chunk(1, score=0.0164), chunk(2, score=0.0161)])
+
+        assert [c["chunk_id"] for c in out] == [1, 2]
+        assert out[0]["score"] == pytest.approx(0.9)
+        assert out[1]["score"] == pytest.approx(0.1)
+
+    def test_reranked_flag_stays_true_when_the_floor_empties_results(self):
+        """An empty result after a floor means 'reranked, nothing cleared the
+        bar' - not 'never reranked'. Deriving the flag from emptiness reported
+        the opposite of what happened."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._reranker.rerank.return_value = [chunk(1, score=-9.0)]
+
+        resp = engine.search(
+            "q", rerank=True, mode=SEMANTIC, thresholds={"min_rerank_score": -8.0}
+        )
+
+        assert resp.results == []
+        assert resp.reranked is True

@@ -88,6 +88,7 @@ cd services/backend
 uv run python -m eval.sweep                      # every mode x top_k x rerank_top_k
 uv run python -m eval.sweep --modes hybrid --top-k 5,10
 uv run python -m eval.plot                       # -> eval/reports/sweep-*.html
+uv run python -m eval.thresholds                 # score-floor / abstention curve
 
 # End-to-end with an LLM judge (Ragas). Costs real API tokens: one call per
 # question for the answer, plus roughly one judge call per metric per question.
@@ -102,6 +103,13 @@ the judge metrics alone can't tell those apart.
 Questions where nothing in the library is relevant ("does this cover X?" - it
 doesn't) are scored separately as abstention, not as recall failures: averaging a
 zero into recall for correct behaviour would misreport it.
+
+Defaults that came out of those sweeps rather than out of taste: `search.mode:
+hybrid`, `keyword_weight: 0.1` (keyword is a weaker ranker than dense - weighting
+the two equally measured *worse* than dense alone), and `min_rerank_score: -8.0`
+(abstention 0.000 -> 0.500 at identical recall). The rerank floor is in the
+cross-encoder's logit units and is specific to `ms-marco-MiniLM-L-6-v2` - swapping
+`search.reranker_model` invalidates it, so re-sweep with `eval.thresholds`.
 
 ## Testing
 

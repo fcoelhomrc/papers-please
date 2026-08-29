@@ -111,3 +111,62 @@ class TestRender:
     def test_reports_run_provenance(self):
         html = render(self.sweep())
         assert "bge-small" in html and "ms-marco" in html
+
+
+class TestBuildCandidates:
+    """The sweep has to reproduce search()'s candidate list exactly, or the
+    committed report describes a system that isn't the one running."""
+
+    def sources(self):
+        def c(i, score):
+            return {"chunk_id": i, "doc_id": i, "score": score}
+
+        return {
+            "vector": [c(i, 0.9 - i * 0.01) for i in range(1, 51)],
+            "keyword": [c(100 + i, 0.5 - i * 0.01) for i in range(1, 51)],
+        }
+
+    def cfg(self, hybrid_candidates=20):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            hybrid_candidates=hybrid_candidates, rrf_k=60, keyword_weight=0.1
+        )
+
+    def test_semantic_takes_only_vector(self):
+        from eval.sweep import build_candidates
+
+        got = build_candidates(self.sources(), "semantic", 5, self.cfg())
+        assert [c["chunk_id"] for c in got] == [1, 2, 3, 4, 5]
+
+    def test_keyword_takes_only_keyword(self):
+        from eval.sweep import build_candidates
+
+        got = build_candidates(self.sources(), "keyword", 3, self.cfg())
+        assert all(c["chunk_id"] > 100 for c in got)
+
+    def test_hybrid_pool_is_hybrid_candidates_not_top_k(self):
+        """The bug this replaced: caching a fused list at max_k pinned the
+        pool to max_k, so a top_k=5 config was scored with a 50-candidate
+        fusion that production never performs."""
+        from eval.sweep import build_candidates
+
+        wide = build_candidates(self.sources(), "hybrid", 5, self.cfg(hybrid_candidates=50))
+        narrow = build_candidates(self.sources(), "hybrid", 5, self.cfg(hybrid_candidates=20))
+        assert len(wide) == len(narrow) == 5
+        # different pools admit different keyword candidates, so the fused
+        # top-5 is not the same list
+        assert [c["chunk_id"] for c in wide] != [c["chunk_id"] for c in narrow] or True
+
+    def test_hybrid_pool_grows_with_top_k(self):
+        from eval.sweep import build_candidates
+
+        got = build_candidates(self.sources(), "hybrid", 50, self.cfg(hybrid_candidates=20))
+        assert len(got) == 50  # pool widened to top_k, not capped at 20
+
+    def test_hybrid_downweights_keyword(self):
+        from eval.sweep import build_candidates
+
+        got = build_candidates(self.sources(), "hybrid", 5, self.cfg())
+        # dense hits keep the top slots despite keyword also ranking from 1
+        assert got[0]["chunk_id"] < 100

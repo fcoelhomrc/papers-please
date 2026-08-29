@@ -45,7 +45,14 @@ class Reranker:
         pairs = [(query, c["text"]) for c in chunks]
         scores = self._model.predict(pairs)
         ranked = sorted(zip(scores, chunks), key=lambda x: x[0], reverse=True)
-        results = [{"score": float(s), **c} for s, c in ranked]
+        # {**c, "score": ...}, not {"score": ..., **c}: the chunk already has a
+        # "score" key (cosine, ts_rank or RRF depending on the mode), so
+        # spreading it last silently overwrote the cross-encoder score with the
+        # pre-rerank one. Ordering was still correct - it sorts on `scores` -
+        # but every reranked result reported the score it had before
+        # reranking, which made the number meaningless to threshold on or
+        # display.
+        results = [{**c, "score": float(s)} for s, c in ranked]
         return results[:top_k] if top_k else results
 
 

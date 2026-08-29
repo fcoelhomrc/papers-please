@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from db.models import Document
 from eval.retrieval import aggregate, score_question
+from search import KEYWORD, SEMANTIC, rrf_fuse
 
 RESULTS_DIR = Path(__file__).parent / "results"
 DATASET_PATH = Path(__file__).parent / "dataset.jsonl"
@@ -51,22 +52,40 @@ def doc_id_to_source_id(engine) -> dict[int, str]:
         return dict(session.execute(select(Document.id, Document.source_id)).all())
 
 
-def retrieve_all(search_engine, questions: list[str], mode: str, max_k: int) -> dict[str, list]:
-    """One retrieval per question, at the widest k in the sweep."""
+def retrieve_sources(search_engine, questions: list[str], max_k: int) -> dict[str, dict]:
+    """Cache each source's ranked candidates once per question, unfused.
+
+    Caching the *fused* list instead would silently pin the hybrid pool to
+    max_k, because fusion depends on how many candidates each source
+    contributed - whereas search() uses max(hybrid_candidates, top_k). A
+    sweep that fused at pool=50 and sliced to 5 measured hybrid at nDCG
+    0.804 where production (pool=20) actually scores 0.814: not a small
+    enough gap to hand-wave, and in the pessimistic direction.
+    """
     out = {}
     for i, q in enumerate(questions, 1):
-        resp = search_engine.search(q, top_k=max_k, rerank=False, mode=mode)
-        out[q] = [
-            {
-                "chunk_id": r.chunk_id,
-                "doc_id": r.doc_id,
-                "text": r.text,
-                "score": r.score,
-            }
-            for r in resp.results
-        ]
-        print(f"  [{i}/{len(questions)}] {mode}: {q[:55]!r} -> {len(out[q])} chunks")
+        out[q] = {
+            "vector": search_engine._vector_candidates(q, max_k),
+            "keyword": search_engine._keyword_candidates(q, max_k),
+        }
+        print(
+            f"  [{i}/{len(questions)}] {len(out[q]['vector'])}v/{len(out[q]['keyword'])}k"
+        )
     return out
+
+
+def build_candidates(sources: dict, mode: str, top_k: int, cfg) -> list[dict]:
+    """Reproduce SearchEngine.search()'s candidate list from cached sources."""
+    if mode == SEMANTIC:
+        return sources["vector"][:top_k]
+    if mode == KEYWORD:
+        return sources["keyword"][:top_k]
+    pool = max(cfg.hybrid_candidates, top_k)
+    return rrf_fuse(
+        [sources["vector"][:pool], sources["keyword"][:pool]],
+        k=cfg.rrf_k,
+        weights=[1.0, cfg.keyword_weight],
+    )[:top_k]
 
 
 def _to_source_ids(chunks: list[dict], id_map: dict[int, str]) -> list[str]:
@@ -97,21 +116,33 @@ def run_sweep(search_engine, rows, id_map, modes, top_ks, rerank_top_ks, reranke
     the engine already holds (config.search.reranker_model); pass more to
     compare cross-encoders, which is the cheapest retrieval lever there is -
     swapping one needs no re-embedding, unlike changing the encoder."""
-    max_k = max(top_ks)
+    from config import load
+
+    cfg = load().search
+    max_k = max(max(top_ks), cfg.hybrid_candidates)
     questions = [r["question"] for r in rows]
     results = []
     rerankers = rerankers or {"configured": search_engine._reranker}
 
+    print(f"\ncaching both sources per question at k={max_k}...")
+    sources = retrieve_sources(search_engine, questions, max_k)
+
     for mode in modes:
-        print(f"\nretrieving for mode={mode} at top_k={max_k}...")
-        cached = retrieve_all(search_engine, questions, mode, max_k)
+        # Rebuilt per top_k rather than sliced from one list, so the hybrid
+        # pool matches what search() would use at that top_k.
+        cached = {
+            q: build_candidates(sources[q], mode, max_k, cfg) for q in questions
+        }
 
         for top_k in top_ks:
+            per_top_k = {
+                q: build_candidates(sources[q], mode, top_k, cfg) for q in questions
+            }
             results.append(
                 {
                     "mode": mode, "top_k": top_k, "rerank": False,
                     "rerank_top_k": None, "reranker": None, "k": top_k,
-                    **score_config(rows, cached, id_map, k=top_k, candidates=top_k),
+                    **score_config(rows, per_top_k, id_map, k=top_k),
                 }
             )
             print(f"  {mode} top_k={top_k} rerank=off -> recall={results[-1]['recall']:.3f}")
@@ -124,9 +155,12 @@ def run_sweep(search_engine, rows, id_map, modes, top_ks, rerank_top_ks, reranke
         # already had - and the cross-encoder dominates this sweep's runtime.
         for name, reranker in rerankers.items():
             for top_k in top_ks:
+                pooled = {
+                    q: build_candidates(sources[q], mode, top_k, cfg) for q in questions
+                }
                 reranked = {
-                    q: reranker.rerank(q, chunks[:top_k], top_k=top_k)
-                    for q, chunks in cached.items()
+                    q: reranker.rerank(q, chunks, top_k=top_k)
+                    for q, chunks in pooled.items()
                     if chunks
                 }
                 print(f"  {mode} {name} top_k={top_k}: reranked {len(reranked)} question(s)")
