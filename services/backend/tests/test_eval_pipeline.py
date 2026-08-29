@@ -21,7 +21,9 @@ class TestFixedPipeline:
         llm = MagicMock()
         llm.invoke.return_value = AIMessage(content="It addresses X.")
 
-        pipeline = FixedPipeline(llm, engine, top_k=2, rerank=True)
+        pipeline = FixedPipeline(
+            llm, engine, system_prompt="Answer from the context only.", top_k=2, rerank=True
+        )
         result = pipeline.answer("What does the muscle synergy paper address?")
 
         engine.search.assert_called_once_with(
@@ -33,6 +35,9 @@ class TestFixedPipeline:
         # the LLM call actually included the retrieved context, not just the question
         sent_prompt = llm.invoke.call_args.args[0][1]["content"]
         assert "Chunk about muscle synergy." in sent_prompt
+
+        # ...and the configured system prompt, rather than one baked into the class
+        assert llm.invoke.call_args.args[0][0]["content"] == "Answer from the context only."
 
 
 class TestAgenticPipeline:

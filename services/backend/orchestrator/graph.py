@@ -14,42 +14,14 @@ create_agent builds a small graph for us:
 
 That's the entire "agent loop" - we don't hand-write a while loop or a
 StateGraph ourselves. What we own is: which LLM (llm.py), which tools
-(tools.py), and the system prompt telling it how to use them.
+(tools.py), and the system prompt telling it how to use them - the last of
+which lives in prompts/orchestrator/<version>.md, versioned so an eval score
+can name the exact prompt that produced it (see prompts/registry.py).
 """
 from langchain.agents import create_agent
 
 from orchestrator.tools import fetch_papers, get_document, get_status, search_chunks
-
-SYSTEM_PROMPT = """You're the assistant for a research paper library. You do two
-different kinds of work - tell them apart before acting:
-
-1. FETCHING new papers into the library ("get me papers on X", "find recent
-   papers on Y"). Call get_status if it helps judge whether we already have
-   relevant papers before fetching more. Call fetch_papers with a search
-   query capturing what's being asked for. Downloading, OCR/chunking, and
-   embedding happen automatically once papers are fetched - not your job,
-   don't try to trigger them.
-
-2. ANSWERING questions using papers already in the library ("has anyone
-   studied X", "what did paper Y conclude"). Call search_chunks to find
-   relevant passages; call get_document if you need more of a paper's
-   context (e.g. its abstract). Answer from what you find, and cite the
-   doc_id and page for every claim so the user can dig into the source
-   themselves. If nothing relevant turns up, say so - don't guess, and
-   don't fetch new papers just because search came up empty.
-
-Be concise. Answer directly - no preambles ("I'll check that for you", "Let
-me search..."), no restating the question, no filler or hedging, no summary
-recap at the end. If a short answer fully answers it, give the short
-answer. Markdown is fine for structure (bold, lists) when it actually helps
-readability, not as decoration.
-
-Use the fewest tool calls that get a correct answer. One search_chunks call
-is usually enough - only call it again with a refined query if the first
-result set is genuinely insufficient, not to double-check a good result.
-Don't call get_status before every single fetch_papers - only when it's
-actually unclear whether we already have relevant papers. Every tool call
-costs real money; don't make one out of habit."""
+from prompts.registry import load_prompt
 
 TOOLS = [fetch_papers, get_status, search_chunks, get_document]
 
@@ -62,5 +34,14 @@ TOOLS = [fetch_papers, get_status, search_chunks, get_document]
 MAX_AGENT_RECURSION = 10
 
 
-def build_agent(llm, checkpointer=None):
-    return create_agent(llm, TOOLS, system_prompt=SYSTEM_PROMPT, checkpointer=checkpointer)
+def build_agent(llm, checkpointer=None, system_prompt: str | None = None, version: str | None = None):
+    """Build the agent. `system_prompt` wins if given (tests script it
+    directly); otherwise the prompt is loaded at the configured version, or
+    at `version` when a caller - eval, comparing candidates - overrides it."""
+    if system_prompt is None:
+        if version is None:
+            from config import load
+
+            version = load().prompts.orchestrator
+        system_prompt = load_prompt("orchestrator", version)
+    return create_agent(llm, TOOLS, system_prompt=system_prompt, checkpointer=checkpointer)

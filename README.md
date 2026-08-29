@@ -67,6 +67,7 @@ services/
   backend/        FastAPI app, stage workers, orchestrator agent
     stages/       download.py / chunk.py / embed.py - independent poll loops
     orchestrator/ tools.py, graph.py, llm.py - the LangGraph agent
+    prompts/      versioned LLM prompts (<name>/v1.md) + registry.py
     ingest/       Semantic Scholar fetch, PDF download
     process/      OCR/chunking (Docling), embedding
     search.py     semantic + keyword search

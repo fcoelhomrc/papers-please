@@ -52,6 +52,37 @@ class TestMakeLLM:
             pass
 
 
+class TestAgentPrompt:
+    def test_defaults_to_configured_version(self):
+        llm = FakeToolCallingModel(responses=[AIMessage(content="ok")])
+        with patch("orchestrator.graph.load_prompt", return_value="P") as mock_load:
+            build_agent(llm)
+        mock_load.assert_called_once_with("orchestrator", "v1")
+
+    def test_explicit_version_overrides_config(self):
+        """How eval scores a candidate prompt without editing config."""
+        llm = FakeToolCallingModel(responses=[AIMessage(content="ok")])
+        with patch("orchestrator.graph.load_prompt", return_value="P") as mock_load:
+            build_agent(llm, version="v7")
+        mock_load.assert_called_once_with("orchestrator", "v7")
+
+    def test_explicit_prompt_text_skips_the_registry(self):
+        llm = FakeToolCallingModel(responses=[AIMessage(content="ok")])
+        with patch("orchestrator.graph.load_prompt") as mock_load:
+            build_agent(llm, system_prompt="scripted prompt")
+        mock_load.assert_not_called()
+
+    def test_real_prompt_reaches_the_model(self):
+        """End to end through the registry: the agent actually sends the
+        file's contents, not an empty or default system prompt."""
+        llm = FakeToolCallingModel(responses=[AIMessage(content="done")])
+        agent = build_agent(llm)
+        agent.invoke({"messages": [HumanMessage("hi")]})
+
+        sent = llm.received_messages[0][0]
+        assert "research paper library" in sent.content
+
+
 class TestBuildAgent:
     def test_calls_get_status_then_stops_when_nothing_to_fetch(self):
         """Scripts the LLM: check status, decide we already have enough, stop."""

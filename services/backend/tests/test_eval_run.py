@@ -140,3 +140,39 @@ def test_run_eval_survives_one_question_failing(tmp_path):
 
     # and the run still completed and wrote output, not aborted
     assert output["variant"] == "agentic"
+
+
+class TestResolvePromptVersions:
+    """`--prompt-version name=version` handling. Resolved before any API
+    spend, so a typo fails immediately rather than after 50 paid questions."""
+
+    def test_defaults_come_from_config(self):
+        from eval.run import _resolve_prompt_versions
+
+        assert _resolve_prompt_versions(None) == {"orchestrator": "v1", "fixed_rag": "v1"}
+
+    def test_override_replaces_one_and_leaves_the_rest(self):
+        from eval.run import _resolve_prompt_versions
+
+        assert _resolve_prompt_versions(["orchestrator=v2"]) == {
+            "orchestrator": "v2",
+            "fixed_rag": "v1",
+        }
+
+    def test_multiple_overrides(self):
+        from eval.run import _resolve_prompt_versions
+
+        got = _resolve_prompt_versions(["orchestrator=v2", "fixed_rag=v3"])
+        assert got == {"orchestrator": "v2", "fixed_rag": "v3"}
+
+    def test_unknown_prompt_name_raises(self):
+        from eval.run import _resolve_prompt_versions
+
+        with pytest.raises(ValueError, match="unknown prompt"):
+            _resolve_prompt_versions(["typoed_name=v2"])
+
+    def test_malformed_override_raises(self):
+        from eval.run import _resolve_prompt_versions
+
+        with pytest.raises(ValueError, match="name=version"):
+            _resolve_prompt_versions(["orchestrator"])

@@ -53,6 +53,15 @@ class LLMConfig(BaseModel):
     vllm_model: str = ""
 
 
+class PromptsConfig(BaseModel):
+    """Which version of each prompt to load from prompts/<name>/<version>.md.
+    Config rather than a constant so an eval run can score a candidate prompt
+    (`--prompt-version orchestrator=v2`) without editing code."""
+
+    orchestrator: str = "v1"
+    fixed_rag: str = "v1"
+
+
 class Config(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
     storage: StorageConfig = StorageConfig()
@@ -61,6 +70,7 @@ class Config(BaseModel):
     search: SearchConfig = SearchConfig()
     stages: StagesConfig = StagesConfig()
     llm: LLMConfig = LLMConfig()
+    prompts: PromptsConfig = PromptsConfig()
 
 
 _config: Config | None = None

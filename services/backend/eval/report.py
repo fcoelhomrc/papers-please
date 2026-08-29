@@ -29,6 +29,12 @@ def _truncate(text: str, n: int = 90) -> str:
     return text if len(text) <= n else text[: n - 1] + "…"
 
 
+# Which versioned prompt each variant actually sends. Listing both on every
+# report would credit a score to a prompt that never ran - a `fixed` run
+# never loads the orchestrator prompt, and vice versa.
+PROMPT_BY_VARIANT = {"fixed": "fixed_rag", "agentic": "orchestrator"}
+
+
 def write_markdown_report(output: dict, dataset_rows: list[dict], model_name: str, judge_model_name: str) -> Path:
     variant = output["variant"]
     means = output["means"]
@@ -44,6 +50,20 @@ def write_markdown_report(output: dict, dataset_rows: list[dict], model_name: st
     lines.append(f"- **Run at (UTC)**: {datetime.now(timezone.utc).isoformat()}")
     lines.append(f"- **Pipeline model**: `{model_name}`")
     lines.append(f"- **Judge model**: `{judge_model_name}` (via Ragas' `LangchainLLMWrapper` — your Anthropic API key, no separate judge key)")
+    prompt_name = PROMPT_BY_VARIANT.get(variant)
+    prompt_version = (output.get("prompt_versions") or {}).get(prompt_name)
+    if prompt_version:
+        lines.append(
+            f"- **Prompt**: `prompts/{prompt_name}/{prompt_version}.md` — edits create a new "
+            "version file, so this score stays attributable to an exact prompt."
+        )
+    retrieval = output.get("retrieval") or {}
+    if retrieval:
+        lines.append(
+            f"- **Retrieval**: embed model `{retrieval.get('embed_model')}`, "
+            f"query prefix `{retrieval.get('query_prompt', '').strip()}` "
+            "(prescribed by the model card, not a tunable prompt)"
+        )
     lines.append(f"- **Dataset**: `eval/dataset.jsonl` — {len(dataset_rows)} questions ({len(grounded)} grounded, {len(edge)} edge case)")
     lines.append("- **Trigger**: manual only (`uv run python -m eval.run --variant ...`) — not wired into compose, CI, or any automated pipeline.")
     lines.append("")

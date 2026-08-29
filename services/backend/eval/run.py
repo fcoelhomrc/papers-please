@@ -60,6 +60,8 @@ def run_eval(
     judge_embeddings,
     model_name: str = "",
     judge_model_name: str = "",
+    prompt_versions: dict[str, str] | None = None,
+    retrieval: dict | None = None,
 ) -> dict:
     rows = load_dataset(dataset_path)
     records = []
@@ -103,7 +105,13 @@ def run_eval(
     per_question = df.to_dict(orient="records")
     means = {m.name: float(df[m.name].mean()) for m in METRICS if m.name in df.columns}
 
-    output = {"variant": variant_name, "means": means, "per_question": per_question}
+    output = {
+        "variant": variant_name,
+        "means": means,
+        "per_question": per_question,
+        "prompt_versions": prompt_versions or {},
+        "retrieval": retrieval or {},
+    }
 
     RESULTS_DIR.mkdir(exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -116,18 +124,39 @@ def run_eval(
     return output
 
 
-def _build_pipeline(variant: str) -> Pipeline:
+def _build_pipeline(variant: str, versions: dict[str, str]) -> Pipeline:
     from config import load
     from orchestrator.graph import build_agent
     from orchestrator.llm import make_llm
+    from prompts.registry import load_prompt
     from search import get_search_engine
 
     llm = make_llm(load())
     if variant == "fixed":
-        return FixedPipeline(llm, get_search_engine())
+        prompt = load_prompt("fixed_rag", versions["fixed_rag"])
+        return FixedPipeline(llm, get_search_engine(), system_prompt=prompt)
     if variant == "agentic":
-        return AgenticPipeline(build_agent(llm))
+        return AgenticPipeline(build_agent(llm, version=versions["orchestrator"]))
     raise ValueError(f"unknown variant: {variant!r}")
+
+
+def _resolve_prompt_versions(overrides: list[str] | None) -> dict[str, str]:
+    """Config defaults, with `--prompt-version name=version` on top. Fails
+    loudly on an unknown name: silently ignoring a typo'd override would
+    produce a report that names a prompt version it did not actually run."""
+    from config import load
+
+    versions = load().prompts.model_dump()
+    for item in overrides or []:
+        name, _, version = item.partition("=")
+        if not version:
+            raise ValueError(f"--prompt-version expects name=version, got {item!r}")
+        if name not in versions:
+            raise ValueError(
+                f"unknown prompt {name!r} (known: {', '.join(sorted(versions))})"
+            )
+        versions[name] = version
+    return versions
 
 
 def _judge_llm(cfg):
@@ -143,6 +172,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--variant", choices=["fixed", "agentic"], required=True)
     parser.add_argument("--dataset", default=str(DATASET_PATH))
+    parser.add_argument(
+        "--prompt-version",
+        action="append",
+        metavar="NAME=VERSION",
+        help="override a configured prompt version, e.g. orchestrator=v2 "
+        "(repeatable). Recorded in the report so the score names its prompt.",
+    )
     args = parser.parse_args()
 
     from observability import setup_observability
@@ -165,7 +201,11 @@ def main():
 
     ensure_fixtures_seeded()
 
-    pipeline = _build_pipeline(args.variant)
+    # Resolved before any spend: a bad --prompt-version should fail here, not
+    # after 50 questions' worth of paid API calls.
+    versions = _resolve_prompt_versions(args.prompt_version)
+
+    pipeline = _build_pipeline(args.variant, versions)
     output = run_eval(
         pipeline,
         Path(args.dataset),
@@ -174,11 +214,19 @@ def main():
         judge_embeddings,
         model_name=cfg.llm.model,
         judge_model_name=cfg.llm.model,
+        prompt_versions=versions,
+        # Not a versioned prompt (see prompts/registry.py) but it does shape
+        # every retrieval score, so a report should still name it.
+        retrieval={
+            "embed_model": MODELS[cfg.embedder.model]["hf_name"],
+            "query_prompt": MODELS[cfg.embedder.model]["query_prompt"],
+        },
     )
 
     print(f"variant: {output['variant']}")
     for name, score in output["means"].items():
         print(f"  {name}: {score:.3f}")
+    print(f"prompts: {', '.join(f'{k}={v}' for k, v in versions.items())}")
     print(f"report: {output['report_path']}")
 
 

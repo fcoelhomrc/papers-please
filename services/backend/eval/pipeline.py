@@ -29,15 +29,14 @@ class Pipeline(Protocol):
     def answer(self, question: str) -> AnswerResult: ...
 
 
-FIXED_SYSTEM_PROMPT = """Answer the question using only the context passages below. If the
-context doesn't contain the answer, say so plainly - don't guess or use
-outside knowledge. Be concise."""
-
-
 class FixedPipeline:
-    def __init__(self, llm, search_engine, top_k: int = 5, rerank: bool = True):
+    # The synthesis prompt now lives in prompts/fixed_rag/<version>.md - the
+    # baseline's prompt is as much a part of a reported score as the agent's,
+    # so it gets the same version treatment.
+    def __init__(self, llm, search_engine, system_prompt: str, top_k: int = 5, rerank: bool = True):
         self._llm = llm
         self._search_engine = search_engine
+        self._system_prompt = system_prompt
         self._top_k = top_k
         self._rerank = rerank
 
@@ -52,7 +51,7 @@ class FixedPipeline:
 
         result = self._llm.invoke(
             [
-                {"role": "system", "content": FIXED_SYSTEM_PROMPT},
+                {"role": "system", "content": self._system_prompt},
                 {"role": "user", "content": prompt},
             ]
         )

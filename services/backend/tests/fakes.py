@@ -12,15 +12,21 @@ message history).
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
+from pydantic import Field
 
 
 class FakeToolCallingModel(BaseChatModel):
     responses: list[AIMessage]
+    # Every message list the model was called with, so a test can assert on
+    # what was actually sent (e.g. that the system prompt is the versioned
+    # one) rather than only on what came back.
+    received_messages: list[list] = Field(default_factory=list)
 
     def bind_tools(self, tools, **kwargs):
         return self
 
     def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        self.received_messages.append(list(messages))
         turn = sum(1 for m in messages if isinstance(m, AIMessage))
         return ChatResult(generations=[ChatGeneration(message=self.responses[turn])])
 
