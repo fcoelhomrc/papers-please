@@ -104,3 +104,40 @@ def test_omits_prompt_line_for_older_results_without_versions(tmp_path):
         path = write_markdown_report(output, dataset_rows, "m", "m")
 
     assert "**Prompt**" not in path.read_text()
+
+
+def test_includes_judge_free_retrieval_section(tmp_path):
+    """Retrieval metrics separate 'never retrieved it' from 'retrieved it and
+    the model ignored it' - the judged metrics alone can't tell those apart."""
+    dataset_rows = [{"category": "grounded", "question": "q", "ground_truth": "a"}]
+    output = {
+        "variant": "agentic",
+        "means": {"faithfulness": 0.5},
+        "per_question": [{"user_input": "q", "faithfulness": 0.5}],
+        "retrieval_metrics": {
+            "recall": 0.81, "precision": 0.2, "hit_rate": 0.9, "mrr": 0.75,
+            "ndcg": 0.7, "n_retrieval": 42, "n_abstention": 8,
+            "abstention_precision": 0.5, "mean_false_positives": 1.2,
+        },
+    }
+
+    with patch("eval.report.REPORTS_DIR", tmp_path):
+        path = write_markdown_report(output, dataset_rows, "m", "m")
+
+    text = path.read_text()
+    assert "Retrieval (no judge involved)" in text
+    assert "0.810" in text and "ndcg" in text
+    assert "abstention_precision" in text
+
+
+def test_omits_retrieval_section_when_unlabeled(tmp_path):
+    dataset_rows = [{"category": "grounded", "question": "q", "ground_truth": "a"}]
+    output = {
+        "variant": "fixed",
+        "means": {"faithfulness": 0.9},
+        "per_question": [{"user_input": "q", "faithfulness": 0.9}],
+        "retrieval_metrics": {},
+    }
+    with patch("eval.report.REPORTS_DIR", tmp_path):
+        path = write_markdown_report(output, dataset_rows, "m", "m")
+    assert "Retrieval (no judge involved)" not in path.read_text()

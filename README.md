@@ -76,6 +76,33 @@ services/
   frontend/       React + Vite + Tailwind + Radix UI, no other framework
 ```
 
+## Evaluation
+
+Two kinds, split by what they cost:
+
+```bash
+cd services/backend
+
+# Retrieval only - no LLM, so it's free to sweep. Scores recall/nDCG/MRR/
+# precision/hit-rate against the relevance labels in eval/dataset.jsonl.
+uv run python -m eval.sweep                      # every mode x top_k x rerank_top_k
+uv run python -m eval.sweep --modes hybrid --top-k 5,10
+uv run python -m eval.plot                       # -> eval/reports/sweep-*.html
+
+# End-to-end with an LLM judge (Ragas). Costs real API tokens: one call per
+# question for the answer, plus roughly one judge call per metric per question.
+uv run python -m eval.run --variant fixed
+uv run python -m eval.run --variant agentic --prompt-version orchestrator=v2
+```
+
+Retrieval metrics are also recorded by the judged run, so a report says whether a
+bad answer came from retrieval missing the paper or from the model ignoring it -
+the judge metrics alone can't tell those apart.
+
+Questions where nothing in the library is relevant ("does this cover X?" - it
+doesn't) are scored separately as abstention, not as recall failures: averaging a
+zero into recall for correct behaviour would misreport it.
+
 ## Testing
 
 ```bash

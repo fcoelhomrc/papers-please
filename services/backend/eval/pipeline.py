@@ -23,6 +23,11 @@ from orchestrator.graph import MAX_AGENT_RECURSION
 class AnswerResult(TypedDict):
     answer: str
     contexts: list[str]
+    # Ranked doc_ids behind those contexts, so a run can be scored on
+    # retrieval (recall/nDCG/...) as well as on what the LLM judge thinks of
+    # the answer - the judge metrics can't tell "retrieval missed it" apart
+    # from "retrieval found it and the model ignored it".
+    doc_ids: list[int]
 
 
 class Pipeline(Protocol):
@@ -45,6 +50,7 @@ class FixedPipeline:
             question, top_k=self._top_k, rerank=self._rerank, rerank_top_k=self._top_k
         )
         contexts = [r.text for r in response.results]
+        doc_ids = [r.doc_id for r in response.results]
 
         context_block = "\n\n".join(f"[{i + 1}] {c}" for i, c in enumerate(contexts))
         prompt = f"Context:\n{context_block}\n\nQuestion: {question}"
@@ -55,7 +61,7 @@ class FixedPipeline:
                 {"role": "user", "content": prompt},
             ]
         )
-        return AnswerResult(answer=result.content, contexts=contexts)
+        return AnswerResult(answer=result.content, contexts=contexts, doc_ids=doc_ids)
 
 
 class AgenticPipeline:
@@ -72,6 +78,7 @@ class AgenticPipeline:
         # search_chunks tool_call id -> its ToolMessage result, so we can
         # pull out the chunk texts the agent actually retrieved and used.
         contexts: list[str] = []
+        doc_ids: list[int] = []
         search_call_ids = {
             call["id"]
             for m in messages
@@ -84,7 +91,9 @@ class AgenticPipeline:
                 try:
                     for chunk in json.loads(m.content):
                         contexts.append(chunk["text"])
+                        if "doc_id" in chunk:
+                            doc_ids.append(chunk["doc_id"])
                 except (json.JSONDecodeError, TypeError, KeyError):
                     continue
 
-        return AnswerResult(answer=messages[-1].content, contexts=contexts)
+        return AnswerResult(answer=messages[-1].content, contexts=contexts, doc_ids=doc_ids)

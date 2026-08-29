@@ -35,6 +35,7 @@ from ragas.metrics import answer_relevancy, context_precision, context_recall, f
 
 from eval.pipeline import AgenticPipeline, FixedPipeline, Pipeline
 from eval.report import write_markdown_report
+from eval.retrieval import aggregate, score_question
 
 RESULTS_DIR = Path(__file__).parent / "results"
 DATASET_PATH = Path(__file__).parent / "dataset.jsonl"
@@ -52,6 +53,30 @@ def load_dataset(path: Path) -> list[dict]:
     return rows
 
 
+def score_retrieval(rows: list[dict], retrieved_docs: list[list[int]]) -> dict:
+    """Rank metrics over what each pipeline actually retrieved.
+
+    Skipped silently when the dataset has no labels - an older dataset should
+    still be scorable on the judged metrics rather than failing the run.
+    """
+    if not all("relevant_source_ids" in r for r in rows):
+        return {}
+
+    from db.connection import PostgresInterface
+    from eval.sweep import _to_source_ids, doc_id_to_source_id
+
+    id_map = doc_id_to_source_id(PostgresInterface.connect())
+    per_question = []
+    for row, doc_ids in zip(rows, retrieved_docs):
+        retrieved = _to_source_ids([{"doc_id": d} for d in doc_ids], id_map)
+        # k is however many the pipeline chose to retrieve - unlike the sweep,
+        # this isn't a fixed budget, so precision is over what it actually used.
+        per_question.append(
+            score_question(retrieved, set(row["relevant_source_ids"]), k=max(len(retrieved), 1))
+        )
+    return aggregate(per_question)
+
+
 def run_eval(
     pipeline: Pipeline,
     dataset_path: Path,
@@ -65,6 +90,7 @@ def run_eval(
 ) -> dict:
     rows = load_dataset(dataset_path)
     records = []
+    retrieved_docs: list[list[int]] = []
     for i, row in enumerate(rows, 1):
         # A single question's pipeline.answer() must never take the other
         # N-1 down with it - a real incident showed why: one question hit
@@ -76,10 +102,11 @@ def run_eval(
             result = pipeline.answer(row["question"])
         except Exception as e:
             print(f"[{i}/{len(rows)}] FAILED: {row['question'][:60]!r} - {e}")
-            result = {"answer": f"error: pipeline failed ({e})", "contexts": []}
+            result = {"answer": f"error: pipeline failed ({e})", "contexts": [], "doc_ids": []}
         else:
             print(f"[{i}/{len(rows)}] ok: {row['question'][:60]!r}")
 
+        retrieved_docs.append(result.get("doc_ids") or [])
         records.append(
             {
                 "user_input": row["question"],
@@ -111,6 +138,10 @@ def run_eval(
         "per_question": per_question,
         "prompt_versions": prompt_versions or {},
         "retrieval": retrieval or {},
+        # Judge-free retrieval scores alongside the judged generation scores:
+        # they separate "retrieval never found it" from "retrieval found it
+        # and the model didn't use it", which the Ragas metrics conflate.
+        "retrieval_metrics": score_retrieval(rows, retrieved_docs),
     }
 
     RESULTS_DIR.mkdir(exist_ok=True)

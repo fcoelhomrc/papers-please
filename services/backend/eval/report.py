@@ -76,6 +76,27 @@ def write_markdown_report(output: dict, dataset_rows: list[dict], model_name: st
         lines.append(f"| {name} | {_fmt(means[name])} |")
     lines.append("")
 
+    rm = output.get("retrieval_metrics") or {}
+    if rm:
+        lines.append("## Retrieval (no judge involved)")
+        lines.append("")
+        lines.append(
+            f"Scored against `relevant_source_ids` labels over the "
+            f"{rm.get('n_retrieval', 0)} questions that have a relevant paper; the "
+            f"{rm.get('n_abstention', 0)} abstention questions are scored separately "
+            "(recall is undefined when nothing is relevant)."
+        )
+        lines.append("")
+        lines.append("| Metric | Score |")
+        lines.append("|---|---|")
+        for name in ("recall", "precision", "hit_rate", "mrr", "ndcg"):
+            if name in rm:
+                lines.append(f"| {name} | {_fmt(rm[name])} |")
+        if "abstention_precision" in rm:
+            lines.append(f"| abstention_precision | {_fmt(rm['abstention_precision'])} |")
+            lines.append(f"| mean_false_positives | {_fmt(rm['mean_false_positives'])} |")
+        lines.append("")
+
     lines.append("## Summary by category")
     lines.append("")
     lines.append("| Category | N | " + " | ".join(metric_names) + " |")
