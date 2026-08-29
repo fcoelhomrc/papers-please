@@ -1,155 +1,202 @@
-import { CheckCircle2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { listDocuments } from '../api'
-import PdfPreview from '../components/PdfPreview'
+import { CheckCircle2, FileStack } from 'lucide-react'
+import { useState } from 'react'
+import PdfPreview from '../components/PdfPreview.jsx'
+import {
+  Button,
+  Card,
+  Checkbox,
+  EmptyState,
+  ErrorState,
+  Input,
+  PageHeader,
+  Select,
+  Skeleton,
+} from '../components/ui.jsx'
+import { useDocuments } from '../hooks/queries'
 
 const PAGE_SIZE = 20
 
 export default function Documents() {
-  const [docs, setDocs] = useState([])
   const [offset, setOffset] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [filters, setFilters] = useState({
+    q: '',
+    onlyAvailable: false,
+    onlyProcessed: false,
+    sort: 'newest',
+  })
 
-  const [q, setQ] = useState('')
-  const [onlyAvailable, setOnlyAvailable] = useState(false)
-  const [onlyProcessed, setOnlyProcessed] = useState(false)
-  const [sort, setSort] = useState('newest')
-
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
-    listDocuments({ offset, limit: PAGE_SIZE, q, onlyAvailable, onlyProcessed, sort })
-      .then(setDocs)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
-  }, [offset, q, onlyAvailable, onlyProcessed, sort])
-
-  function resetAndSet(setter) {
-    return (value) => {
-      setOffset(0)
-      setter(value)
-    }
+  // Any filter change invalidates the current page position - staying on
+  // page 3 of a different result set is never what you want.
+  function setFilter(key, value) {
+    setOffset(0)
+    setFilters((f) => ({ ...f, [key]: value }))
   }
 
-  const hasMore = docs.length === PAGE_SIZE
-  const filtersActive = q || onlyAvailable || onlyProcessed
+  const { data: docs, error, isLoading, isPlaceholderData } = useDocuments({
+    offset,
+    limit: PAGE_SIZE,
+    ...filters,
+  })
+
+  const hasMore = docs?.length === PAGE_SIZE
+  const filtersActive = filters.q || filters.onlyAvailable || filters.onlyProcessed
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold">Documents</h1>
-        <p className="text-[13px] text-muted mt-0.5">All papers registered in the database.</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader title="Documents" description="All papers registered in the database." />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => resetAndSet(setQ)(e.target.value)}
+      {/* One row from sm up; on phones the filter input takes the full width
+          and the toggles/sort share the row below it, rather than wrapping
+          into three ragged lines. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Input
+          value={filters.q}
+          onChange={(e) => setFilter('q', e.target.value)}
           placeholder="Filter by title…"
-          className="flex-1 min-w-[180px] rounded-lg border border-border bg-surface px-3 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ink/20"
+          className="sm:min-w-[180px] sm:flex-1"
         />
-        <label className="flex items-center gap-1.5 text-[13px] text-muted cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={onlyAvailable}
-            onChange={(e) => resetAndSet(setOnlyAvailable)(e.target.checked)}
+        <div className="flex items-center gap-4">
+          <Checkbox
+            label="Has PDF"
+            checked={filters.onlyAvailable}
+            onChange={(e) => setFilter('onlyAvailable', e.target.checked)}
           />
-          Has PDF
-        </label>
-        <label className="flex items-center gap-1.5 text-[13px] text-muted cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={onlyProcessed}
-            onChange={(e) => resetAndSet(setOnlyProcessed)(e.target.checked)}
+          <Checkbox
+            label="Searchable"
+            checked={filters.onlyProcessed}
+            onChange={(e) => setFilter('onlyProcessed', e.target.checked)}
           />
-          Searchable
-        </label>
-        <select
-          value={sort}
-          onChange={(e) => resetAndSet(setSort)(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-2 py-1.5 text-[13px]"
-        >
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="title">Title</option>
-          <option value="year">Year</option>
-        </select>
+          <Select
+            value={filters.sort}
+            onChange={(e) => setFilter('sort', e.target.value)}
+            className="ml-auto sm:ml-0"
+          >
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="title">Title</option>
+            <option value="year">Year</option>
+          </Select>
+        </div>
       </div>
 
-      {error && <p className="text-[13px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">{error}</p>}
+      <ErrorState error={error} />
 
-      {loading ? (
-        <p className="text-[13px] text-faint">Loading…</p>
-      ) : docs.length === 0 ? (
-        <p className="text-[13px] text-faint">
-          {filtersActive ? 'No documents match these filters.' : 'No documents yet. Use Fetch to add papers.'}
-        </p>
-      ) : (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-[13px]">
-            <thead className="bg-canvas border-b border-border">
-              <tr>
-                <th className="text-left px-4 py-2.5 font-medium text-muted">Title</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted">Venue</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted">Year</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {docs.map((doc) => {
-                const authors = doc.authors?.slice(0, 3).join(', ')
-                const authorsLabel = doc.authors?.length > 3 ? `${authors} et al.` : authors
-                return (
-                  <tr key={doc.id}>
-                    <td className="px-4 py-2.5">
+      {isLoading ? (
+        <Card className="divide-y divide-border">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="flex items-center gap-4 p-4">
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-6 w-20" />
+            </div>
+          ))}
+        </Card>
+      ) : docs?.length === 0 ? (
+        <EmptyState
+          icon={FileStack}
+          title={filtersActive ? 'No matching documents' : 'No documents yet'}
+          description={
+            filtersActive
+              ? 'No documents match these filters.'
+              : 'Use Fetch to add papers to the library.'
+          }
+        />
+      ) : docs ? (
+        <>
+          {/* Table from sm up; the same rows as stacked cards on phones, where
+              a four-column table would either overflow or truncate to noise. */}
+          <Card
+            className={isPlaceholderData ? 'overflow-hidden opacity-60 transition-opacity' : 'overflow-hidden'}
+          >
+            <table className="hidden w-full text-sm sm:table">
+              <thead className="border-b border-border bg-inset">
+                <tr>
+                  <th className="px-4 py-2.5 text-left font-medium text-muted">Title</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-muted">Venue</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-muted">Year</th>
+                  <th className="px-4 py-2.5" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {docs.map((doc) => (
+                  <tr key={doc.id} className="transition-colors hover:bg-inset/60">
+                    <td className="max-w-md px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
                         {doc.processed && (
-                          <CheckCircle2 size={13} className="text-green-600 dark:text-green-400 shrink-0" />
+                          <CheckCircle2 size={13} className="shrink-0 text-success" />
                         )}
-                        <span className="font-medium truncate max-w-md" title={doc.processed ? 'Searchable' : undefined}>
-                          {doc.title}
-                        </span>
+                        <span className="truncate font-medium" title={doc.title}>{doc.title}</span>
                       </div>
-                      {authorsLabel && <div className="text-[11.5px] text-faint truncate max-w-md">{authorsLabel}</div>}
+                      <AuthorLine authors={doc.authors} />
                     </td>
                     <td className="px-4 py-2.5 text-muted">{doc.venue ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-muted">{doc.year ?? '—'}</td>
+                    <td className="px-4 py-2.5 tabular-nums text-muted">{doc.year ?? '—'}</td>
                     <td className="px-4 py-2.5 text-right">
                       {doc.has_pdf ? (
                         <PdfPreview docId={doc.id} title={doc.title} />
                       ) : (
-                        <span className="text-[11.5px] text-faint">no PDF yet</span>
+                        <span className="text-2xs text-faint">no PDF yet</span>
                       )}
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ))}
+              </tbody>
+            </table>
 
-      {!loading && (offset > 0 || hasMore) && (
-        <div className="flex justify-between items-center text-[13px]">
-          <button
-            onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-            disabled={offset === 0}
-            className="rounded-lg border border-border px-3 py-1.5 disabled:opacity-40"
-          >
-            Previous
-          </button>
-          <span className="text-faint">{offset + 1}–{offset + docs.length}</span>
-          <button
-            onClick={() => setOffset((o) => o + PAGE_SIZE)}
-            disabled={!hasMore}
-            className="rounded-lg border border-border px-3 py-1.5 disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
-      )}
+            <div className="divide-y divide-border sm:hidden">
+              {docs.map((doc) => (
+                <div key={doc.id} className="space-y-2 p-4">
+                  <div className="flex items-start gap-1.5">
+                    {doc.processed && (
+                      <CheckCircle2 size={13} className="mt-1 shrink-0 text-success" />
+                    )}
+                    <span className="text-sm font-medium leading-snug">{doc.title}</span>
+                  </div>
+                  <AuthorLine authors={doc.authors} />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-2xs text-muted">
+                      {[doc.venue, doc.year].filter(Boolean).join(' · ') || '—'}
+                    </span>
+                    {doc.has_pdf ? (
+                      <PdfPreview docId={doc.id} title={doc.title} />
+                    ) : (
+                      <span className="text-2xs text-faint">no PDF yet</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {(offset > 0 || hasMore) && (
+            <div className="flex items-center justify-between text-sm">
+              <Button
+                size="sm"
+                onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
+                disabled={offset === 0}
+              >
+                Previous
+              </Button>
+              <span className="tabular-nums text-faint">
+                {offset + 1}–{offset + docs.length}
+              </span>
+              <Button size="sm" onClick={() => setOffset((o) => o + PAGE_SIZE)} disabled={!hasMore}>
+                Next
+              </Button>
+            </div>
+          )}
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+function AuthorLine({ authors }) {
+  if (!authors?.length) return null
+  const shown = authors.slice(0, 3).join(', ')
+  return (
+    <div className="truncate text-2xs text-faint">
+      {authors.length > 3 ? `${shown} et al.` : shown}
     </div>
   )
 }

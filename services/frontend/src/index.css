@@ -2,64 +2,167 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens. Light is :root, dark is .dark - the theme provider always
+   writes an explicit class on <html>, so there's no prefers-color-scheme
+   branch here and no ambiguity about which one wins. */
 :root {
-  --canvas: 250 250 250;
+  --canvas: 250 250 249;
   --surface: 255 255 255;
-  --border: 228 228 231;
-  --ink: 24 24 27;
-  --muted: 113 113 122;
-  --faint: 161 161 170;
-  --accent: 24 24 27;
+  --inset: 245 245 244;
+  --border: 231 229 228;
+  --border-strong: 214 211 209;
+  --ink: 28 25 23;
+  --muted: 120 113 108;
+  --faint: 168 162 158;
+  --accent: 67 56 202;
   --accent-ink: 255 255 255;
+  --accent-soft: 238 242 255;
+  --success: 21 128 61;
+  --success-soft: 240 253 244;
+  --warn: 180 83 9;
+  --warn-soft: 255 251 235;
+  --danger: 185 28 28;
+  --danger-soft: 254 242 242;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: 18 18 18;
-    --surface: 26 26 26;
-    --border: 44 44 46;
-    --ink: 244 244 245;
-    --muted: 161 161 170;
-    --faint: 113 113 122;
-    --accent: 244 244 245;
-    --accent-ink: 24 24 27;
-  }
+.dark {
+  --canvas: 12 12 13;
+  --surface: 24 24 27;
+  --inset: 32 32 35;
+  --border: 39 39 42;
+  --border-strong: 63 63 70;
+  --ink: 250 250 250;
+  --muted: 161 161 170;
+  --faint: 113 113 122;
+  --accent: 129 140 248;
+  --accent-ink: 23 23 28;
+  --accent-soft: 30 32 58;
+  --success: 74 222 128;
+  --success-soft: 20 38 28;
+  --warn: 251 191 36;
+  --warn-soft: 43 34 12;
+  --danger: 248 113 113;
+  --danger-soft: 48 22 22;
+}
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-canvas text-ink antialiased;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  @apply bg-canvas text-ink text-base antialiased;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter,
+    Helvetica, Arial, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
-::-webkit-scrollbar-track { background: transparent; }
+/* One focus treatment for the whole app - the old code repeated
+   `focus:ring-1 focus:ring-ink/20` per input and skipped it on buttons. */
+@layer base {
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/40 ring-offset-2 ring-offset-canvas;
+  }
+}
 
-/* Chat markdown - scoped instead of the Tailwind typography plugin, sized
-   for the chat bubble's 13.5px base rather than prose defaults. */
-.prose-chat p { margin: 0 0 0.5em; }
-.prose-chat p:last-child { margin-bottom: 0; }
-.prose-chat strong { font-weight: 600; }
-.prose-chat em { font-style: italic; }
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full border-[3px] border-solid border-transparent;
+  background-clip: content-box;
+  background-color: rgb(var(--border-strong));
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--faint));
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Chat markdown - scoped rather than the Tailwind typography plugin, sized
+   for the chat bubble's 13px base rather than prose defaults. */
+.prose-chat p {
+  margin: 0 0 0.5em;
+}
+.prose-chat p:last-child {
+  margin-bottom: 0;
+}
+.prose-chat strong {
+  font-weight: 600;
+}
+.prose-chat em {
+  font-style: italic;
+}
 .prose-chat code {
-  @apply bg-border/50 rounded px-1 py-0.5;
+  @apply rounded-sm bg-inset px-1 py-0.5;
   font-size: 0.9em;
-  font-family: ui-monospace, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .prose-chat pre {
-  @apply bg-canvas border border-border rounded-lg;
-  padding: 0.6em 0.8em;
-  overflow-x: auto;
-  margin: 0.5em 0;
+  @apply my-2 overflow-x-auto rounded-lg border border-border bg-canvas p-2.5;
 }
-.prose-chat pre code { background: none; padding: 0; }
-.prose-chat ul, .prose-chat ol { margin: 0.4em 0; padding-left: 1.3em; }
-.prose-chat li { margin: 0.15em 0; }
-.prose-chat ul { list-style: disc; }
-.prose-chat ol { list-style: decimal; }
-.prose-chat a { text-decoration: underline; text-underline-offset: 2px; }
-.prose-chat h1, .prose-chat h2, .prose-chat h3 {
+.prose-chat pre code {
+  background: none;
+  padding: 0;
+}
+.prose-chat ul,
+.prose-chat ol {
+  margin: 0.4em 0;
+  padding-left: 1.3em;
+}
+.prose-chat li {
+  margin: 0.15em 0;
+}
+.prose-chat ul {
+  list-style: disc;
+}
+.prose-chat ol {
+  list-style: decimal;
+}
+.prose-chat a {
+  @apply text-accent underline;
+  text-underline-offset: 2px;
+}
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3 {
   font-weight: 600;
   margin: 0.6em 0 0.3em;
 }
-.prose-chat h1:first-child, .prose-chat h2:first-child, .prose-chat h3:first-child { margin-top: 0; }
+.prose-chat h1:first-child,
+.prose-chat h2:first-child,
+.prose-chat h3:first-child {
+  margin-top: 0;
+}
+
+/* Skeletons: a sweep rather than a pulse - reads as "loading" without the
+   whole page throbbing. */
+.skeleton {
+  @apply relative overflow-hidden rounded-md bg-inset;
+}
+.skeleton::after {
+  @apply absolute inset-0;
+  content: '';
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--border) / 0.6),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
