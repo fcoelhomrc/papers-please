@@ -70,7 +70,7 @@ services/
     prompts/      versioned LLM prompts (<name>/v1.md) + registry.py
     ingest/       Semantic Scholar fetch, PDF download
     process/      OCR/chunking (Docling), embedding
-    search.py     semantic + keyword search
+    search.py     semantic / keyword / hybrid (RRF) retrieval + rerank
     status.py     pipeline status query (shared by /status and the agent's get_status tool)
   db/             schema.sql
   frontend/       React + Vite + Tailwind + Radix UI, no other framework

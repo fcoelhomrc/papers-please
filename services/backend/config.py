@@ -28,6 +28,11 @@ class SearchConfig(BaseModel):
     top_k: int = 10
     rerank_top_k: int = 5
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    # "semantic" | "keyword" | "hybrid". Defaults to semantic so the existing
+    # behaviour stays the default - hybrid is opt-in until eval says it wins.
+    mode: str = "semantic"
+    rrf_k: int = 60  # RRF damping; 60 is the original paper's default
+    hybrid_candidates: int = 20  # per-source pool size before fusion narrows to top_k
 
 
 class StageConfig(BaseModel):

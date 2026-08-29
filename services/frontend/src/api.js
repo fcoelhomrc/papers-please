@@ -10,14 +10,14 @@ async function handle(res) {
   return res.json()
 }
 
-export function search(q, { topK = 10, rerank = false, rerankTopK = 5 } = {}) {
-  const params = new URLSearchParams({ q, top_k: topK, rerank, rerank_top_k: rerankTopK })
+// One endpoint for every retrieval mode (semantic | keyword | hybrid).
+// /search/keyword still exists server-side for back-compat, but there's no
+// reason for the UI to special-case one mode onto its own route.
+export function search(q, { mode = 'semantic', topK = 10, rerank = false, rerankTopK = 5 } = {}) {
+  const params = new URLSearchParams({
+    q, mode, top_k: topK, rerank, rerank_top_k: rerankTopK,
+  })
   return fetch(`${BASE}/search?${params}`).then(handle)
-}
-
-export function searchKeyword(q, { topK = 10 } = {}) {
-  const params = new URLSearchParams({ q, top_k: topK })
-  return fetch(`${BASE}/search/keyword?${params}`).then(handle)
 }
 
 export function fetchPapers({ query = '', venue = '', year = '', maxPapers = 500 } = {}) {

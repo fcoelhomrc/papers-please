@@ -41,6 +41,7 @@ class ChunkResult(BaseModel):
 class SearchResponse(BaseModel):
     query: str
     model: str
+    mode: str = "semantic"  # which retrieval mode produced these results
     reranked: bool
     results: list[ChunkResult]
 

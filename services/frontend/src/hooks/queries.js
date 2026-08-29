@@ -19,10 +19,7 @@ export const keys = {
 export function useSearch({ mode, query, topK, rerank, enabled }) {
   return useQuery({
     queryKey: keys.search(mode, query, { topK, rerank }),
-    queryFn: () =>
-      mode === 'semantic'
-        ? api.search(query, { topK, rerank, rerankTopK: 5 })
-        : api.searchKeyword(query, { topK }),
+    queryFn: () => api.search(query, { mode, topK, rerank, rerankTopK: 5 }),
     enabled: Boolean(enabled && query.trim()),
     // A search result is a snapshot of an index that only changes when the
     // pipeline ingests more - not worth auto-invalidating, but cheap to keep.

@@ -115,9 +115,11 @@ def search(
     top_k: int = Query(default=10, ge=1, le=50),
     rerank: bool = False,
     rerank_top_k: int = Query(default=5, ge=1, le=20),
+    # None -> whatever config.search.mode says, so the default is one place
+    mode: str | None = Query(default=None, pattern="^(semantic|keyword|hybrid)$"),
     engine: SearchEngine = Depends(get_engine),
 ):
-    return engine.search(q, top_k=top_k, rerank=rerank, rerank_top_k=rerank_top_k)
+    return engine.search(q, top_k=top_k, rerank=rerank, rerank_top_k=rerank_top_k, mode=mode)
 
 
 @app.get("/search/keyword", response_model=SearchResponse)

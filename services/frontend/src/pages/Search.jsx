@@ -16,6 +16,18 @@ import {
 } from '../components/ui.jsx'
 import { useSearch } from '../hooks/queries'
 
+const MODE_HELP = {
+  semantic: 'Semantic search over indexed paper chunks — matches meaning, not exact words.',
+  keyword: 'Keyword search — literal word matches, ranked by Postgres full-text relevance.',
+  hybrid: 'Both retrievers, fused by reciprocal rank — chunks that rank well in each win.',
+}
+
+const MODE_PLACEHOLDER = {
+  semantic: 'Search research papers…',
+  keyword: 'Search exact words…',
+  hybrid: 'Search research papers…',
+}
+
 function authorLine(authors, year) {
   const shown = authors?.slice(0, 3).join(', ')
   const label = authors?.length > 3 ? `${shown} et al.` : shown
@@ -76,11 +88,7 @@ export default function Search() {
     <div className="space-y-6">
       <PageHeader
         title="Search"
-        description={
-          mode === 'semantic'
-            ? 'Semantic search over indexed paper chunks — matches meaning, not exact words.'
-            : 'Keyword search — literal word matches, ranked by relevance.'
-        }
+        description={MODE_HELP[mode]}
       />
 
       <form
@@ -97,13 +105,14 @@ export default function Search() {
             options={[
               { value: 'semantic', label: 'Semantic' },
               { value: 'keyword', label: 'Keyword' },
+              { value: 'hybrid', label: 'Hybrid' },
             ]}
           />
           <div className="flex flex-1 gap-2">
             <Input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={mode === 'semantic' ? 'Search research papers…' : 'Search exact words…'}
+              placeholder={MODE_PLACEHOLDER[mode]}
               className="flex-1"
             />
             <Button type="submit" variant="primary" loading={isFetching} disabled={!draft.trim()}>
@@ -124,13 +133,11 @@ export default function Search() {
 
         {showOptions && (
           <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-surface px-3.5 py-2.5 animate-fade-in">
-            {mode === 'semantic' && (
-              <Checkbox
-                label="Rerank results"
-                checked={rerank}
-                onChange={(e) => setRerank(e.target.checked)}
-              />
-            )}
+            <Checkbox
+              label="Rerank results"
+              checked={rerank}
+              onChange={(e) => setRerank(e.target.checked)}
+            />
             <label className="flex items-center gap-2 text-sm text-muted">
               Top
               <Select value={topK} onChange={(e) => setTopK(Number(e.target.value))}>
@@ -165,6 +172,7 @@ export default function Search() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-muted">
             <span>{data.results.length} results</span>
+            <Badge tone="accent">{data.mode}</Badge>
             {data.reranked && <Badge tone="accent">reranked</Badge>}
             <Badge>{data.model}</Badge>
           </div>
