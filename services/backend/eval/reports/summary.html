@@ -1,12 +1,12 @@
 <style>
 .viz-root { color-scheme: light;
   --surface-1:#fcfcfb; --text-primary:#0b0b0b; --text-secondary:#52514e;
-  --text-muted:#78766f; --grid:#e6e5e1;
+  --text-muted:#78716c; --grid:#e7e5e4; --accent:#4338ca; --card:#ffffff;
   --s-semantic:#2a78d6; --s-keyword:#eb6834;
   --s-hybrid:#1baf7a; }
 @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .viz-root {
   color-scheme: dark; --surface-1:#1a1a19; --text-primary:#fff; --text-secondary:#c3c2b7;
-  --text-muted:#96948a; --grid:#302f2c;
+  --text-muted:#a1a1aa; --grid:#27272a; --accent:#818cf8; --card:#18181b;
   --s-semantic:#3987e5; --s-keyword:#d95926;
   --s-hybrid:#199e70; } }
 :root[data-theme="dark"] .viz-root {
@@ -52,14 +52,29 @@ code { background:color-mix(in srgb,var(--grid) 60%,transparent); padding:1px 5p
   color:var(--text-secondary); }
 .legend span { display:inline-flex; align-items:center; gap:7px; }
 .legend i { width:11px; height:11px; border-radius:3px; background:var(--c); }
+.stats { display:grid; gap:12px; margin:20px 0 8px;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }
+.stat { background:var(--card); border:1px solid var(--grid); border-radius:10px;
+  padding:14px 16px; display:flex; flex-direction:column; gap:2px; }
+.stat-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--text-muted); }
+.stat-value { font-size:28px; font-weight:600; font-variant-numeric:tabular-nums;
+  letter-spacing:-0.02em; }
+.stat-note { font-size:12px; color:var(--text-muted); }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { * { animation:none !important;
+  transition:none !important; } }
 </style>
 
+<title>papers-please · evaluation results</title>
 <div class="viz-root">
-<h1>Evaluation summary</h1>
+<h1>Evaluation results</h1>
 <p class="sub">Every eval run recorded so far, and the retrieval operating curves.</p>
 <p class="meta">8 runs from <code>eval/ledger.jsonl</code>. Curves from <code>sweep-20260829T230921Z.json</code>.
 Blank cells mean the metric doesn't apply to that run kind - judged runs have no
 recall labels, retrieval runs have no LLM judge.</p>
+
+<div class="stats"><div class="stat"><div class="stat-label">Runs recorded</div><div class="stat-value">8</div><div class="stat-note">judged, retrieval and threshold</div></div><div class="stat"><div class="stat-label">Best retrieval</div><div class="stat-value">0.847</div><div class="stat-note">nDCG · hybrid top_k=10 rerank->10</div></div><div class="stat"><div class="stat-label">Best faithfulness</div><div class="stat-value">0.829</div><div class="stat-note">judged · fixed pipeline</div></div><div class="stat"><div class="stat-label">Abstention</div><div class="stat-value">0.000</div><div class="stat-note">share of no-answer questions correctly returning nothing</div></div></div>
 
 <h2>All runs</h2>
 <div class="tablewrap"><table><thead><tr><th>Run</th><th>Kind</th><th>Best config</th><th>Model</th><th>N</th><th title="faithfulness (judged)">faith</th><th title="answer_relevancy (judged)">ans rel</th><th title="context_precision (judged)">ctx prec</th><th title="context_recall (judged)">ctx rec</th><th title="recall@k">recall</th><th title="precision@k">prec</th><th title="hit_rate@k">hit</th><th title="mean reciprocal rank">mrr</th><th title="nDCG@k">ndcg</th><th title="abstention_precision">abst</th></tr></thead><tbody><tr><td><code>fixed-20260828T152436Z</code></td><td><span class='kind kind-judged'>judged</span></td><td>fixed</td><td><code>claude-haiku-4-5</code></td><td>50</td><td>0.829</td><td>0.623</td><td>0.653</td><td>0.760</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td></tr><tr><td><code>agentic-20260828T163611Z</code></td><td><span class='kind kind-judged'>judged</span></td><td>agentic</td><td><code>claude-haiku-4-5</code></td><td>50</td><td>0.564</td><td>0.740</td><td>0.574</td><td>0.730</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td></tr><tr><td><code>sweep-20260829T221416Z</code></td><td><span class='kind kind-retrieval_sweep'>retrieval sweep</span></td><td>hybrid top_k=10 rerank->10 <span class=dim>(72 configs)</span></td><td><code>bge-small</code></td><td>50</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>0.893</td><td>0.098</td><td>0.905</td><td>0.840</td><td>0.847</td><td>0.000</td></tr><tr><td><code>thresholds-20260829T222404Z</code></td><td><span class='kind kind-threshold_sweep'>threshold sweep</span></td><td>semantic vec>=0.00 <span class=dim>(20 configs)</span></td><td><code>bge-small</code></td><td>50</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>0.810</td><td>0.176</td><td>0.833</td><td>0.788</td><td>0.787</td><td>0.000</td></tr><tr><td><code>thresholds-20260829T222525Z</code></td><td><span class='kind kind-threshold_sweep'>threshold sweep</span></td><td>hybrid vec>=0.00 <span class=dim>(30 configs)</span></td><td><code>bge-small</code></td><td>50</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>0.810</td><td>0.176</td><td>0.833</td><td>0.788</td><td>0.787</td><td>0.000</td></tr><tr><td><code>thresholds-20260829T223135Z</code></td><td><span class='kind kind-threshold_sweep'>threshold sweep</span></td><td>semantic vec>=0.00 <span class=dim>(16 configs)</span></td><td><code>bge-small</code></td><td>50</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>0.810</td><td>0.176</td><td>0.833</td><td>0.788</td><td>0.787</td><td>0.000</td></tr><tr><td><code>sweep-20260829T225432Z</code></td><td><span class='kind kind-retrieval_sweep'>retrieval sweep</span></td><td>hybrid top_k=50 rerank=off <span class=dim>(72 configs)</span></td><td><code>bge-small</code></td><td>50</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>0.940</td><td>0.020</td><td>0.952</td><td>0.826</td><td>0.841</td><td>0.000</td></tr><tr><td><code>sweep-20260829T230921Z</code></td><td><span class='kind kind-retrieval_sweep'>retrieval sweep</span></td><td>hybrid top_k=50 rerank=off <span class=dim>(72 configs)</span></td><td><code>bge-small</code></td><td>50</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>0.940</td><td>0.020</td><td>0.952</td><td>0.826</td><td>0.841</td><td>0.000</td></tr></tbody></table></div>

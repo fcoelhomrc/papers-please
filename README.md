@@ -78,7 +78,66 @@ services/
 
 ## Evaluation
 
-Two kinds, split by what they cost:
+Retrieval is measured against hand-labelled relevance judgements in
+`eval/dataset.jsonl` — 50 questions, 42 with at least one relevant paper and 8
+where the library genuinely has nothing. Every figure below regenerates with
+`uv run python -m eval.figures`.
+
+### The operating curve
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/precision-recall-dark.svg">
+  <img alt="Precision-recall curves for semantic, keyword and hybrid retrieval" src="assets/eval/precision-recall-light.svg">
+</picture>
+
+Asking for more results can only raise recall while diluting precision, so a
+retriever is a curve rather than a point, and one dominates another by sitting
+above and to the right of it. Reading the measured curves against that
+expectation is what separates a retriever that returns **more** from one that
+returns **better**.
+
+The right-hand panel is its own finding: once the cross-encoder reranks a
+50-candidate pool, all three curves collapse onto each other — the retrieval
+mode stops mattering.
+
+### Recall and ranking against k
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/recall-vs-k-dark.svg">
+  <img alt="Recall@k and nDCG@k for each retrieval mode" src="assets/eval/recall-vs-k-light.svg">
+</picture>
+
+Recall keeps climbing with k, but nDCG flattens after k≈10: the extra results
+are real but no longer well-ranked, which is the argument for retrieving wide
+and reranking down rather than simply returning more.
+
+### Two defects the labels exposed
+
+<p align="left">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/keyword-fix-dark.svg">
+  <img alt="Keyword recall before and after switching to OR matching" src="assets/eval/keyword-fix-light.svg" width="49%">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/abstention-dark.svg">
+  <img alt="Recall against abstention as the rerank score floor moves" src="assets/eval/abstention-light.svg" width="49%">
+</picture>
+</p>
+
+**Left.** Keyword search used `plainto_tsquery`, which ANDs every lexeme — a
+question sentence only matched a chunk containing all of its words. It returned
+anything for 9 of 50 questions, and recall sat flat at 0.167 no matter how large
+k grew. Flat-with-k is the signature of a *matching* failure rather than a
+ranking one, which is exactly what the curve shows. OR-ing the lexemes took
+recall@5 from 0.167 to 0.738.
+
+**Right.** Retrieval could not abstain: it returned top-k regardless, so on the
+8 questions with no relevant paper it always handed the model something
+irrelevant. The cross-encoder separates those cleanly (relevant questions score
+a median +4.8, unanswerable ones −8.7), so a score floor buys abstention — free
+up to −8.0, and paid for in recall after that.
+
+### Running it
 
 ```bash
 cd services/backend
@@ -87,8 +146,8 @@ cd services/backend
 # precision/hit-rate against the relevance labels in eval/dataset.jsonl.
 uv run python -m eval.sweep                      # every mode x top_k x rerank_top_k
 uv run python -m eval.sweep --modes hybrid --top-k 5,10
-uv run python -m eval.plot                       # -> eval/reports/sweep-*.html
-uv run python -m eval.thresholds                 # score-floor / abstention curve
+uv run python -m eval.thresholds --rerank-floors -10,-8,-6
+uv run python -m eval.figures                    # -> assets/eval/*.svg (the plots above)
 uv run python -m eval.summary                    # -> eval/reports/summary.html
 
 # End-to-end with an LLM judge (Ragas). Costs real API tokens: one call per

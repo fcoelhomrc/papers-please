@@ -45,7 +45,8 @@ def cache_sources(engine, questions, max_k):
     return out
 
 
-def candidates_for(sources, mode, floor, rrf_k, top_k, kw_floor=0.0, kw_weight=1.0):
+def candidates_for(sources, mode, floor, rrf_k, top_k, kw_floor=0.0, kw_weight=1.0,
+                   pool=None):
     """Apply a vector floor, then build the mode's ranked list from cache.
 
     The floor is applied per source before fusion, matching what
@@ -58,7 +59,14 @@ def candidates_for(sources, mode, floor, rrf_k, top_k, kw_floor=0.0, kw_weight=1
         return vec[:top_k]
     if mode == KEYWORD:
         return kw[:top_k]
-    return rrf_fuse([vec, kw], k=rrf_k, weights=[1.0, kw_weight])[:top_k]
+    # Fuse over the pool search() would use, not over everything cached.
+    # Caching at 50 and fusing all of it silently measures a configuration
+    # production never runs - the same conflation that made the sweep report
+    # hybrid at nDCG 0.804 where production scores 0.814.
+    pool = pool or top_k
+    return rrf_fuse(
+        [vec[:pool], kw[:pool]], k=rrf_k, weights=[1.0, kw_weight]
+    )[:top_k]
 
 
 def main():
@@ -74,6 +82,15 @@ def main():
         "chunks, and RRF gives every one of them rank credit.",
     )
     parser.add_argument("--dataset", default=str(DATASET_PATH))
+    parser.add_argument(
+        "--rerank-floors",
+        default="",
+        help="cross-encoder score floors to sweep instead of bi-encoder ones. "
+        "This is the floor that actually works: the cross-encoder separates "
+        "relevant from irrelevant questions cleanly (medians +4.8 vs -8.7) "
+        "where the bi-encoder's distributions overlap.",
+    )
+    parser.add_argument("--rerank-pool", type=int, default=20)
     args = parser.parse_args()
 
     rows = load_labeled_dataset(Path(args.dataset))
@@ -91,7 +108,49 @@ def main():
     sources = cache_sources(engine, [r["question"] for r in rows], max_k=50)
 
     results = []
-    for mode in args.modes.split(","):
+
+    if args.rerank_floors:
+        # Rerank the pool once per question, then apply each floor to the
+        # cached scores - the cross-encoder pass is the expensive part and the
+        # floor only decides where its sorted list is cut.
+        reranked = {}
+        for row in rows:
+            c = candidates_for(
+                sources[row["question"]], args.modes.split(",")[0], 0.0,
+                cfg.search.rrf_k, args.rerank_pool,
+                kw_weight=cfg.search.keyword_weight,
+                pool=max(cfg.search.hybrid_candidates, args.rerank_pool),
+            )
+            reranked[row["question"]] = (
+                engine._reranker.rerank(row["question"], c, top_k=args.rerank_pool)
+                if c else []
+            )
+
+        for floor in [float(f) for f in args.rerank_floors.split(",")]:
+            per_q = []
+            for row in rows:
+                ch = [c for c in reranked[row["question"]] if c["score"] >= floor]
+                per_q.append(
+                    score_question(
+                        _to_source_ids(ch[: args.top_k], id_map),
+                        set(row["relevant_source_ids"]), args.top_k,
+                    )
+                )
+            agg = aggregate(per_q)
+            results.append({
+                "mode": args.modes.split(",")[0], "min_rerank_score": floor,
+                "rerank_pool": args.rerank_pool, "top_k": args.top_k, **agg,
+            })
+            print(
+                f"  rerank floor={floor:>7.2f} recall={agg['recall']:.3f} "
+                f"ndcg={agg['ndcg']:.3f} abstention={agg.get('abstention_precision', 0):.3f} "
+                f"fp={agg.get('mean_false_positives', 0):.2f}"
+            )
+        modes_iter = []
+    else:
+        modes_iter = args.modes.split(",")
+
+    for mode in modes_iter:
         for floor in floors:
             for kwf in kw_floors:
                 per_q = []
@@ -99,6 +158,7 @@ def main():
                     chunks = candidates_for(
                         sources[row["question"]], mode, floor, cfg.search.rrf_k,
                         args.top_k, kw_floor=kwf, kw_weight=cfg.search.keyword_weight,
+                        pool=max(cfg.search.hybrid_candidates, args.top_k),
                     )
                     retrieved = _to_source_ids(chunks, id_map)
                     per_q.append(

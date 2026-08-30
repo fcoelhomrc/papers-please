@@ -141,6 +141,53 @@ def _ledger_table(rows) -> str:
     return f"<table><thead>{head}</thead><tbody>{''.join(body)}</tbody></table>"
 
 
+def headline(rows, sweep) -> str:
+    """A dashboard is scanned, not read top-to-bottom, so the state that would
+    change what you do next goes above the table rather than inside it."""
+    judged = [r for r in rows if r["kind"] == "judged"]
+    sweeps = [r for r in rows if r["kind"] == "retrieval_sweep"]
+
+    stats = [("Runs recorded", str(len(rows)), "judged, retrieval and threshold")]
+
+    if sweeps:
+        best = max(sweeps, key=lambda r: r["metrics"].get("ndcg", 0))
+        stats.append(
+            (
+                "Best retrieval",
+                f"{best['metrics'].get('ndcg', 0):.3f}",
+                f"nDCG · {best['variant']}",
+            )
+        )
+    if judged:
+        b = max(judged, key=lambda r: r["metrics"].get("faithfulness", 0))
+        stats.append(
+            (
+                "Best faithfulness",
+                f"{b['metrics'].get('faithfulness', 0):.3f}",
+                f"judged · {b['variant']} pipeline",
+            )
+        )
+    if sweep:
+        ab = max(
+            (r.get("abstention_precision", 0) for r in sweep["results"]), default=0
+        )
+        stats.append(
+            (
+                "Abstention",
+                f"{ab:.3f}",
+                "share of no-answer questions correctly returning nothing",
+            )
+        )
+
+    cards = "".join(
+        f'<div class="stat"><div class="stat-label">{label}</div>'
+        f'<div class="stat-value">{value}</div>'
+        f'<div class="stat-note">{note}</div></div>'
+        for label, value, note in stats
+    )
+    return f'<div class="stats">{cards}</div>'
+
+
 def latest_sweep() -> dict | None:
     paths = sorted(RESULTS_DIR.glob("sweep-*.json"))
     if not paths:
@@ -193,12 +240,12 @@ def render(rows, sweep) -> str:
     return f"""<style>
 .viz-root {{ color-scheme: light;
   --surface-1:#fcfcfb; --text-primary:#0b0b0b; --text-secondary:#52514e;
-  --text-muted:#78766f; --grid:#e6e5e1;
+  --text-muted:#78716c; --grid:#e7e5e4; --accent:#4338ca; --card:#ffffff;
   --s-semantic:{SERIES['semantic']['light']}; --s-keyword:{SERIES['keyword']['light']};
   --s-hybrid:{SERIES['hybrid']['light']}; }}
 @media (prefers-color-scheme: dark) {{ :root:where(:not([data-theme="light"])) .viz-root {{
   color-scheme: dark; --surface-1:#1a1a19; --text-primary:#fff; --text-secondary:#c3c2b7;
-  --text-muted:#96948a; --grid:#302f2c;
+  --text-muted:#a1a1aa; --grid:#27272a; --accent:#818cf8; --card:#18181b;
   --s-semantic:{SERIES['semantic']['dark']}; --s-keyword:{SERIES['keyword']['dark']};
   --s-hybrid:{SERIES['hybrid']['dark']}; }} }}
 :root[data-theme="dark"] .viz-root {{
@@ -244,14 +291,29 @@ code {{ background:color-mix(in srgb,var(--grid) 60%,transparent); padding:1px 5
   color:var(--text-secondary); }}
 .legend span {{ display:inline-flex; align-items:center; gap:7px; }}
 .legend i {{ width:11px; height:11px; border-radius:3px; background:var(--c); }}
+.stats {{ display:grid; gap:12px; margin:20px 0 8px;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }}
+.stat {{ background:var(--card); border:1px solid var(--grid); border-radius:10px;
+  padding:14px 16px; display:flex; flex-direction:column; gap:2px; }}
+.stat-label {{ font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--text-muted); }}
+.stat-value {{ font-size:28px; font-weight:600; font-variant-numeric:tabular-nums;
+  letter-spacing:-0.02em; }}
+.stat-note {{ font-size:12px; color:var(--text-muted); }}
+:focus-visible {{ outline:2px solid var(--accent); outline-offset:2px; }}
+@media (prefers-reduced-motion: reduce) {{ * {{ animation:none !important;
+  transition:none !important; }} }}
 </style>
 
+<title>papers-please · evaluation results</title>
 <div class="viz-root">
-<h1>Evaluation summary</h1>
+<h1>Evaluation results</h1>
 <p class="sub">Every eval run recorded so far, and the retrieval operating curves.</p>
 <p class="meta">{len(rows)} runs from <code>eval/ledger.jsonl</code>. {table_note}
 Blank cells mean the metric doesn't apply to that run kind - judged runs have no
 recall labels, retrieval runs have no LLM judge.</p>
+
+{headline(rows, sweep)}
 
 <h2>All runs</h2>
 <div class="tablewrap">{_ledger_table(rows)}</div>
