@@ -296,6 +296,17 @@ cross-encoder's logit units and is specific to `ms-marco-MiniLM-L-6-v2` - swappi
 cd services/backend
 uv run pytest              # fast, mocked - default
 uv run pytest -m integration   # real Postgres (disposable podman container) + real Pinecone (isolated test namespace)
+
+# The eval harness imports ragas, whose executor calls nest_asyncio.apply()
+# at import time and poisons the event loop for the TestClient tests - so
+# these run in their own process.
+uv run pytest -o addopts="" tests/test_eval_run.py tests/test_eval_sampling.py -m eval
+
+cd ../frontend
+npm test                   # node --test, built in - no test dependency
 ```
 
 Every subtask that touches the DB/Pinecone/search has both: mocked unit tests for wiring, and integration tests proving the actual query/index behavior against real infra (mocks agreeing with themselves isn't proof the SQL is right).
+
+The agent's own tests run against offline replay (see above), so the whole
+default suite passes with no `ANTHROPIC_API_KEY` and spends nothing.

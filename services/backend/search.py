@@ -30,6 +30,7 @@ def rrf_fuse(
     k: int = 60,
     key: str = "chunk_id",
     weights: list[float] | None = None,
+    labels: list[str] | None = None,
 ) -> list[dict]:
     """Reciprocal Rank Fusion: score each chunk as sum(w / (k + rank)) over
     the lists it appears in, ranks 1-based.
@@ -53,20 +54,31 @@ def rrf_fuse(
     Each returned chunk's `score` is replaced by its RRF score - the source
     scores aren't comparable to it, and keeping both invites reading the
     wrong one.
+
+    `labels` names each list, and each fused chunk records which of them found
+    it in `sources`. Fusion is the only place that knows this - afterwards a
+    chunk found by both retrievers is indistinguishable from one found by
+    either, and "why did this match?" becomes unanswerable. It's also the
+    most useful thing to show next to a hybrid result: agreement between two
+    independent retrievers is a different kind of confidence from one
+    retriever being very sure.
     """
     weights = weights or [1.0] * len(ranked_lists)
+    labels = labels or [str(i) for i in range(len(ranked_lists))]
     scores: dict[int, float] = {}
     chunks: dict[int, dict] = {}
-    for ranked, weight in zip(ranked_lists, weights):
+    sources: dict[int, list[str]] = {}
+    for ranked, weight, label in zip(ranked_lists, weights, labels):
         for rank, chunk in enumerate(ranked, start=1):
             cid = chunk[key]
             scores[cid] = scores.get(cid, 0.0) + weight / (k + rank)
             # Keep the first-seen copy: the rows are identical either way, and
             # this avoids depending on which source happened to come last.
             chunks.setdefault(cid, chunk)
+            sources.setdefault(cid, []).append(label)
 
     return [
-        {**chunks[cid], "score": score}
+        {**chunks[cid], "score": score, "sources": sources[cid]}
         for cid, score in sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
     ]
 
@@ -303,9 +315,15 @@ class SearchEngine(PostgresInterface):
         retrieve_k = max(candidates, top_k) if (rerank and candidates) else top_k
 
         if mode == SEMANTIC:
-            chunks = self._vector_candidates(query, retrieve_k, t["min_vector_score"])
+            chunks = [
+                {**c, "sources": [SEMANTIC]}
+                for c in self._vector_candidates(query, retrieve_k, t["min_vector_score"])
+            ]
         elif mode == KEYWORD:
-            chunks = self._keyword_candidates(query, retrieve_k, t["min_keyword_score"])
+            chunks = [
+                {**c, "sources": [KEYWORD]}
+                for c in self._keyword_candidates(query, retrieve_k, t["min_keyword_score"])
+            ]
         else:
             # Each source contributes a wider pool than the final top_k -
             # pulling only top_k per source would let one source's misses cap
@@ -321,6 +339,7 @@ class SearchEngine(PostgresInterface):
                 ],
                 k=cfg.rrf_k,
                 weights=[1.0, cfg.keyword_weight],
+                labels=[SEMANTIC, KEYWORD],
             )[:retrieve_k]
 
         # Tracked separately from `chunks` being non-empty: with a rerank
@@ -360,7 +379,7 @@ def keyword_search(query: str, top_k: int = 10) -> SearchResponse:
     the endpoint stays usable from a process that never loads them.
     """
     with Session(PostgresInterface.connect()) as session:
-        results = _keyword_rows(session, query, top_k)
+        results = [{**c, "sources": [KEYWORD]} for c in _keyword_rows(session, query, top_k)]
     return SearchResponse(
         query=query,
         model="keyword",

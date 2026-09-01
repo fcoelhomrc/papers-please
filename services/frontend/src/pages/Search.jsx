@@ -1,5 +1,7 @@
 import { FileText, SearchIcon, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import Passage from '../components/Passage.jsx'
 import PdfPreview from '../components/PdfPreview.jsx'
 import {
   Badge,
@@ -34,21 +36,36 @@ function authorLine(authors, year) {
   return [label, year].filter(Boolean).join(' · ')
 }
 
+// Which retriever(s) surfaced this chunk. Agreement between two independent
+// retrievers is a different kind of confidence from one being very sure, and
+// the score alone can't express that - the backend computed it during fusion
+// and used to throw it away.
+const SOURCE_LABEL = { semantic: 'meaning', keyword: 'exact words' }
+
 function ResultCard({ r }) {
   return (
     <Card className="animate-slide-up p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-base font-semibold leading-snug">{r.title}</h3>
+          <h3 className="text-base font-semibold leading-snug">
+            <Link to={`/documents/${r.doc_id}`} className="hover:text-accent">
+              {r.title}
+            </Link>
+          </h3>
           <p className="mt-0.5 text-xs text-muted">{authorLine(r.authors, r.year)}</p>
         </div>
-        <PdfPreview docId={r.doc_id} title={r.title} />
+        {/* The page the passage came from, so the preview opens there
+            instead of at page 1. */}
+        <PdfPreview docId={r.doc_id} title={r.title} page={r.page_num} />
       </div>
-      <blockquote className="mt-3 rounded-r-lg border-l-2 border-accent/40 bg-inset px-3 py-2 text-sm leading-relaxed">
-        {r.text}
-      </blockquote>
-      <div className="mt-2.5 flex items-center gap-2 text-2xs text-faint">
+      <Passage text={r.text} className="mt-3" />
+      <div className="mt-2.5 flex flex-wrap items-center gap-2 text-2xs text-faint">
         {r.page_num != null && <span>Page {r.page_num}</span>}
+        {r.sources?.map((s) => (
+          <Badge key={s} tone={r.sources.length > 1 ? 'accent' : 'neutral'}>
+            {SOURCE_LABEL[s] || s}
+          </Badge>
+        ))}
         <span className="ml-auto tabular-nums">score {r.score.toFixed(3)}</span>
       </div>
     </Card>

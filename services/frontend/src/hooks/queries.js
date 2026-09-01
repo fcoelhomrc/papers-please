@@ -13,6 +13,8 @@ import * as api from '../api'
 export const keys = {
   search: (mode, q, opts) => ['search', mode, q, opts],
   documents: (params) => ['documents', params],
+  document: (id) => ['document', id],
+  documentChunks: (id) => ['document', id, 'chunks'],
   status: () => ['status'],
 }
 
@@ -34,6 +36,24 @@ export function useDocuments(params) {
     // Keeps the previous page's rows on screen while the next page loads,
     // so paging doesn't flash an empty table.
     placeholderData: (prev) => prev,
+  })
+}
+
+export function useDocument(docId) {
+  return useQuery({
+    queryKey: keys.document(docId),
+    queryFn: () => api.getDocument(docId),
+    enabled: Boolean(docId),
+  })
+}
+
+export function useDocumentChunks(docId) {
+  return useQuery({
+    queryKey: keys.documentChunks(docId),
+    queryFn: () => api.listDocumentChunks(docId),
+    enabled: Boolean(docId),
+    // A paper's chunks only change when it is re-ingested.
+    staleTime: 5 * 60_000,
   })
 }
 

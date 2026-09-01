@@ -75,6 +75,20 @@ class ChunkResult(BaseModel):
     text: str
     context: str | None = None
     score: float
+    # Which retriever(s) surfaced this chunk. Only fusion knows - afterwards a
+    # chunk both retrievers agreed on looks identical to one either found
+    # alone, and agreement is a different kind of confidence from one
+    # retriever being very sure.
+    sources: list[str] = []
+
+
+class DocumentChunk(BaseModel):
+    """A chunk as listed on a paper's own page, in document order."""
+
+    chunk_id: int
+    chunk_index: int
+    page_num: int | None
+    text: str
 
 
 class SearchResponse(BaseModel):

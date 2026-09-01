@@ -1,4 +1,6 @@
-const BASE = '/api'
+import { BASE, pdfUrl } from './lib/urls.js'
+
+export { pdfUrl }
 
 async function handle(res) {
   if (!res.ok) {
@@ -47,8 +49,13 @@ export function listDocuments({
   return fetch(`${BASE}/documents?${params}`).then(handle)
 }
 
-export function pdfUrl(docId, { download = false } = {}) {
-  return `${BASE}/documents/${docId}/pdf${download ? '?download=true' : ''}`
+export function getDocument(docId) {
+  return fetch(`${BASE}/documents/${docId}`).then(handle)
+}
+
+export function listDocumentChunks(docId, { offset = 0, limit = 100 } = {}) {
+  const params = new URLSearchParams({ offset, limit })
+  return fetch(`${BASE}/documents/${docId}/chunks?${params}`).then(handle)
 }
 
 export function getStatus() {

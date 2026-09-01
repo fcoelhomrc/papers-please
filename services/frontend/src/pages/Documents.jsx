@@ -1,5 +1,6 @@
 import { CheckCircle2, FileStack } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import PdfPreview from '../components/PdfPreview.jsx'
 import {
   Button,
@@ -125,7 +126,13 @@ export default function Documents() {
                         {doc.processed && (
                           <CheckCircle2 size={13} className="shrink-0 text-success" />
                         )}
-                        <span className="truncate font-medium" title={doc.title}>{doc.title}</span>
+                        <Link
+                          to={`/documents/${doc.id}`}
+                          className="truncate font-medium transition-colors hover:text-accent"
+                          title={doc.title}
+                        >
+                          {doc.title}
+                        </Link>
                       </div>
                       <AuthorLine authors={doc.authors} />
                     </td>
@@ -150,7 +157,12 @@ export default function Documents() {
                     {doc.processed && (
                       <CheckCircle2 size={13} className="mt-1 shrink-0 text-success" />
                     )}
-                    <span className="text-sm font-medium leading-snug">{doc.title}</span>
+                    <Link
+                      to={`/documents/${doc.id}`}
+                      className="text-sm font-medium leading-snug transition-colors hover:text-accent"
+                    >
+                      {doc.title}
+                    </Link>
                   </div>
                   <AuthorLine authors={doc.authors} />
                   <div className="flex items-center justify-between gap-2">

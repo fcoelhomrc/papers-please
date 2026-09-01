@@ -5,6 +5,7 @@ import { Route, Routes } from 'react-router-dom'
 import ChatPanel from './components/ChatPanel.jsx'
 import SidebarContent from './components/Sidebar.jsx'
 import { Button } from './components/ui.jsx'
+import Document from './pages/Document.jsx'
 import Documents from './pages/Documents.jsx'
 import Fetch from './pages/Fetch.jsx'
 import Queue from './pages/Queue.jsx'
@@ -81,6 +82,7 @@ export default function App() {
               <Route path="/" element={<Search />} />
               <Route path="/fetch" element={<Fetch />} />
               <Route path="/documents" element={<Documents />} />
+              <Route path="/documents/:docId" element={<Document />} />
               <Route path="/queue" element={<Queue />} />
             </Routes>
           </div>

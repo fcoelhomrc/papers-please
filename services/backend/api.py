@@ -16,6 +16,7 @@ from orchestrator.evidence import extract_evidence, extract_trace
 from schemas import (
     ChatRequest,
     ChatResponse,
+    DocumentChunk,
     DocumentOut,
     FetchRequest,
     SearchResponse,
@@ -271,6 +272,38 @@ def get_document(doc_id: int, engine: SearchEngine = Depends(get_engine)):
             raise HTTPException(status_code=404, detail="Document not found")
         pdf_ids, processed_ids = _pdf_and_processed_ids(session, [doc_id])
     return _document_out(doc, pdf_ids, processed_ids)
+
+
+@app.get("/documents/{doc_id}/chunks", response_model=list[DocumentChunk])
+def get_document_chunks(
+    doc_id: int,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    engine: SearchEngine = Depends(get_engine),
+):
+    """A paper's chunks in document order - what the index actually holds for
+    it, which is otherwise only observable by searching for a phrase you
+    already know is in there.
+
+    Paginated: a long paper at 256-token chunks runs to a few hundred rows,
+    and the page renders them lazily rather than shipping the whole PDF's
+    text on first paint.
+    """
+    with Session(engine.engine) as session:
+        rows = session.execute(
+            select(Chunk.id, Chunk.chunk_index, Chunk.page_num, Chunk.chunk_text)
+            .join(Object, Chunk.obj_id == Object.id)
+            .where(Object.doc_id == doc_id)
+            .order_by(Chunk.chunk_index)
+            .offset(offset)
+            .limit(limit)
+        ).all()
+    return [
+        DocumentChunk(
+            chunk_id=r.id, chunk_index=r.chunk_index, page_num=r.page_num, text=r.chunk_text or ""
+        )
+        for r in rows
+    ]
 
 
 @app.get("/documents/{doc_id}/pdf")

@@ -560,3 +560,59 @@ class TestExpandNeighbours:
         expand_neighbours(session, [chunk(0, chunk_index=0, obj_id=1)], window=2)
 
         assert session.asked_for == {(1, 0), (1, 1), (1, 2)}
+
+
+class TestSourceProvenance:
+    """#32 — fusion is the only place that knows which retriever found a
+    chunk. Afterwards, one both retrievers agreed on is indistinguishable
+    from one either found alone."""
+
+    def test_fusion_records_every_list_a_chunk_appeared_in(self):
+        fused = rrf_fuse(
+            [[chunk(1), chunk(2)], [chunk(2), chunk(3)]],
+            k=60,
+            labels=["semantic", "keyword"],
+        )
+        by_id = {c["chunk_id"]: c["sources"] for c in fused}
+
+        assert by_id[1] == ["semantic"]
+        assert by_id[2] == ["semantic", "keyword"]
+        assert by_id[3] == ["keyword"]
+
+    def test_labels_default_to_positional_names(self):
+        fused = rrf_fuse([[chunk(1)]], k=60)
+
+        assert fused[0]["sources"] == ["0"]
+
+    def test_hybrid_search_labels_its_two_retrievers(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._keyword_candidates = MagicMock(return_value=[chunk(1), chunk(2)])
+
+        resp = engine.search("q", top_k=5, mode=HYBRID)
+        by_id = {r.chunk_id: r.sources for r in resp.results}
+
+        assert by_id[1] == [SEMANTIC, KEYWORD]
+        assert by_id[2] == [KEYWORD]
+
+    def test_single_source_modes_still_name_their_retriever(self):
+        """A badge that is blank for semantic search and populated for hybrid
+        reads as missing data rather than as a meaningful difference."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._keyword_candidates = MagicMock(return_value=[chunk(1)])
+
+        assert engine.search("q", mode=SEMANTIC).results[0].sources == [SEMANTIC]
+        assert engine.search("q", mode=KEYWORD).results[0].sources == [KEYWORD]
+
+    def test_provenance_survives_reranking(self):
+        """Rerank reorders the dicts fusion produced; it must not drop keys
+        it doesn't know about."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._keyword_candidates = MagicMock(return_value=[chunk(1)])
+        engine._reranker.rerank.side_effect = lambda q, chunks, top_k: chunks[:top_k]
+
+        resp = engine.search("q", top_k=5, rerank=True, rerank_top_k=5, mode=HYBRID)
+
+        assert resp.results[0].sources == [SEMANTIC, KEYWORD]
