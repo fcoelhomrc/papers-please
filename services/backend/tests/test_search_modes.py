@@ -350,3 +350,91 @@ class TestRerankerScore:
 
         assert resp.results == []
         assert resp.reranked is True
+
+
+class TestRerankCandidatePool:
+    """#27 — reranking only pays off when the cross-encoder gets more
+    candidates than it returns. Retrieving 5 and reranking to 5 reorders those
+    5 and can never promote a 6th, which is what shipped."""
+
+    def test_pool_widens_retrieval_but_not_the_result(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(
+            return_value=[chunk(i) for i in range(1, 41)]
+        )
+        engine._reranker.rerank.return_value = [chunk(7), chunk(3)]
+
+        resp = engine.search(
+            "q", top_k=2, rerank=True, rerank_top_k=2, mode=SEMANTIC, candidates=40
+        )
+
+        # retrieval asked for the pool...
+        engine._vector_candidates.assert_called_once_with("q", 40, None)
+        # ...the reranker saw all of it...
+        assert len(engine._reranker.rerank.call_args.args[1]) == 40
+        # ...and the caller still got what it asked for.
+        assert [r.chunk_id for r in resp.results] == [7, 3]
+
+    def test_a_chunk_ranked_below_top_k_can_now_win(self):
+        """The whole point: chunk 12 is invisible to a top_k=3 retrieval, and
+        reachable once the pool is 40 wide."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(
+            return_value=[chunk(i) for i in range(1, 41)]
+        )
+        engine._reranker.rerank.side_effect = lambda q, chunks, top_k: sorted(
+            chunks, key=lambda c: 0 if c["chunk_id"] == 12 else 1
+        )[:top_k]
+
+        resp = engine.search(
+            "q", top_k=3, rerank=True, rerank_top_k=3, mode=SEMANTIC, candidates=40
+        )
+
+        assert resp.results[0].chunk_id == 12
+
+    def test_pool_is_ignored_without_reranking(self):
+        """Nothing would narrow 40 back down to top_k, so the caller would get
+        40 results it never asked for."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+
+        engine.search("q", top_k=5, rerank=False, mode=SEMANTIC, candidates=40)
+
+        engine._vector_candidates.assert_called_once_with("q", 5, None)
+
+    def test_pool_never_narrows_an_already_wider_request(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._reranker.rerank.return_value = [chunk(1)]
+
+        engine.search(
+            "q", top_k=50, rerank=True, rerank_top_k=5, mode=SEMANTIC, candidates=40
+        )
+
+        engine._vector_candidates.assert_called_once_with("q", 50, None)
+
+    def test_omitting_the_pool_keeps_the_old_exact_top_k_behaviour(self):
+        """eval.sweep and the /search endpoint measure retrieval itself, so
+        top_k must keep meaning "retrieve exactly this many" for them."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._reranker.rerank.return_value = [chunk(1)]
+
+        engine.search("q", top_k=5, rerank=True, rerank_top_k=5, mode=SEMANTIC)
+
+        engine._vector_candidates.assert_called_once_with("q", 5, None)
+
+    def test_hybrid_pool_covers_both_sources_before_fusion(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._keyword_candidates = MagicMock(return_value=[chunk(2)])
+        engine._reranker.rerank.return_value = [chunk(1)]
+
+        engine.search(
+            "q", top_k=5, rerank=True, rerank_top_k=5, mode=HYBRID, candidates=40
+        )
+
+        # both sources pull the full pool - fusing a wide list with a narrow
+        # one would let the narrow source cap what fusion has to work with
+        assert engine._vector_candidates.call_args.args[1] == 40
+        assert engine._keyword_candidates.call_args.args[1] == 40

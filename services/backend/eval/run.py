@@ -308,7 +308,12 @@ def _build_pipeline(variant: str, versions: dict[str, str]) -> Pipeline:
     llm = make_llm(load())
     if variant == "fixed":
         prompt = load_prompt("fixed_rag", versions["fixed_rag"])
-        return FixedPipeline(llm, get_search_engine(), system_prompt=prompt)
+        return FixedPipeline(
+            llm,
+            get_search_engine(),
+            system_prompt=prompt,
+            candidates=load().search.rerank_candidates,
+        )
     if variant == "agentic":
         return AgenticPipeline(build_agent(llm, version=versions["orchestrator"]))
     raise ValueError(f"unknown variant: {variant!r}")

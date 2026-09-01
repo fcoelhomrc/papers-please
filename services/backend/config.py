@@ -34,6 +34,22 @@ class SearchConfig(BaseModel):
     mode: str = "hybrid"
     rrf_k: int = 60  # RRF damping; 60 is the original paper's default
     hybrid_candidates: int = 20  # per-source pool size before fusion narrows to top_k
+    # How many candidates to retrieve before the cross-encoder cuts down to
+    # the requested top_k, for callers that ask for "the best k" rather than
+    # naming exact retrieval sizes (search_chunks, FixedPipeline).
+    #
+    # Reranking only pays off when it gets more candidates than it returns.
+    # Retrieving 5 and reranking to 5 reorders those 5 and can never rescue a
+    # 6th - which is what shipped, so the cross-encoder was doing a fraction
+    # of the work it was loaded for. The measured headroom is in the ledger:
+    # hybrid top_k=50 unranked recalls 0.940 against top_k=10 rerank->10's
+    # 0.893, so the relevant chunk is usually *in* a wide pool and merely
+    # ranked too low to survive a narrow one.
+    #
+    # 40 rather than 50: the cross-encoder is O(candidates) local CPU on
+    # every search, and recall gains flatten well before 50 while latency
+    # does not.
+    rerank_candidates: int = 40
     # Keyword's weight in RRF, relative to dense retrieval's 1.0. Not 1.0
     # because the two are not equally good rankers (nDCG 0.598 vs 0.787 alone
     # at top_k=5), and weighting them equally measured *worse* than dense

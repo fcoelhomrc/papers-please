@@ -66,8 +66,17 @@ def search_chunks(query: str, top_k: int = 5, rerank: bool = True) -> list[dict]
     more of a paper's context (e.g. its abstract) once you've found it here.
     """
     try:
+        from config import load
+
+        # Retrieve wide, return narrow: the cross-encoder gets a full pool to
+        # pick from rather than the same `top_k` it is being asked to return,
+        # which left it reordering the shortlist instead of choosing it.
         response = get_search_engine().search(
-            query, top_k=top_k, rerank=rerank, rerank_top_k=top_k
+            query,
+            top_k=top_k,
+            rerank=rerank,
+            rerank_top_k=top_k,
+            candidates=load().search.rerank_candidates,
         )
         return [
             {

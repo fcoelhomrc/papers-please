@@ -24,6 +24,7 @@ search:
   reranker_model: cross-encoder/ms-marco-MiniLM-L-6-v2
   mode: hybrid            # semantic | keyword | hybrid
   keyword_weight: 0.1     # keyword's RRF weight relative to dense retrieval's 1.0
+  rerank_candidates: 40   # pool retrieved before the cross-encoder cuts to top_k
   min_rerank_score: -8.0  # cross-encoder logits, ms-marco-MiniLM specific
 
 stages:

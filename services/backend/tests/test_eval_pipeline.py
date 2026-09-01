@@ -27,7 +27,13 @@ class TestFixedPipeline:
         result = pipeline.answer("What does the muscle synergy paper address?")
 
         engine.search.assert_called_once_with(
-            "What does the muscle synergy paper address?", top_k=2, rerank=True, rerank_top_k=2
+            "What does the muscle synergy paper address?",
+            top_k=2,
+            rerank=True,
+            rerank_top_k=2,
+            # None unless a caller opts into the wide pool (#27); eval.run
+            # passes config.search.rerank_candidates when it builds this.
+            candidates=None,
         )
         assert result["answer"] == "It addresses X."
         assert result["contexts"] == ["Chunk about muscle synergy.", "Chunk about modular RL."]
@@ -83,3 +89,24 @@ class TestAgenticPipeline:
 
         _, kwargs = agent.invoke.call_args
         assert kwargs["config"]["recursion_limit"] == MAX_AGENT_RECURSION
+
+
+def test_fixed_pipeline_forwards_its_candidate_pool():
+    """#27 — the baseline retrieves as wide as the agent does, so a judged
+    comparison stays about pipeline shape rather than about one of them
+    accidentally having better retrieval settings."""
+    from unittest.mock import MagicMock
+
+    from eval.pipeline import FixedPipeline
+    from schemas import SearchResponse
+
+    engine = MagicMock()
+    engine.search.return_value = SearchResponse(
+        query="q", model="bge-small", mode="hybrid", reranked=True, results=[]
+    )
+    llm = MagicMock()
+    llm.invoke.return_value.content = "an answer"
+
+    FixedPipeline(llm, engine, system_prompt="sys", top_k=5, candidates=40).answer("q")
+
+    assert engine.search.call_args.kwargs["candidates"] == 40

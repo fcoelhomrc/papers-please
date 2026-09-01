@@ -82,7 +82,13 @@ class TestSearchChunks:
             )
 
         mock_engine.search.assert_called_once_with(
-            "cervical cancer transformers", top_k=3, rerank=True, rerank_top_k=3
+            "cervical cancer transformers",
+            top_k=3,
+            rerank=True,
+            rerank_top_k=3,
+            # retrieve wide, return narrow (#27) - the pool comes from
+            # config.search.rerank_candidates
+            candidates=40,
         )
         assert result == [
             {
@@ -156,3 +162,38 @@ class TestGetDocument:
             result = tools.get_document.invoke({"doc_id": 9})
 
         assert "error" in result
+
+
+class TestSearchChunksCandidatePool:
+    """#27 — the agent's search tool asks for "the best k", so it retrieves a
+    wide pool and lets the cross-encoder choose, rather than handing the
+    reranker the same shortlist it is being asked to return."""
+
+    def test_retrieves_a_pool_wider_than_it_returns(self):
+        from schemas import SearchResponse
+
+        empty = SearchResponse(
+            query="q", model="bge-small", mode="hybrid", reranked=True, results=[]
+        )
+        with (
+            patch("orchestrator.tools.get_search_engine") as mock_engine,
+            patch("config.load") as mock_load,
+        ):
+            mock_load.return_value.search.rerank_candidates = 40
+            mock_engine.return_value.search.return_value = empty
+
+            tools.search_chunks.invoke({"query": "attention", "top_k": 5})
+
+        kwargs = mock_engine.return_value.search.call_args.kwargs
+        assert kwargs["candidates"] == 40
+        assert kwargs["top_k"] == 5
+        assert kwargs["rerank_top_k"] == 5
+
+    def test_a_config_failure_does_not_crash_the_graph(self):
+        """Same contract as every other tool: return an error value, never
+        raise - an uncaught exception leaves a tool_use with no tool_result
+        and permanently corrupts the thread."""
+        with patch("config.load", side_effect=RuntimeError("no config")):
+            result = tools.search_chunks.invoke({"query": "attention"})
+
+        assert "error" in result[0]

@@ -38,16 +38,32 @@ class FixedPipeline:
     # The synthesis prompt now lives in prompts/fixed_rag/<version>.md - the
     # baseline's prompt is as much a part of a reported score as the agent's,
     # so it gets the same version treatment.
-    def __init__(self, llm, search_engine, system_prompt: str, top_k: int = 5, rerank: bool = True):
+    def __init__(
+        self,
+        llm,
+        search_engine,
+        system_prompt: str,
+        top_k: int = 5,
+        rerank: bool = True,
+        candidates: int | None = None,
+    ):
         self._llm = llm
         self._search_engine = search_engine
         self._system_prompt = system_prompt
         self._top_k = top_k
         self._rerank = rerank
+        self._candidates = candidates
 
     def answer(self, question: str) -> AnswerResult:
+        # Same wide-pool retrieval the agent's search_chunks uses, so the
+        # baseline stays a comparison of *pipeline shape* rather than an
+        # accidental comparison of retrieval settings.
         response = self._search_engine.search(
-            question, top_k=self._top_k, rerank=self._rerank, rerank_top_k=self._top_k
+            question,
+            top_k=self._top_k,
+            rerank=self._rerank,
+            rerank_top_k=self._top_k,
+            candidates=self._candidates,
         )
         contexts = [r.text for r in response.results]
         doc_ids = [r.doc_id for r in response.results]

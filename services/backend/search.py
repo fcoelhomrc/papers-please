@@ -197,8 +197,23 @@ class SearchEngine(PostgresInterface):
         rerank_top_k: int = 5,
         mode: str | None = None,
         thresholds: dict | None = None,
+        candidates: int | None = None,
     ) -> SearchResponse:
-        """`thresholds` overrides the configured minimum scores, keyed
+        """`candidates` widens retrieval ahead of the reranker: fetch this
+        many, then let the cross-encoder cut to `rerank_top_k`. Without it,
+        retrieval fetches exactly `top_k` and reranking can only reorder what
+        it was given - never promote a chunk that ranked 12th into the top 5,
+        which is most of what a cross-encoder is for.
+
+        Opt-in rather than the default because `top_k` means "how many to
+        retrieve" to callers that are measuring retrieval itself (eval.sweep,
+        the /search endpoint's explicit knobs); silently retrieving 40 when
+        they asked for 5 would corrupt what they are measuring. Callers whose
+        intent is "give me the best k" - search_chunks, FixedPipeline - pass
+        it. Ignored when `rerank` is off, since there would then be nothing
+        to narrow the pool back down.
+
+        `thresholds` overrides the configured minimum scores, keyed
         min_vector_score / min_keyword_score / min_rerank_score. They are in
         each source's own units on purpose - cosine (~0.5-0.9), ts_rank
         (~0.0-0.1), cross-encoder logits (~-11..+11) and RRF (~0.016) are not
@@ -221,15 +236,19 @@ class SearchEngine(PostgresInterface):
             **(thresholds or {}),
         }
 
+        # What retrieval fetches, which is only the same as top_k when the
+        # reranker isn't there to narrow it afterwards.
+        retrieve_k = max(candidates, top_k) if (rerank and candidates) else top_k
+
         if mode == SEMANTIC:
-            chunks = self._vector_candidates(query, top_k, t["min_vector_score"])
+            chunks = self._vector_candidates(query, retrieve_k, t["min_vector_score"])
         elif mode == KEYWORD:
-            chunks = self._keyword_candidates(query, top_k, t["min_keyword_score"])
+            chunks = self._keyword_candidates(query, retrieve_k, t["min_keyword_score"])
         else:
             # Each source contributes a wider pool than the final top_k -
             # pulling only top_k per source would let one source's misses cap
             # what fusion has to work with.
-            pool = max(cfg.hybrid_candidates, top_k)
+            pool = max(cfg.hybrid_candidates, retrieve_k)
             # Thresholds apply per source, before fusion: an RRF score is a
             # rank artefact with no notion of "relevant enough", so filtering
             # after fusion could not express this at all.
@@ -240,7 +259,7 @@ class SearchEngine(PostgresInterface):
                 ],
                 k=cfg.rrf_k,
                 weights=[1.0, cfg.keyword_weight],
-            )[:top_k]
+            )[:retrieve_k]
 
         # Tracked separately from `chunks` being non-empty: with a rerank
         # floor, an empty result can now mean "reranked, and nothing cleared
