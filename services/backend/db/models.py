@@ -44,6 +44,27 @@ class Chunk(Base):
     page_num: Mapped[int | None]
 
 
+class Feedback(Base):
+    """A relevance judgement someone made in the UI.
+
+    doc_id/chunk_id are plain ints, not ForeignKeys: a judgement stays true
+    about a query/document pair after a re-index renumbers or removes the
+    chunk it was made against, and cascading them away on every chunker
+    change would defeat the point of collecting them.
+    """
+
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String)  # 'search' | 'citation'
+    query: Mapped[str]
+    doc_id: Mapped[int | None]
+    chunk_id: Mapped[int | None]
+    verdict: Mapped[str] = mapped_column(String)  # 'up' | 'down'
+    note: Mapped[str | None]
+    created_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
+
+
 class EmbeddingModel(Base):
     __tablename__ = "embedding_models"
 

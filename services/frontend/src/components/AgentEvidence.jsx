@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { pdfUrl } from '../api'
 import { citationIndex } from '../lib/citations.js'
+import FeedbackButtons from './FeedbackButtons.jsx'
 import { Badge } from './ui.jsx'
 
 /* What the agent found, and what it did to find it.
@@ -28,7 +29,7 @@ function authorLine(authors, year) {
   return [label, year].filter(Boolean).join(' · ')
 }
 
-export function EvidenceCards({ evidence }) {
+export function EvidenceCards({ evidence, query }) {
   if (!evidence?.length) return null
   const index = citationIndex(evidence)
 
@@ -36,8 +37,11 @@ export function EvidenceCards({ evidence }) {
     <div className="mt-2.5 space-y-1.5 border-t border-border pt-2">
       <p className="text-2xs font-medium uppercase tracking-wide text-faint">Sources</p>
       {evidence.map((e) => (
-        <a
+        <div
           key={e.chunk_id ?? `${e.doc_id}-${e.page_num}`}
+          className="flex items-center gap-1"
+        >
+        <a
           // The anchor a citation superscript scrolls to. Several passages
           // from one paper share a number, so the id has to include the
           // chunk to stay unique — the citation targets the first.
@@ -45,7 +49,7 @@ export function EvidenceCards({ evidence }) {
           href={pdfUrl(e.doc_id, { page: e.page_num })}
           target="_blank"
           rel="noreferrer"
-          className="group flex gap-2 rounded-lg border border-border bg-canvas px-2.5 py-2 transition-colors hover:border-border-strong"
+          className="group flex min-w-0 flex-1 gap-2 rounded-lg border border-border bg-canvas px-2.5 py-2 transition-colors hover:border-border-strong"
         >
           <span className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded bg-accent/15 text-2xs font-semibold tabular-nums text-accent">
             {index.get(e.doc_id)}
@@ -60,6 +64,18 @@ export function EvidenceCards({ evidence }) {
             </span>
           </span>
         </a>
+        {/* The question is what makes a thumb an eval label - "this paper is
+            relevant to X" - so a citation card can only offer one when the
+            turn's question came down with it. */}
+        {query && (
+          <FeedbackButtons
+            kind="citation"
+            query={query}
+            docId={e.doc_id}
+            chunkId={e.chunk_id}
+          />
+        )}
+        </div>
       ))}
     </div>
   )

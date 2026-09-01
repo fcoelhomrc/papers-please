@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -47,6 +49,35 @@ class ChatResponse(BaseModel):
     # unlinked prose into something openable and checkable.
     evidence: list[Evidence] = []
     trace: list[TraceStep] = []
+
+
+class FeedbackRequest(BaseModel):
+    """A thumbs-up/down on one result or citation.
+
+    `query` is required even for a citation: a judgement with no question
+    attached cannot become an eval row, which is the entire reason for
+    collecting these.
+    """
+
+    kind: str = Field(default="search", pattern="^(search|citation)$")
+    query: str = Field(min_length=1)
+    doc_id: int | None = None
+    chunk_id: int | None = None
+    verdict: str = Field(pattern="^(up|down)$")
+    note: str | None = None
+
+
+class FeedbackOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    kind: str
+    query: str
+    doc_id: int | None
+    chunk_id: int | None
+    verdict: str
+    note: str | None
+    created_at: datetime
 
 
 class StatusResponse(BaseModel):

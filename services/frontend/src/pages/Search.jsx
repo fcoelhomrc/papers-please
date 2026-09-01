@@ -1,6 +1,7 @@
 import { FileText, SearchIcon, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import FeedbackButtons from '../components/FeedbackButtons.jsx'
 import Passage from '../components/Passage.jsx'
 import PdfPreview from '../components/PdfPreview.jsx'
 import {
@@ -42,7 +43,7 @@ function authorLine(authors, year) {
 // and used to throw it away.
 const SOURCE_LABEL = { semantic: 'meaning', keyword: 'exact words' }
 
-function ResultCard({ r }) {
+function ResultCard({ r, query }) {
   return (
     <Card className="animate-slide-up p-4">
       <div className="flex items-start justify-between gap-3">
@@ -66,7 +67,13 @@ function ResultCard({ r }) {
             {SOURCE_LABEL[s] || s}
           </Badge>
         ))}
-        <span className="ml-auto tabular-nums">score {r.score.toFixed(3)}</span>
+        <FeedbackButtons
+          className="ml-auto"
+          query={query}
+          docId={r.doc_id}
+          chunkId={r.chunk_id}
+        />
+        <span className="tabular-nums">score {r.score.toFixed(3)}</span>
       </div>
     </Card>
   )
@@ -193,7 +200,9 @@ export default function Search() {
             {data.reranked && <Badge tone="accent">reranked</Badge>}
             <Badge>{data.model}</Badge>
           </div>
-          {data.results.map((r) => <ResultCard key={r.chunk_id} r={r} />)}
+          {data.results.map((r) => (
+            <ResultCard key={r.chunk_id} r={r} query={submitted} />
+          ))}
         </div>
       ) : null}
     </div>

@@ -59,6 +59,14 @@ export function listDocumentChunks(docId, { offset = 0, limit = 100 } = {}) {
   return fetch(`${BASE}/documents/${docId}/chunks?${params}`).then(handle)
 }
 
+export function sendFeedback(body) {
+  return fetch(`${BASE}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(handle)
+}
+
 export function getStatus() {
   return fetch(`${BASE}/status`).then(handle)
 }

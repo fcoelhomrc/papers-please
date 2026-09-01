@@ -170,6 +170,52 @@ on demand.
 `llm.provider: replay` in `config.yaml` does the same thing; the environment
 variable wins, so it can override a checked-in config.
 
+## Feedback
+
+Every search result and every cited source in an agent answer carries a
+thumbs-up/down. A thumbs-up is exactly what `relevant_source_ids` encodes —
+*for this question, this paper is relevant* — so it is the cheapest possible
+way to grow the eval set, which is otherwise hand-authored in
+`eval/fixtures.py`.
+
+```bash
+cd services/backend
+uv run python -m eval.feedback                  # print proposed dataset rows
+uv run python -m eval.feedback --min-votes 2    # only questions marked twice
+```
+
+It **proposes** rather than appends, for two reasons. A dataset row also
+needs `ground_truth`, which a thumb cannot supply — every proposal comes out
+with that field blank, because an invented ground truth would poison every
+faithfulness score computed against it afterwards. And feedback is unvetted
+input: silently appending would let a stray click move the numbers this
+project steers by, with no diff to notice it in.
+
+A thumbs-*down* is not the inverse label and is not turned into one. "This
+result is bad" says nothing about which paper would have been good, and
+`relevant_source_ids` has no way to record a negative.
+
+Stored in Postgres rather than annotated onto Phoenix spans: Phoenix only
+sees LangChain calls, so `/search` produces no span to annotate, and its
+volume is disposable dev state that labels have to outlive.
+
+Adding this to an existing database (there is no migration tooling — the DDL
+lives in `services/db/schema.sql`):
+
+```sql
+CREATE TABLE feedback (
+    id SERIAL PRIMARY KEY,
+    kind TEXT NOT NULL CHECK (kind IN ('search', 'citation')),
+    query TEXT NOT NULL,
+    doc_id INT,
+    chunk_id INT,
+    verdict TEXT NOT NULL CHECK (verdict IN ('up', 'down')),
+    note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_feedback_created ON feedback(created_at DESC);
+```
+
 ## Evaluation
 
 Retrieval is measured against hand-labelled relevance judgements in

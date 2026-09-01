@@ -4,7 +4,7 @@ from pathlib import Path
 
 import log
 from config import load
-from db.models import Chunk, ChunkEmbedding, Document, Object
+from db.models import Chunk, ChunkEmbedding, Document, Feedback, Object
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from ingest.fetcher import SemanticScholarFetcher
@@ -18,6 +18,8 @@ from schemas import (
     ChatResponse,
     DocumentChunk,
     DocumentOut,
+    FeedbackOut,
+    FeedbackRequest,
     FetchRequest,
     SearchResponse,
     StatusResponse,
@@ -204,6 +206,37 @@ async def agent_chat_stream(req: ChatRequest, agent=Depends(get_agent)):
         # bug hard to spot.
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@app.post("/feedback", response_model=FeedbackOut)
+def create_feedback(req: FeedbackRequest, engine: SearchEngine = Depends(get_engine)):
+    """Record a relevance judgement.
+
+    Every search and every cited answer is a labelling opportunity, and the
+    eval set is otherwise grown by hand (eval/fixtures.py). Stored rather
+    than sent to Phoenix: Phoenix only sees LangChain spans, so /search -
+    which never touches LangChain - produces nothing to annotate, and its
+    volume is disposable dev state. Labels have to outlive that.
+    """
+    row = Feedback(**req.model_dump())
+    with Session(engine.engine) as session:
+        session.add(row)
+        session.commit()
+        session.refresh(row)
+        return FeedbackOut.model_validate(row)
+
+
+@app.get("/feedback", response_model=list[FeedbackOut])
+def list_feedback(
+    verdict: str | None = Query(default=None, pattern="^(up|down)$"),
+    limit: int = Query(default=200, ge=1, le=1000),
+    engine: SearchEngine = Depends(get_engine),
+):
+    with Session(engine.engine) as session:
+        stmt = select(Feedback).order_by(Feedback.created_at.desc()).limit(limit)
+        if verdict:
+            stmt = stmt.where(Feedback.verdict == verdict)
+        return [FeedbackOut.model_validate(r) for r in session.execute(stmt).scalars().all()]
 
 
 @app.get("/search", response_model=SearchResponse)

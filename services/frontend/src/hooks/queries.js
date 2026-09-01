@@ -79,6 +79,12 @@ export function useFetchPapers() {
   })
 }
 
+export function useFeedback() {
+  // No invalidation: feedback is write-only from the UI's point of view -
+  // it is read by eval/feedback.py, not by any screen here.
+  return useMutation({ mutationFn: api.sendFeedback })
+}
+
 export function useChat() {
   return useMutation({
     // Streaming, so the panel can show tool calls as they happen rather than

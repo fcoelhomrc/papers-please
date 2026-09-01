@@ -66,7 +66,7 @@ function Citation({ href, children }) {
   )
 }
 
-function Bubble({ role, content, evidence, trace }) {
+function Bubble({ role, content, evidence, trace, question }) {
   if (role === 'user') {
     return (
       <div className="flex justify-end animate-slide-up">
@@ -110,7 +110,7 @@ function Bubble({ role, content, evidence, trace }) {
                 {linkCitations(content, evidence)}
               </ReactMarkdown>
             </div>
-            <EvidenceCards evidence={evidence} />
+            <EvidenceCards evidence={evidence} query={question} />
             {isAbstention(trace, evidence) && <AbstentionNote />}
             <ToolTrace trace={trace} />
           </>
@@ -160,6 +160,10 @@ export default function ChatPanel({ open, onClose }) {
               content: data.reply,
               evidence: data.evidence,
               trace: data.trace,
+              // Carried onto the answer so its source cards can offer a
+              // thumb: a judgement is "relevant to this question", and the
+              // question lives on the user's turn, not the agent's.
+              question: trimmed,
             },
           ])
         },

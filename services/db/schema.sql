@@ -42,6 +42,27 @@ CREATE TABLE chunk_embeddings (
     PRIMARY KEY (chunk_id, model_id)
 );
 
+-- Relevance judgements from whoever is using the app. The eval set is
+-- hand-authored (eval/fixtures.py), which is the slowest possible way to
+-- grow labels while every search is a labelling opportunity going to waste.
+--
+-- No FK to chunks: a judgement stays true about a query/document pair after
+-- a re-index renumbers or removes the chunk it was made against, and losing
+-- labels to ON DELETE CASCADE every time the chunker changes would defeat
+-- the point of collecting them.
+CREATE TABLE feedback (
+    id SERIAL PRIMARY KEY,
+    kind TEXT NOT NULL CHECK (kind IN ('search', 'citation')),
+    query TEXT NOT NULL,
+    doc_id INT,
+    chunk_id INT,
+    verdict TEXT NOT NULL CHECK (verdict IN ('up', 'down')),
+    note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_feedback_created ON feedback(created_at DESC);
+
 CREATE INDEX idx_documents_has_pdf ON documents(pdf_url) WHERE pdf_url IS NOT NULL;
 CREATE INDEX idx_objects_pending ON objects(status) WHERE status = 'pending';
 CREATE INDEX idx_chunk_embeddings_model ON chunk_embeddings(model_id);
