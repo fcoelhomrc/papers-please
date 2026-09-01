@@ -4,6 +4,13 @@ import { ArrowUp, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useChat } from '../hooks/queries'
+import { isAbstention, linkCitations, parseCitationHref } from '../lib/citations.js'
+import {
+  AbstentionNote,
+  EvidenceCards,
+  LiveSteps,
+  ToolTrace,
+} from './AgentEvidence.jsx'
 import { Button, Textarea } from './ui.jsx'
 
 const THREAD_KEY = 'pp-chat-thread-id'
@@ -27,7 +34,39 @@ function getThreadId() {
   return id
 }
 
-function Bubble({ role, content, toolCalls }) {
+/* The agent's "[doc 3, p4]" rendered as a clickable superscript.
+ *
+ * Scrolls to the matching source card rather than opening the PDF directly:
+ * the card is where the paper's identity lives, and jumping straight into a
+ * PDF viewer skips the step where the reader finds out which paper they are
+ * about to read. The card itself is the link to the page.
+ */
+function Citation({ href, children }) {
+  const parsed = parseCitationHref(href)
+  if (!parsed) return null
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        const card = e.currentTarget
+          .closest('[data-message]')
+          ?.querySelector(`#evidence-${parsed.docId}`)
+        card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        card?.animate(
+          [{ borderColor: 'var(--color-accent, currentColor)' }, {}],
+          { duration: 1200 },
+        )
+      }}
+      className="mx-px inline-flex h-3.5 min-w-3.5 items-center justify-center rounded bg-accent/15 px-1 align-super text-[10px] font-semibold tabular-nums text-accent transition-colors hover:bg-accent/30"
+      title={parsed.page ? `Source ${children} · page ${parsed.page}` : `Source ${children}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Bubble({ role, content, evidence, trace }) {
   if (role === 'user') {
     return (
       <div className="flex justify-end animate-slide-up">
@@ -37,10 +76,13 @@ function Bubble({ role, content, toolCalls }) {
       </div>
     )
   }
+
   const isError = role === 'error'
+
   return (
     <div className="flex justify-start animate-slide-up">
       <div
+        data-message
         className={clsx(
           'max-w-[92%] rounded-2xl rounded-bl-md px-3.5 py-2 text-sm leading-relaxed',
           isError
@@ -51,18 +93,27 @@ function Bubble({ role, content, toolCalls }) {
         {isError ? (
           <span className="whitespace-pre-wrap">{content}</span>
         ) : (
-          <div className="prose-chat">
-            <ReactMarkdown>{content}</ReactMarkdown>
-          </div>
-        )}
-        {toolCalls?.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1 border-t border-border pt-1.5">
-            {toolCalls.map((t, i) => (
-              <code key={i} className="rounded-sm bg-inset px-1.5 py-0.5 text-2xs text-faint">
-                {t}
-              </code>
-            ))}
-          </div>
+          <>
+            <div className="prose-chat">
+              <ReactMarkdown
+                components={{
+                  a: ({ href, children }) =>
+                    parseCitationHref(href) ? (
+                      <Citation href={href}>{children}</Citation>
+                    ) : (
+                      <a href={href} target="_blank" rel="noreferrer">
+                        {children}
+                      </a>
+                    ),
+                }}
+              >
+                {linkCitations(content, evidence)}
+              </ReactMarkdown>
+            </div>
+            <EvidenceCards evidence={evidence} />
+            {isAbstention(trace, evidence) && <AbstentionNote />}
+            <ToolTrace trace={trace} />
+          </>
         )}
       </div>
     </div>
@@ -72,6 +123,7 @@ function Bubble({ role, content, toolCalls }) {
 export default function ChatPanel({ open, onClose }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
+  const [steps, setSteps] = useState([])
   const [threadId, setThreadId] = useState(getThreadId)
   const viewportRef = useRef(null)
   const inputRef = useRef(null)
@@ -81,7 +133,7 @@ export default function ChatPanel({ open, onClose }) {
     if (viewportRef.current) {
       viewportRef.current.scrollTop = viewportRef.current.scrollHeight
     }
-  }, [messages, chat.isPending, open])
+  }, [messages, steps, chat.isPending, open])
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
@@ -93,15 +145,28 @@ export default function ChatPanel({ open, onClose }) {
 
     setMessages((m) => [...m, { role: 'user', content: trimmed }])
     setInput('')
+    setSteps([])
     chat.mutate(
-      { message: trimmed, threadId },
+      // Steps arrive over SSE while the turn runs, so the panel can say what
+      // the agent is doing instead of showing an ellipsis until it's over.
+      { message: trimmed, threadId, onStep: (s) => setSteps((prev) => [...prev, s]) },
       {
-        onSuccess: (data) =>
+        onSuccess: (data) => {
+          setSteps([])
           setMessages((m) => [
             ...m,
-            { role: 'agent', content: data.reply, toolCalls: data.tool_calls },
-          ]),
-        onError: (err) => setMessages((m) => [...m, { role: 'error', content: err.message }]),
+            {
+              role: 'agent',
+              content: data.reply,
+              evidence: data.evidence,
+              trace: data.trace,
+            },
+          ])
+        },
+        onError: (err) => {
+          setSteps([])
+          setMessages((m) => [...m, { role: 'error', content: err.message }])
+        },
       },
     )
   }
@@ -111,6 +176,7 @@ export default function ChatPanel({ open, onClose }) {
     localStorage.setItem(THREAD_KEY, id)
     setThreadId(id)
     setMessages([])
+    setSteps([])
     chat.reset()
   }
 
@@ -148,7 +214,7 @@ export default function ChatPanel({ open, onClose }) {
             <div className="space-y-4">
               <p className="text-sm text-muted">
                 Ask the agent to fetch new papers, or to answer questions from what's already in
-                the library.
+                the library. Answers cite their sources.
               </p>
               <div className="space-y-1.5">
                 {SUGGESTIONS.map((s) => (
@@ -167,19 +233,7 @@ export default function ChatPanel({ open, onClose }) {
               {messages.map((m, i) => (
                 <Bubble key={i} {...m} />
               ))}
-              {chat.isPending && (
-                <div className="flex justify-start">
-                  <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border bg-canvas px-3.5 py-2.5">
-                    {[0, 150, 300].map((delay) => (
-                      <span
-                        key={delay}
-                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-faint"
-                        style={{ animationDelay: `${delay}ms` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+              {chat.isPending && <LiveSteps steps={steps} />}
             </div>
           )}
         </ScrollArea.Viewport>

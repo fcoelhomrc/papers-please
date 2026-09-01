@@ -81,6 +81,10 @@ export function useFetchPapers() {
 
 export function useChat() {
   return useMutation({
-    mutationFn: ({ message, threadId }) => api.chat(message, threadId),
+    // Streaming, so the panel can show tool calls as they happen rather than
+    // a bouncing ellipsis followed by everything at once. onStep is supplied
+    // per call by the component that wants the progress.
+    mutationFn: ({ message, threadId, onStep }) =>
+      api.chatStream(message, threadId, { onStep }),
   })
 }

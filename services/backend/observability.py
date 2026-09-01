@@ -11,8 +11,11 @@ CallbackHandler wiring.
 
 PHOENIX_COLLECTOR_ENDPOINT (set in compose.yaml) points at the phoenix
 container. No API key - local, self-hosted, nothing leaves this machine.
+Unset means no tracing at all, which is what makes it possible to run the
+backend on its own (see the replay mode in the README).
 """
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +33,27 @@ def setup_observability(service_name: str) -> None:
     global _instrumented
     if _instrumented:
         return
+
+    # No endpoint configured means nobody asked for tracing. Registering
+    # anyway points the exporter at phoenix.otel's localhost default and
+    # every span then pays for a connection that was never going to work -
+    # see the batch=True note below for why that is not merely untidy.
+    if not os.environ.get("PHOENIX_COLLECTOR_ENDPOINT"):
+        logger.info("PHOENIX_COLLECTOR_ENDPOINT unset - tracing disabled")
+        return
+
     try:
         from phoenix.otel import register
 
-        register(project_name=service_name, auto_instrument=True)
+        # batch=True, not phoenix's SimpleSpanProcessor default. Simple
+        # exports each span inline on the thread that produced it, so with
+        # the collector down every LLM call and every tool call blocks on
+        # gRPC connect-and-retry - measured at ~6s per span, which turned a
+        # two-search agent turn into a request that never visibly finished.
+        # Diagnostics must not sit in the request path; a batch processor
+        # exports on its own thread and drops on the floor if nothing is
+        # listening.
+        register(project_name=service_name, auto_instrument=True, batch=True)
         _instrumented = True
         logger.info(f"phoenix observability enabled (project={service_name})")
     except Exception as e:
