@@ -265,18 +265,34 @@ def search_keyword(q: str, top_k: int = Query(default=10, ge=1, le=50)):
 
 
 def _pdf_and_processed_ids(session: Session, doc_ids: list[int]) -> tuple[set[int], set[int]]:
-    """Which of these doc_ids have a downloaded PDF (an objects row) and
-    which are fully processed (at least one chunk with an embedding) -
-    batched rather than N+1, computed separately from the main query since
-    expressing both as correlated subqueries in one ORM select got unreadable
-    fast for little benefit at this table size."""
+    """Which of these doc_ids have a readable PDF on disk, and which are
+    fully processed (at least one chunk with an embedding) - batched rather
+    than N+1, computed separately from the main query since expressing both
+    as correlated subqueries in one ORM select got unreadable fast for little
+    benefit at this table size.
+
+    `has_pdf` used to mean "an objects row exists", which is not the same
+    claim and is the one the UI acts on: it decides whether to offer a
+    Preview button. Normally the two agree, because the download stage
+    writes the file before inserting the row - they diverge exactly where it
+    matters. eval/seed.py inserts an objects row with a synthetic path for
+    fixtures that have no PDF at all, and a wiped storage volume or a
+    misconfigured storage.root does the same thing to real papers. In every
+    one of those cases the old answer produced a button whose only possible
+    outcome was a 404.
+
+    One stat per object on the page, bounded by the endpoint's limit.
+    """
     if not doc_ids:
         return set(), set()
-    pdf_ids = set(
-        session.execute(
-            select(Object.doc_id).where(Object.doc_id.in_(doc_ids)).distinct()
-        ).scalars().all()
-    )
+    root = Path(load().storage.root)
+    pdf_ids = {
+        r.doc_id
+        for r in session.execute(
+            select(Object.doc_id, Object.path).where(Object.doc_id.in_(doc_ids))
+        ).all()
+        if r.path and (root / r.path).is_file()
+    }
     processed_ids = set(
         session.execute(
             select(Object.doc_id)

@@ -2,7 +2,6 @@ import clsx from 'clsx'
 import { AlertTriangle, ChevronDown, Loader2, SearchX } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { pdfUrl } from '../api'
 import { citationIndex } from '../lib/citations.js'
 import FeedbackButtons from './FeedbackButtons.jsx'
 import { Badge } from './ui.jsx'
@@ -41,14 +40,19 @@ export function EvidenceCards({ evidence, query }) {
           key={e.chunk_id ?? `${e.doc_id}-${e.page_num}`}
           className="flex items-center gap-1"
         >
-        <a
+        <Link
           // The anchor a citation superscript scrolls to. Several passages
           // from one paper share a number, so the id has to include the
           // chunk to stay unique — the citation targets the first.
           id={`evidence-${e.doc_id}`}
-          href={pdfUrl(e.doc_id, { page: e.page_num })}
-          target="_blank"
-          rel="noreferrer"
+          // The paper's page, not the raw PDF. Two reasons: a cited paper
+          // may have no PDF on disk at all (a library seeded from eval
+          // fixtures has chunk text and no files), so a direct PDF link is
+          // a 404 waiting to happen; and landing straight in a PDF viewer
+          // skips the step where the reader finds out which paper they are
+          // about to read. The document page offers the PDF when there is
+          // one, at this page.
+          to={`/documents/${e.doc_id}${e.page_num != null ? `?page=${e.page_num}` : ''}`}
           className="group flex min-w-0 flex-1 gap-2 rounded-lg border border-border bg-canvas px-2.5 py-2 transition-colors hover:border-border-strong"
         >
           <span className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded bg-accent/15 text-2xs font-semibold tabular-nums text-accent">
@@ -63,7 +67,7 @@ export function EvidenceCards({ evidence, query }) {
               {e.page_num != null && <span className="shrink-0">p{e.page_num}</span>}
             </span>
           </span>
-        </a>
+        </Link>
         {/* The question is what makes a thumb an eval label - "this paper is
             relevant to X" - so a citation card can only offer one when the
             turn's question came down with it. */}

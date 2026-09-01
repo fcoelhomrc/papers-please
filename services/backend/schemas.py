@@ -123,6 +123,11 @@ class ChunkResult(BaseModel):
     text: str
     context: str | None = None
     score: float
+    # Whether this chunk's paper has a PDF on disk. Without it the result
+    # card offers a Preview whose only possible outcome is a 404 - which is
+    # every result in a library seeded from eval fixtures, since those have
+    # chunk text but no file behind it.
+    has_pdf: bool = False
     # Which retriever(s) surfaced this chunk. Only fusion knows - afterwards a
     # chunk both retrievers agreed on looks identical to one either found
     # alone, and agreement is a different kind of confidence from one
@@ -157,5 +162,5 @@ class DocumentOut(BaseModel):
     venue: str | None
     year: int | None
     abstract: str | None
-    has_pdf: bool = False  # a PDF was downloaded and registered (objects row exists)
+    has_pdf: bool = False  # the PDF is readable on disk, not merely recorded
     processed: bool = False  # fully chunked + embedded, i.e. searchable

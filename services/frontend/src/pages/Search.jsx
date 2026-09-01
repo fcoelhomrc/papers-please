@@ -55,9 +55,12 @@ function ResultCard({ r, query }) {
           </h3>
           <p className="mt-0.5 text-xs text-muted">{authorLine(r.authors, r.year)}</p>
         </div>
-        {/* The page the passage came from, so the preview opens there
-            instead of at page 1. */}
-        <PdfPreview docId={r.doc_id} title={r.title} page={r.page_num} />
+        {/* Only when there is actually a file: a chunk can exist with no
+            PDF behind it (eval fixtures are seeded as text against a
+            synthetic path), and the button could then only 404. The page
+            the passage came from is carried through so the preview opens
+            there instead of at page 1. */}
+        {r.has_pdf && <PdfPreview docId={r.doc_id} title={r.title} page={r.page_num} />}
       </div>
       <Passage text={r.text} className="mt-3" />
       <div className="mt-2.5 flex flex-wrap items-center gap-2 text-2xs text-faint">

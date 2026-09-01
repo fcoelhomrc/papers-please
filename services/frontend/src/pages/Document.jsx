@@ -1,6 +1,6 @@
 import { ArrowLeft, ExternalLink, FileText, SearchIcon } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import Passage from '../components/Passage.jsx'
 import PdfPreview from '../components/PdfPreview.jsx'
 import {
@@ -42,6 +42,10 @@ function sourceUrl(sourceId) {
 
 export default function Document() {
   const { docId } = useParams()
+  // Carried by agent citation cards, so "open the source" lands on the
+  // cited page rather than page 1.
+  const [params] = useSearchParams()
+  const citedPage = Number(params.get('page')) || null
   const [filter, setFilter] = useState('')
   const doc = useDocument(docId)
   const chunks = useDocumentChunks(docId)
@@ -84,7 +88,13 @@ export default function Document() {
         description={authorLine(paper.authors, paper.year, paper.venue)}
         actions={
           paper.has_pdf ? (
-            <PdfPreview docId={paper.id} title={paper.title} label="Open PDF" size="md" />
+            <PdfPreview
+              docId={paper.id}
+              title={paper.title}
+              page={citedPage}
+              label="Open PDF"
+              size="md"
+            />
           ) : null
         }
       />

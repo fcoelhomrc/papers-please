@@ -87,3 +87,39 @@ class TestDocumentsFilterIntegration:
 
         assert len(docs) == 1
         assert docs[0]["source_id"] == "c"
+
+
+@pytest.mark.integration
+def test_has_pdf_requires_the_file_to_exist(configured_db, tmp_path, monkeypatch):
+    """#36 — has_pdf gates whether the UI offers a Preview button, so it has
+    to mean "the file is readable", not "a row was written". eval/seed.py
+    inserts an objects row with a synthetic path for fixtures that have no
+    PDF at all; the old answer produced a button that could only 404."""
+    import config as config_module
+    from fastapi.testclient import TestClient
+
+    import api
+    from db.models import Document, Object
+
+    cfg = config_module.load()
+    monkeypatch.setattr(cfg.storage, "root", str(tmp_path))
+
+    with Session(configured_db) as session:
+        real = Document(source_id="has-a-file", title="Real")
+        ghost = Document(source_id="no-file", title="Seeded fixture")
+        session.add_all([real, ghost])
+        session.flush()
+        session.add(Object(doc_id=real.id, path="real.pdf", status="chunked"))
+        session.add(Object(doc_id=ghost.id, path="eval-fixtures/ghost.pdf", status="chunked"))
+        session.commit()
+        real_id, ghost_id = real.id, ghost.id
+
+    (tmp_path / "real.pdf").write_bytes(b"%PDF-1.4 fake")
+
+    client = TestClient(api.app)
+    by_id = {d["id"]: d for d in client.get("/documents").json()}
+
+    assert by_id[real_id]["has_pdf"] is True
+    assert by_id[ghost_id]["has_pdf"] is False
+    # and the endpoint agrees with the flag rather than contradicting it
+    assert client.get(f"/documents/{ghost_id}/pdf").status_code == 404

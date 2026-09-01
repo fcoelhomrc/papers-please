@@ -616,3 +616,41 @@ class TestSourceProvenance:
         resp = engine.search("q", top_k=5, rerank=True, rerank_top_k=5, mode=HYBRID)
 
         assert resp.results[0].sources == [SEMANTIC, KEYWORD]
+
+
+class TestChunkHasPdf:
+    """#36 — a chunk can exist with no PDF behind it, and the result card
+    uses this to decide whether to offer a Preview that could only 404."""
+
+    def test_false_when_the_file_is_missing(self, monkeypatch, tmp_path):
+        import config as config_module
+        from search import _pdf_exists
+
+        monkeypatch.setattr(config_module.load().storage, "root", str(tmp_path))
+
+        assert _pdf_exists("eval-fixtures/nothing-here.pdf") is False
+
+    def test_true_when_the_file_is_there(self, monkeypatch, tmp_path):
+        import config as config_module
+        from search import _pdf_exists
+
+        monkeypatch.setattr(config_module.load().storage, "root", str(tmp_path))
+        (tmp_path / "real.pdf").write_bytes(b"%PDF-1.4")
+
+        assert _pdf_exists("real.pdf") is True
+
+    def test_a_missing_path_is_not_an_error(self):
+        from search import _pdf_exists
+
+        assert _pdf_exists(None) is False
+        assert _pdf_exists("") is False
+
+    def test_an_unreadable_storage_root_does_not_break_search(self, monkeypatch):
+        """A misconfigured storage root should cost a Preview button, not
+        return a 500 on every search."""
+        import config as config_module
+        from search import _pdf_exists
+
+        monkeypatch.setattr(config_module.load().storage, "root", "\x00 not a path")
+
+        assert _pdf_exists("x.pdf") is False

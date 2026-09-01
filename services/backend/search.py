@@ -9,6 +9,7 @@ The two single-source modes are unchanged; hybrid is additive. Reranking
 candidates.
 """
 import os
+from pathlib import Path
 
 from db.connection import PostgresInterface
 from db.models import Chunk, Document, Object
@@ -105,6 +106,26 @@ def _chunk_rows_stmt(chunk_ids=None):
     return stmt if chunk_ids is None else stmt.where(Chunk.id.in_(chunk_ids))
 
 
+def _pdf_exists(path: str | None) -> bool:
+    """Whether the chunk's source PDF is actually readable.
+
+    The result card uses this to decide whether to offer a Preview. A chunk
+    can exist with no file behind it - eval fixtures are seeded as chunk
+    text against a synthetic path - and offering a preview then produces a
+    button that can only 404.
+    """
+    if not path:
+        return False
+    from config import load
+
+    try:
+        return (Path(load().storage.root) / path).is_file()
+    except OSError:
+        # An unreadable or misconfigured storage root is a "no", not a 500
+        # on a search request.
+        return False
+
+
 def _row_to_chunk(r, score: float) -> dict:
     return {
         "chunk_id": r.id,
@@ -116,6 +137,7 @@ def _row_to_chunk(r, score: float) -> dict:
         "text": r.chunk_text,
         "page_num": r.page_num,
         "pdf_path": r.path,
+        "has_pdf": _pdf_exists(r.path),
         "title": r.title,
         "authors": r.authors,
         "year": r.year,
