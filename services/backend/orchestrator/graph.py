@@ -34,14 +34,26 @@ TOOLS = [fetch_papers, get_status, search_chunks, get_document]
 MAX_AGENT_RECURSION = 10
 
 
-def build_agent(llm, checkpointer=None, system_prompt: str | None = None, version: str | None = None):
+def build_agent(
+    llm,
+    checkpointer=None,
+    system_prompt: str | None = None,
+    version: str | None = None,
+    tools=None,
+):
     """Build the agent. `system_prompt` wins if given (tests script it
     directly); otherwise the prompt is loaded at the configured version, or
-    at `version` when a caller - eval, comparing candidates - overrides it."""
+    at `version` when a caller - eval, comparing candidates - overrides it.
+
+    `tools` overrides TOOLS, which offline replay needs: a replayed model
+    still emits real tool calls, and those must land on replay tools rather
+    than on the ones that reach Pinecone and Postgres."""
     if system_prompt is None:
         if version is None:
             from config import load
 
             version = load().prompts.orchestrator
         system_prompt = load_prompt("orchestrator", version)
-    return create_agent(llm, TOOLS, system_prompt=system_prompt, checkpointer=checkpointer)
+    return create_agent(
+        llm, tools or TOOLS, system_prompt=system_prompt, checkpointer=checkpointer
+    )

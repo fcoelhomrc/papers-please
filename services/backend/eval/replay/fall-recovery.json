@@ -1,0 +1,42 @@
+{
+  "name": "fall-recovery",
+  "match": "fall recovery",
+  "description": "The ordinary case: one search, an answer citing two papers.",
+  "turns": [
+    {
+      "content": "",
+      "tool_calls": [
+        {"name": "search_chunks", "args": {"query": "fall recovery legged robots control policy", "top_k": 5}}
+      ]
+    },
+    {
+      "content": "Yes. Two papers in the library cover it directly.\n\n**Learned recovery policies.** A single RL policy trained in simulation recovers a quadruped from arbitrary fallen postures on flat ground, transferring to hardware without per-pose scripting [doc 3, p4].\n\n**Contact-schedule planning.** A trajectory-optimisation approach instead plans the contact sequence explicitly, which generalises to uneven terrain but needs a known terrain map [doc 7, p2].\n\nThe trade-off between them is terrain assumptions: the learned policy needs none and is limited to flat ground, the planner handles slopes but must be told what they look like."
+    }
+  ],
+  "tool_results": {
+    "search_chunks": [
+      [
+        {
+          "doc_id": 3,
+          "chunk_id": 118,
+          "title": "Learning Agile Recovery Behaviours for Quadrupedal Robots",
+          "authors": ["M. Okada", "L. Ferrari", "T. Brandt"],
+          "year": 2023,
+          "page_num": 4,
+          "text": "Results > Recovery from arbitrary postures\n\nWe train a single recovery policy in simulation and deploy it without modification on hardware. The policy recovers the robot from 94% of sampled fallen postures on flat ground within 3.2 seconds on average, compared with 61% for the scripted baseline, which requires a hand-authored routine per posture class.",
+          "score": 6.41
+        },
+        {
+          "doc_id": 7,
+          "chunk_id": 204,
+          "title": "Contact-Implicit Trajectory Optimisation for Fall Recovery",
+          "authors": ["S. Nagy", "P. Okonkwo"],
+          "year": 2024,
+          "page_num": 2,
+          "text": "Method > Contact schedule\n\nRather than learning a policy, we solve for the contact sequence directly. This generalises across terrain geometries that the learned baselines were never trained on, at the cost of requiring an accurate terrain map at planning time.",
+          "score": 5.02
+        }
+      ]
+    ]
+  }
+}

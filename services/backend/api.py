@@ -10,7 +10,7 @@ from ingest.fetcher import SemanticScholarFetcher
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from orchestrator.graph import MAX_AGENT_RECURSION, build_agent
-from orchestrator.llm import make_llm
+from orchestrator.llm import make_agent_parts
 from schemas import (
     ChatRequest,
     ChatResponse,
@@ -57,7 +57,8 @@ def get_agent():
             # MemorySaver gives the agent conversation memory across turns,
             # keyed by thread_id - in-process only, resets on backend
             # restart, which is fine for a single-instance dev deployment.
-            _agent = build_agent(make_llm(load()), checkpointer=MemorySaver())
+            llm, tools = make_agent_parts(load())
+            _agent = build_agent(llm, checkpointer=MemorySaver(), tools=tools)
         except Exception as e:
             raise HTTPException(
                 status_code=503,

@@ -1,0 +1,19 @@
+{
+  "name": "abstention",
+  "match": "protein folding",
+  "description": "Retrieval clears no threshold and returns nothing. The agent must say so rather than fetch or guess.",
+  "turns": [
+    {
+      "content": "",
+      "tool_calls": [
+        {"name": "search_chunks", "args": {"query": "protein folding structure prediction", "top_k": 5}}
+      ]
+    },
+    {
+      "content": "Nothing in the library covers protein folding — the search returned no passages above the relevance threshold. The collection is mostly robotics and machine-learning systems work.\n\nIf you want papers on this, ask me to fetch some."
+    }
+  ],
+  "tool_results": {
+    "search_chunks": [[]]
+  }
+}

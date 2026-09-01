@@ -1,0 +1,60 @@
+{
+  "name": "transformer-attention",
+  "match": "attention",
+  "description": "Two searches: the first query is too broad, the agent refines it.",
+  "turns": [
+    {
+      "content": "",
+      "tool_calls": [
+        {"name": "search_chunks", "args": {"query": "transformer attention", "top_k": 5}}
+      ]
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {"name": "search_chunks", "args": {"query": "sparse attention long context efficiency", "top_k": 5}}
+      ]
+    },
+    {
+      "content": "The library's attention work is mostly about cost at long context.\n\n**Sparse patterns.** Restricting each query to a strided window plus a few global tokens brings the quadratic term down to near-linear, with under a point of perplexity lost at 8k context [doc 12, p6].\n\n**Where it stops working.** The same paper reports the gap widening sharply past 32k, which it attributes to the fixed stride failing to capture long-range dependencies rather than to the sparsity itself [doc 12, p9]."
+    }
+  ],
+  "tool_results": {
+    "search_chunks": [
+      [
+        {
+          "doc_id": 12,
+          "chunk_id": 401,
+          "title": "Strided Sparse Attention at Long Context",
+          "authors": ["R. Delacroix", "H. Yamashita"],
+          "year": 2024,
+          "page_num": 1,
+          "text": "Introduction\n\nAttention's quadratic cost in sequence length is the dominant term in long-context inference.",
+          "score": 2.11
+        }
+      ],
+      [
+        {
+          "doc_id": 12,
+          "chunk_id": 407,
+          "title": "Strided Sparse Attention at Long Context",
+          "authors": ["R. Delacroix", "H. Yamashita"],
+          "year": 2024,
+          "page_num": 6,
+          "text": "Results > Perplexity against context length\n\nAt 8k context the sparse variant loses 0.8 perplexity against dense attention while cutting attention FLOPs by 71%.",
+          "score": 7.83
+        },
+        {
+          "doc_id": 12,
+          "chunk_id": 412,
+          "title": "Strided Sparse Attention at Long Context",
+          "authors": ["R. Delacroix", "H. Yamashita"],
+          "year": 2024,
+          "page_num": 9,
+          "text": "Discussion > Failure at extreme context\n\nBeyond 32k the gap widens to 3.4 perplexity. We attribute this to the fixed stride rather than to sparsity per se: dependencies further apart than the stride are never attended to at any layer.",
+          "score": 6.95
+        }
+      ]
+    ]
+  }
+}

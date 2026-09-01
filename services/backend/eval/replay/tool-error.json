@@ -1,0 +1,19 @@
+{
+  "name": "tool-error",
+  "match": "muscle synergy",
+  "description": "A tool fails. The agent must report the failure rather than answer as if the search succeeded — the case that is awkward to provoke on a live system and easy to regress.",
+  "turns": [
+    {
+      "content": "",
+      "tool_calls": [
+        {"name": "search_chunks", "args": {"query": "muscle synergy modular control", "top_k": 5}}
+      ]
+    },
+    {
+      "content": "The search failed — the backend couldn't reach the vector index (`connection pool exhausted`). I can't answer this from the library until that recovers.\n\nNothing is wrong with your question; try again in a moment."
+    }
+  ],
+  "tool_results": {
+    "search_chunks": [[{"error": "search failed (connection pool exhausted)"}]]
+  }
+}

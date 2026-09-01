@@ -47,6 +47,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       PINECONE_API_KEY: ${PINECONE_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # Set to 1 to run the agent from recorded fixtures in eval/replay/
+      # instead of calling an LLM - the chat panel works end to end with no
+      # API key and no tokens spent. Empty (the default) means normal mode.
+      PAPERS_PLEASE_REPLAY: ${PAPERS_PLEASE_REPLAY:-}
       PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:4317
     depends_on:
       db:

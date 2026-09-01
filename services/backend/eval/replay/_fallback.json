@@ -1,0 +1,32 @@
+{
+  "name": "_fallback",
+  "match": "",
+  "description": "Anything no other fixture claims. Exists so an unanticipated question degrades to an honest 'not scripted' answer instead of dead-ending the UI.",
+  "turns": [
+    {
+      "content": "",
+      "tool_calls": [
+        {"name": "search_chunks", "args": {"query": "replay fallback", "top_k": 5}}
+      ]
+    },
+    {
+      "content": "**Replay mode** — this backend is running without an LLM, replaying recorded fixtures from `eval/replay/`.\n\nNo fixture matches that question, so here's a stub result. Try one of these, which do have scripts:\n\n- *fall recovery* in legged robots — one search, two citations\n- transformer *attention* — two searches, the query gets refined\n- *protein folding* — abstention, nothing relevant in the library\n- *federated learning* — a fetch request\n- *muscle synergy* — a tool failure"
+    }
+  ],
+  "tool_results": {
+    "search_chunks": [
+      [
+        {
+          "doc_id": 1,
+          "chunk_id": 1,
+          "title": "(replay fixture — not a real paper)",
+          "authors": ["Replay Fixture"],
+          "year": 2026,
+          "page_num": 1,
+          "text": "This is placeholder text from eval/replay/_fallback.json. The backend is in replay mode, so no retrieval actually happened.",
+          "score": 0.0
+        }
+      ]
+    ]
+  }
+}

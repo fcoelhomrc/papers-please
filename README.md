@@ -135,6 +135,41 @@ uv run python -c "from process.embedder import PdfEmbedder; PdfEmbedder().execut
 The stage workers pick the objects back up on their next poll. Budget OCR
 time, not tokens - none of this calls an LLM.
 
+## Running it without an API key
+
+The agent panel works end to end with no `ANTHROPIC_API_KEY`, no Postgres and
+no Pinecone:
+
+```bash
+PAPERS_PLEASE_REPLAY=1 docker compose up
+```
+
+Replay swaps **both** ends of the agent loop for recorded fixtures in
+`services/backend/eval/replay/` — the model that decides and the tools that
+fetch. The LangGraph graph itself still runs for real, so the tool-calling
+loop, the checkpointer, the message sequence, and everything downstream that
+reads it are exercised exactly as in production. A bug in how a tool result
+becomes a citation is catchable here; a bug in retrieval quality is not.
+
+Scripted questions:
+
+| Ask about | Exercises |
+|---|---|
+| *fall recovery* in legged robots | one search, an answer citing two papers |
+| transformer *attention* | two searches — the first query is too broad and gets refined |
+| *protein folding* | abstention: nothing relevant, and the agent says so |
+| *federated learning* | a fetch request, status checked first |
+| *muscle synergy* | a tool failure, reported rather than papered over |
+
+Anything else falls through to `_fallback.json`, which explains itself rather
+than dead-ending. Fixtures are hand-authored, not recorded from a live run —
+recording would spend the tokens this exists to avoid, and a hand-written
+fixture can cover an abstention or a tool failure that is awkward to provoke
+on demand.
+
+`llm.provider: replay` in `config.yaml` does the same thing; the environment
+variable wins, so it can override a checked-in config.
+
 ## Evaluation
 
 Retrieval is measured against hand-labelled relevance judgements in

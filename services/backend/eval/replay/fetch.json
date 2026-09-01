@@ -1,0 +1,29 @@
+{
+  "name": "fetch",
+  "match": "federated learning",
+  "description": "A fetch request: status first to judge whether the library already has coverage, then fetch.",
+  "turns": [
+    {"content": "", "tool_calls": [{"name": "get_status", "args": {}}]},
+    {
+      "content": "",
+      "tool_calls": [
+        {"name": "fetch_papers", "args": {"query": "federated learning privacy", "max_papers": 50}}
+      ]
+    },
+    {
+      "content": "Fetched 50 papers on federated learning privacy. The library had nothing on the topic beforehand.\n\nThey'll be downloaded, OCR'd and embedded automatically — check the Queue page for progress. Searchable once they reach the embedded stage."
+    }
+  ],
+  "tool_results": {
+    "get_status": [
+      {
+        "documents_total": 128,
+        "pending_download": 4,
+        "objects_by_status": {"chunked": 118, "pending": 6},
+        "chunks_pending_embed": 212,
+        "embed_model": "BAAI/bge-small-en-v1.5"
+      }
+    ],
+    "fetch_papers": ["fetched 50 papers"]
+  }
+}
