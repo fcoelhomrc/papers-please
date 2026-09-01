@@ -76,6 +76,53 @@ services/
   frontend/       React + Vite + Tailwind + Radix UI, no other framework
 ```
 
+### What actually gets embedded
+
+A chunk's stored text is its section path plus its body:
+
+```
+Methods > Ablation Studies
+
+We ablate the encoder and observe ...
+```
+
+Docling strips headings out into metadata and hands back bare body text.
+Storing only that made two papers' Methods sections describing the same
+technique into near-identical vectors with nothing to tell them apart, and
+left queries naming a section ("ablation results") with no term to match.
+The prefix is free against the token budget - `HybridChunker` already sizes
+chunks by counting its own contextualized form, headings included.
+
+Sections with no retrievable claims (references, acknowledgments, funding,
+competing interests, data availability) are dropped at chunk time. A
+references section is a packed list of author surnames, so it matches the
+keyword retriever for nearly any author or topic query and scores well doing
+it - a whole class of confident, useless hits, removed at the source.
+Appendices are deliberately kept: they hold ablations and proofs.
+
+### Re-indexing after a chunking change
+
+Chunk text and vector metadata are inputs to the embedding, so changing
+either makes existing vectors stale. `chunks` is upserted
+`ON CONFLICT DO NOTHING` on `(obj_id, chunk_index)`, so re-running the
+chunker over already-chunked objects will *not* rewrite their text - the
+rows have to go first:
+
+```sql
+-- chunk_embeddings and chunks cascade from objects
+TRUNCATE chunks RESTART IDENTITY CASCADE;
+UPDATE objects SET status = 'pending';
+```
+
+```bash
+# then re-embed into a fresh index (drops and recreates it)
+cd services/backend
+uv run python -c "from process.embedder import PdfEmbedder; PdfEmbedder().execute(recreate_index=True)"
+```
+
+The stage workers pick the objects back up on their next poll. Budget OCR
+time, not tokens - none of this calls an LLM.
+
 ## Evaluation
 
 Retrieval is measured against hand-labelled relevance judgements in

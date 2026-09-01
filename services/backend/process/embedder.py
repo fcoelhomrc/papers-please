@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 from db.connection import PostgresInterface
-from db.models import Chunk, ChunkEmbedding, EmbeddingModel
+from db.models import Chunk, ChunkEmbedding, Document, EmbeddingModel, Object
 from pinecone import ServerlessSpec
 from pinecone.grpc import PineconeGRPC as Pinecone
 from sentence_transformers import CrossEncoder, SentenceTransformer
@@ -29,6 +29,18 @@ MODELS: dict[str, dict] = {
         "index_name": "papers-please-bge-large",
     },
 }
+
+
+def chunk_metadata(**fields) -> dict:
+    """Vector metadata, minus anything unset.
+
+    Pinecone rejects null metadata values outright, and page_num/year are
+    both genuinely optional (a chunk with no provenance, a preprint with no
+    year), so an absent key is the only way to express "unknown" - a
+    sentinel like 0 or -1 would silently match a `year >= 2023` style filter
+    the wrong way round.
+    """
+    return {k: v for k, v in fields.items() if v is not None}
 
 
 class Reranker:
@@ -103,19 +115,32 @@ class PdfEmbedder(PostgresInterface):
                 )
             ).scalar_one()
 
-    def pending(self, model_id: int) -> list[tuple[int, str, int | None]]:
+    def pending(self, model_id: int) -> list[tuple[int, str, dict]]:
+        """Chunks not yet embedded under this model, each with the metadata
+        that goes into the vector alongside it.
+
+        Joins through to documents so the vector carries doc_id and year -
+        Pinecone can filter on metadata, and without these the only way to
+        answer "search within this paper" or "since 2023" was to over-fetch
+        and discard in Postgres afterwards.
+        """
         already_embedded = select(ChunkEmbedding.chunk_id).where(
             ChunkEmbedding.model_id == model_id
         )
         stmt = (
-            select(Chunk.id, Chunk.chunk_text, Chunk.page_num)
+            select(Chunk.id, Chunk.chunk_text, Chunk.page_num, Document.id.label("doc_id"), Document.year)
+            .join(Object, Chunk.obj_id == Object.id)
+            .join(Document, Object.doc_id == Document.id)
             .where(Chunk.chunk_text.is_not(None))
             .where(Chunk.id.not_in(already_embedded))
         )
         with Session(self.engine) as session:
             rows = session.execute(stmt).all()
         logger.info(f"{len(rows)} chunks pending embedding (model_id={model_id})")
-        return [(r.id, r.chunk_text, r.page_num) for r in rows]
+        return [
+            (r.id, r.chunk_text, chunk_metadata(page_num=r.page_num, doc_id=r.doc_id, year=r.year))
+            for r in rows
+        ]
 
     def _embed(self, texts: list[str]) -> np.ndarray:
         return self._encoder.encode(
@@ -126,15 +151,11 @@ class PdfEmbedder(PostgresInterface):
             convert_to_numpy=True,
         )
 
-    def _upsert_vectors(self, batch: list[tuple[int, np.ndarray, int | None]]):
+    def _upsert_vectors(self, batch: list[tuple[int, np.ndarray, dict]]):
         index = self._pc.Index(self._cfg["index_name"])
         vectors = [
-            {
-                "id": str(chunk_id),
-                "values": vec.tolist(),
-                "metadata": {"page_num": page},
-            }
-            for chunk_id, vec, page in batch
+            {"id": str(chunk_id), "values": vec.tolist(), "metadata": meta}
+            for chunk_id, vec, meta in batch
         ]
         index.upsert(vectors=vectors, namespace=self._namespace)  # type: ignore
 
@@ -165,10 +186,10 @@ class PdfEmbedder(PostgresInterface):
             batch = pending[i : i + batch_size]
             chunk_ids = [r[0] for r in batch]
             texts = [r[1] for r in batch]
-            pages = [r[2] for r in batch]
+            metadatas = [r[2] for r in batch]
 
             vecs = self._embed(texts)
-            self._upsert_vectors(list(zip(chunk_ids, vecs, pages)))
+            self._upsert_vectors(list(zip(chunk_ids, vecs, metadatas)))
             self._record_embeddings(chunk_ids, model_id)
             logger.info(f"Embedded {i + len(batch)}/{len(pending)} chunks")
 
