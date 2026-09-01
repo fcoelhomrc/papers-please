@@ -12,11 +12,11 @@ evidence behind it:
 Both implement the same Pipeline protocol so eval/run.py doesn't care which
 one it's scoring.
 """
-import json
 from typing import Protocol, TypedDict
 
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage
 
+from orchestrator.evidence import extract_contexts
 from orchestrator.graph import MAX_AGENT_RECURSION
 
 
@@ -91,25 +91,8 @@ class AgenticPipeline:
         )
         messages = result["messages"]
 
-        # search_chunks tool_call id -> its ToolMessage result, so we can
-        # pull out the chunk texts the agent actually retrieved and used.
-        contexts: list[str] = []
-        doc_ids: list[int] = []
-        search_call_ids = {
-            call["id"]
-            for m in messages
-            if isinstance(m, AIMessage)
-            for call in m.tool_calls
-            if call["name"] == "search_chunks"
-        }
-        for m in messages:
-            if isinstance(m, ToolMessage) and m.tool_call_id in search_call_ids:
-                try:
-                    for chunk in json.loads(m.content):
-                        contexts.append(chunk["text"])
-                        if "doc_id" in chunk:
-                            doc_ids.append(chunk["doc_id"])
-                except (json.JSONDecodeError, TypeError, KeyError):
-                    continue
+        # Shared with the API's citation cards (orchestrator/evidence.py), so
+        # a reported score describes the same retrieval the user is shown.
+        contexts, doc_ids = extract_contexts(messages)
 
         return AnswerResult(answer=messages[-1].content, contexts=contexts, doc_ids=doc_ids)

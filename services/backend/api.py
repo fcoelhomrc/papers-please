@@ -1,3 +1,4 @@
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -5,12 +6,13 @@ import log
 from config import load
 from db.models import Chunk, ChunkEmbedding, Document, Object
 from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from ingest.fetcher import SemanticScholarFetcher
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 from orchestrator.graph import MAX_AGENT_RECURSION, build_agent
 from orchestrator.llm import make_agent_parts
+from orchestrator.evidence import extract_evidence, extract_trace
 from schemas import (
     ChatRequest,
     ChatResponse,
@@ -107,7 +109,100 @@ def agent_chat(req: ChatRequest, agent=Depends(get_agent)):
         if isinstance(m, AIMessage)
         for call in m.tool_calls
     ]
-    return ChatResponse(reply=result["messages"][-1].content, tool_calls=tool_calls)
+    # Extracted from this turn's messages only, same as tool_calls - with
+    # memory, result["messages"] holds the whole conversation, and citing
+    # three turns' worth of evidence under one answer would attribute
+    # sources to claims that never used them.
+    return ChatResponse(
+        reply=result["messages"][-1].content,
+        tool_calls=tool_calls,
+        evidence=extract_evidence(new_messages),
+        trace=extract_trace(new_messages),
+    )
+
+
+def _sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+@app.post("/agent/chat/stream")
+async def agent_chat_stream(req: ChatRequest, agent=Depends(get_agent)):
+    """The same turn as /agent/chat, reported as it happens.
+
+    Non-streaming, the panel shows a bouncing ellipsis for however long the
+    agent takes and then everything lands at once - the tool calls are only
+    visible after they no longer matter. Here each graph node emits a `step`
+    as it completes, so a search announces itself while it is running.
+
+    stream_mode="updates" rather than astream_events: node updates are a
+    small documented shape (node name -> the messages it added), where the
+    event stream is a much larger surface to depend on for the same
+    information. Token-level streaming is deliberately not used - the reply
+    is short and the interesting events here are the tool calls.
+
+    /agent/chat is unchanged and still the simpler thing to call.
+    """
+    config = {
+        "configurable": {"thread_id": req.thread_id},
+        "recursion_limit": MAX_AGENT_RECURSION,
+    }
+    prior_state = agent.get_state(config)
+    prior_count = len(prior_state.values.get("messages", [])) if prior_state.values else 0
+
+    async def events():
+        try:
+            async for update in agent.astream(
+                {"messages": [HumanMessage(req.message)]}, config=config, stream_mode="updates"
+            ):
+                for node, payload in update.items():
+                    for message in (payload or {}).get("messages", []) or []:
+                        if isinstance(message, AIMessage) and message.tool_calls:
+                            for call in message.tool_calls:
+                                yield _sse(
+                                    "step",
+                                    {"kind": "tool_call", "tool": call["name"], "args": call.get("args") or {}},
+                                )
+                        elif isinstance(message, ToolMessage):
+                            yield _sse("step", {"kind": "tool_result", "tool": message.name})
+                        elif isinstance(message, AIMessage) and node != "tools":
+                            yield _sse("step", {"kind": "thinking"})
+        except Exception as e:
+            # The stream is already open, so an HTTP error code is no longer
+            # available - the client has to learn about this in-band or it
+            # waits forever on a `done` that never comes.
+            yield _sse("error", {"detail": str(e)})
+            return
+
+        # Re-read the final state rather than accumulating as we go: the
+        # checkpointer holds the authoritative message list, and rebuilding
+        # it from stream fragments is a second place for the two to disagree.
+        state = agent.get_state(config)
+        messages = state.values.get("messages", [])
+        new_messages = messages[prior_count:]
+        yield _sse(
+            "done",
+            ChatResponse(
+                reply=messages[-1].content if messages else "",
+                tool_calls=[
+                    call["name"]
+                    for m in new_messages
+                    if isinstance(m, AIMessage)
+                    for call in m.tool_calls
+                ],
+                evidence=extract_evidence(new_messages),
+                trace=extract_trace(new_messages),
+            ).model_dump(),
+        )
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        # Without this, nginx (services/frontend/nginx.conf proxies /api)
+        # buffers the whole response and the stream arrives as one lump -
+        # which looks exactly like the non-streaming endpoint and makes the
+        # bug hard to spot.
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/search", response_model=SearchResponse)
