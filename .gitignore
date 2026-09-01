@@ -22,3 +22,6 @@ node_modules/
 dist/
 .npm
 **/eval/results/*.json
+
+# Ragas judge-call cache (eval/run.py) - a local memo, not a result
+**/eval/.judge-cache/

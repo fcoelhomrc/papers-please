@@ -64,7 +64,24 @@ def write_markdown_report(output: dict, dataset_rows: list[dict], model_name: st
             f"query prefix `{retrieval.get('query_prompt', '').strip()}` "
             "(prescribed by the model card, not a tunable prompt)"
         )
-    lines.append(f"- **Dataset**: `eval/dataset.jsonl` — {len(dataset_rows)} questions ({len(grounded)} grounded, {len(edge)} edge case)")
+    n_dataset = output.get("n_dataset") or len(dataset_rows)
+    sampled = "" if n_dataset == len(dataset_rows) else f" of {n_dataset}"
+    lines.append(
+        f"- **Dataset**: `eval/dataset.jsonl` — {len(dataset_rows)}{sampled} questions "
+        f"({len(grounded)} grounded, {len(edge)} edge case)"
+        + (" — stratified sample, seeded" if sampled else "")
+    )
+    spend = output.get("judge_spend") or {}
+    if spend:
+        # The number this report exists to keep honest. A score with no cost
+        # next to it is how a 50-question run quietly grows into a 1M-token
+        # one without anybody noticing.
+        cost = f" — ${spend['usd']:.4f}" if "usd" in spend else ""
+        lines.append(
+            f"- **Judge spend**: {spend['input_tokens']:,} in / "
+            f"{spend['output_tokens']:,} out tokens{cost} "
+            "(judge calls only; excludes the pipeline's own answers)"
+        )
     lines.append("- **Trigger**: manual only (`uv run python -m eval.run --variant ...`) — not wired into compose, CI, or any automated pipeline.")
     lines.append("")
 

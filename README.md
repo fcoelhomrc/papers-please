@@ -139,22 +139,41 @@ up to −8.0, and paid for in recall after that.
 
 ### Running it
 
+Two tiers, and the cheap one is the default loop. Retrieval quality is a
+ranking property measurable against labels, so it needs no LLM at all; reach
+for the judge only when the question is about the *generated answer*, which is
+the one thing labels can't score.
+
 ```bash
 cd services/backend
 
-# Retrieval only - no LLM, so it's free to sweep. Scores recall/nDCG/MRR/
-# precision/hit-rate against the relevance labels in eval/dataset.jsonl.
+# Tier 1 - free. No LLM anywhere, so sweep as often as you like. Scores
+# recall/nDCG/MRR/precision/hit-rate against the relevance labels in
+# eval/dataset.jsonl. Run this on every retrieval change.
 uv run python -m eval.sweep                      # every mode x top_k x rerank_top_k
 uv run python -m eval.sweep --modes hybrid --top-k 5,10
 uv run python -m eval.thresholds --rerank-floors -10,-8,-6
 uv run python -m eval.figures                    # -> assets/eval/*.svg (the plots above)
 uv run python -m eval.summary                    # -> eval/reports/summary.html
 
-# End-to-end with an LLM judge (Ragas). Costs real API tokens: one call per
-# question for the answer, plus roughly one judge call per metric per question.
-uv run python -m eval.run --variant fixed
+# Tier 2 - costs real API tokens: one call per question for the answer, plus
+# several judge calls per metric per question. Two judged metrics only
+# (faithfulness, answer_relevancy); context precision/recall are measured
+# free and against labels by eval.sweep above.
+uv run python -m eval.run --variant fixed --sample 15    # iterating
+uv run python -m eval.run --variant agentic              # full run, for the ledger
 uv run python -m eval.run --variant agentic --prompt-version orchestrator=v2
 ```
+
+`--sample N` scores a stratified subset (category x domain, seeded - the same
+N is the same N every time), so iterating doesn't cost a full run. Judge calls
+are memoised under `eval/.judge-cache/`, so re-running an unchanged dataset
+re-reads instead of re-paying; `--no-cache` forces fresh verdicts.
+
+Every judged run reports what it spent - `89,412 in / 12,004 out tokens -
+$0.15` - in the report, the ledger, and the summary table's `cost` column. A
+score with no cost beside it is how a 50-question run quietly grows into a
+1M-token one.
 
 Every run appends a line to `eval/ledger.jsonl` (committed), and
 `eval.summary` renders it as one table covering judged and retrieval runs

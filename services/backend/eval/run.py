@@ -2,13 +2,23 @@
 
 MANUAL ONLY. Costs real Anthropic API calls (your ANTHROPIC_API_KEY - Ragas
 has no key of its own, it just calls whatever LLM object you hand it): one
-call per question for the pipeline's own answer, plus roughly one judge
-call per metric per question. This is never invoked automatically - not
-from compose.yaml, not from any CI workflow (there isn't one), not from any
+call per question for the pipeline's own answer, plus several judge calls
+per metric per question. This is never invoked automatically - not from
+compose.yaml, not from any CI workflow (there isn't one), not from any
 stage worker. It only runs when a human types the command below.
 
-    uv run python -m eval.run --variant fixed
-    uv run python -m eval.run --variant agentic
+    uv run python -m eval.run --variant fixed --sample 15   # iterate
+    uv run python -m eval.run --variant agentic             # full, for the ledger
+
+This is the *expensive* tier. The judge-free retrieval scores (eval.sweep,
+eval.thresholds) measure ranking quality for zero tokens and are the loop to
+run on every retrieval change; reach for this one only when you need to know
+what the generated answer looks like, which is the one thing a judge adds.
+
+Three things keep the bill down (#26): only two judged metrics rather than
+four (see METRICS), --sample N for a stratified subset, and judge calls
+memoised on disk so re-running an unchanged dataset re-reads instead of
+re-paying.
 
 Judge LLM is Claude (via ragas' LangchainLLMWrapper) - no OpenAI key
 needed, consistent with the rest of the stack. Judge embeddings reuse the
@@ -24,14 +34,17 @@ Every run writes two artifacts:
 """
 import argparse
 import json
+import random
 from datetime import datetime, timezone
 from pathlib import Path
 
 from langchain_anthropic import ChatAnthropic
 from ragas import EvaluationDataset, evaluate
+from ragas.cache import DiskCacheBackend
+from ragas.cost import TokenUsage, get_token_usage_for_anthropic
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
-from ragas.metrics import answer_relevancy, context_precision, context_recall, faithfulness
+from ragas.metrics import AnswerRelevancy, faithfulness
 
 from eval.pipeline import AgenticPipeline, FixedPipeline, Pipeline
 from eval.report import write_markdown_report
@@ -39,8 +52,35 @@ from eval.retrieval import aggregate, score_question
 
 RESULTS_DIR = Path(__file__).parent / "results"
 DATASET_PATH = Path(__file__).parent / "dataset.jsonl"
+JUDGE_CACHE_DIR = Path(__file__).parent / ".judge-cache"
 
-METRICS = [faithfulness, answer_relevancy, context_precision, context_recall]
+# Two judged metrics, not four. context_precision and context_recall were
+# dropped in #26: eval/sweep.py already scores precision/recall/nDCG/MRR
+# against the dataset's `relevant_source_ids` labels for zero tokens, and
+# does it against ground truth rather than against a judge's opinion of
+# ground truth. Paying for a weaker measurement of something already
+# measured exactly was ~55% of the judge bill - context_precision alone
+# issues one call *per retrieved context*, so its cost scaled with k.
+#
+# What's left is the pair a judge is genuinely required for, because both
+# are properties of generated prose that no label can capture:
+#   faithfulness      - is the answer supported by the retrieved context
+#   answer_relevancy  - does the answer address the question that was asked
+#
+# strictness=1 (ragas' default is 3) generates one reverse-question per
+# answer instead of three. Averaging over three buys stability in the third
+# decimal, which is well below the noise floor of a 50-question set.
+METRICS = [faithfulness, AnswerRelevancy(strictness=1)]
+
+# USD per (input, output) token - Anthropic list prices, for turning the
+# judge's token count into a number that means something. Only the models
+# this project would plausibly judge with; an unlisted model records tokens
+# and omits the cost rather than inventing a price.
+JUDGE_PRICING = {
+    "claude-haiku-4-5": (1.00 / 1e6, 5.00 / 1e6),
+    "claude-sonnet-5": (2.00 / 1e6, 10.00 / 1e6),
+    "claude-opus-5": (5.00 / 1e6, 25.00 / 1e6),
+}
 
 
 def load_dataset(path: Path) -> list[dict]:
@@ -51,6 +91,80 @@ def load_dataset(path: Path) -> list[dict]:
             if line:
                 rows.append(json.loads(line))
     return rows
+
+
+def stratified_sample(rows: list[dict], n: int, seed: int = 0) -> list[dict]:
+    """`n` questions that keep the dataset's category x domain mix.
+
+    A judged run is the expensive tier, so iterating on it means running a
+    subset - but a subset drawn uniformly at random is a worse instrument
+    than a smaller one drawn carefully. The dataset is deliberately built out
+    of strata (grounded/edge_case x domain), and the edge cases are the rows
+    that catch abstention regressions, so a sample that loses them measures
+    the easy half of the problem and reports it as the whole.
+
+    Round-robin across strata rather than a proportional allotment: with 50
+    questions over ~8 strata, proportional rounding drives the small strata
+    to zero, which is exactly the coverage a subset must not lose.
+
+    Seeded, so `--sample 15` names the same 15 questions on every run and two
+    scores taken a week apart stay comparable.
+    """
+    if n >= len(rows):
+        return rows
+
+    strata: dict[tuple, list[dict]] = {}
+    for row in rows:
+        key = (row.get("category", ""), row.get("domain") or row.get("subtype") or "")
+        strata.setdefault(key, []).append(row)
+
+    rng = random.Random(seed)
+    for group in strata.values():
+        rng.shuffle(group)
+
+    picked: list[dict] = []
+    order = sorted(strata)
+    while len(picked) < n:
+        drew = False
+        for key in order:
+            if not strata[key]:
+                continue
+            picked.append(strata[key].pop())
+            drew = True
+            if len(picked) == n:
+                break
+        if not drew:  # every stratum exhausted (n > len(rows) can't happen, but be safe)
+            break
+
+    # Restore dataset order so the report's per-question table reads in the
+    # same sequence as the file it came from.
+    position = {id(r): i for i, r in enumerate(rows)}
+    return sorted(picked, key=lambda r: position[id(r)])
+
+
+def judge_spend(eval_result, judge_model_name: str) -> dict:
+    """What the judge cost, in tokens and (where the price is known) dollars.
+
+    Ragas only tracks this when evaluate() was handed a token_usage_parser,
+    and raises otherwise - so an older or differently-configured run reports
+    nothing rather than failing. Never let accounting break a run whose API
+    calls are already paid for.
+    """
+    try:
+        usage = eval_result.total_tokens()
+    except Exception as e:
+        print(f"warning: no judge token usage recorded ({e})")
+        return {}
+
+    # total_tokens() returns a list when more than one model was involved.
+    if isinstance(usage, list):
+        usage = sum(usage, TokenUsage(input_tokens=0, output_tokens=0))
+
+    spend = {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens}
+    price = JUDGE_PRICING.get(judge_model_name)
+    if price:
+        spend["usd"] = round(usage.cost(*price), 4)
+    return spend
 
 
 def score_retrieval(rows: list[dict], retrieved_docs: list[list[int]]) -> dict:
@@ -87,8 +201,11 @@ def run_eval(
     judge_model_name: str = "",
     prompt_versions: dict[str, str] | None = None,
     retrieval: dict | None = None,
+    sample: int | None = None,
+    judge_cache_dir: Path | None = None,
 ) -> dict:
-    rows = load_dataset(dataset_path)
+    all_rows = load_dataset(dataset_path)
+    rows = stratified_sample(all_rows, sample) if sample else all_rows
     records = []
     retrieved_docs: list[list[int]] = []
     for i, row in enumerate(rows, 1):
@@ -121,11 +238,21 @@ def run_eval(
         )
 
     dataset = EvaluationDataset.from_list(records)
+    # Memoised by a hash of the prompt, so re-running an unchanged dataset
+    # (a report tweak, a crash after the answers were generated, comparing a
+    # report format) re-reads instead of re-paying. Only the *judge* calls -
+    # the pipeline's own answers above are not cached, since the whole point
+    # of a run is usually that the pipeline changed.
+    cache = DiskCacheBackend(cache_dir=str(judge_cache_dir)) if judge_cache_dir else None
     eval_result = evaluate(
         dataset,
         metrics=METRICS,
-        llm=LangchainLLMWrapper(judge_llm),
+        llm=LangchainLLMWrapper(judge_llm, cache=cache),
         embeddings=LangchainEmbeddingsWrapper(judge_embeddings),
+        # Without this ragas records no usage at all and total_tokens() raises.
+        # A run that can't say what it cost is how you end up guessing at a
+        # 1M-token bill instead of reading it.
+        token_usage_parser=get_token_usage_for_anthropic,
     )
 
     df = eval_result.to_pandas()
@@ -135,6 +262,9 @@ def run_eval(
     output = {
         "variant": variant_name,
         "means": means,
+        "n_questions": len(rows),
+        "n_dataset": len(all_rows),
+        "judge_spend": judge_spend(eval_result, judge_model_name),
         "per_question": per_question,
         "prompt_versions": prompt_versions or {},
         "retrieval": retrieval or {},
@@ -223,6 +353,20 @@ def main():
         help="override a configured prompt version, e.g. orchestrator=v2 "
         "(repeatable). Recorded in the report so the score names its prompt.",
     )
+    parser.add_argument(
+        "--sample",
+        type=int,
+        metavar="N",
+        help="score a stratified N-question subset instead of the whole "
+        "dataset. Seeded, so the same N is the same N every time. Use it "
+        "while iterating; run the full set for a ledger entry.",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="bypass the on-disk judge cache and re-pay for every judge call. "
+        "Only needed if you suspect a stale cached verdict.",
+    )
     args = parser.parse_args()
 
     from observability import setup_observability
@@ -265,12 +409,21 @@ def main():
             "embed_model": MODELS[cfg.embedder.model]["hf_name"],
             "query_prompt": MODELS[cfg.embedder.model]["query_prompt"],
         },
+        sample=args.sample,
+        judge_cache_dir=None if args.no_cache else JUDGE_CACHE_DIR,
     )
 
     print(f"variant: {output['variant']}")
     for name, score in output["means"].items():
         print(f"  {name}: {score:.3f}")
     print(f"prompts: {', '.join(f'{k}={v}' for k, v in versions.items())}")
+    spend = output.get("judge_spend") or {}
+    if spend:
+        cost = f" — ${spend['usd']:.4f}" if "usd" in spend else ""
+        print(
+            f"judge spend: {spend['input_tokens']:,} in / "
+            f"{spend['output_tokens']:,} out{cost}"
+        )
     print(f"report: {output['report_path']}")
 
 

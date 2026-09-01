@@ -141,3 +141,120 @@ def test_omits_retrieval_section_when_unlabeled(tmp_path):
     with patch("eval.report.REPORTS_DIR", tmp_path):
         path = write_markdown_report(output, dataset_rows, "m", "m")
     assert "Retrieval (no judge involved)" not in path.read_text()
+
+
+class TestJudgeSpendReporting:
+    """#26 — a score with no cost next to it is how a 50-question run quietly
+    grows into a 1M-token one. The report states spend; the ledger parses it
+    back out."""
+
+    def test_report_states_judge_spend(self, tmp_path):
+        from unittest.mock import patch
+
+        from eval.report import write_markdown_report
+
+        output = {
+            "variant": "fixed",
+            "means": {"faithfulness": 0.8},
+            "per_question": [{"user_input": "q1", "faithfulness": 0.8}],
+            "n_questions": 1,
+            "n_dataset": 1,
+            "judge_spend": {"input_tokens": 89412, "output_tokens": 12004, "usd": 0.1494},
+        }
+        rows = [{"category": "grounded", "domain": "robotics", "question": "q1"}]
+
+        with patch("eval.report.REPORTS_DIR", tmp_path):
+            text = write_markdown_report(output, rows, "m", "j").read_text()
+
+        assert "**Judge spend**: 89,412 in / 12,004 out tokens — $0.1494" in text
+
+    def test_report_flags_a_sampled_run(self, tmp_path):
+        from unittest.mock import patch
+
+        from eval.report import write_markdown_report
+
+        output = {
+            "variant": "fixed",
+            "means": {"faithfulness": 0.8},
+            "per_question": [{"user_input": "q1", "faithfulness": 0.8}],
+            "n_questions": 1,
+            "n_dataset": 50,
+        }
+        rows = [{"category": "grounded", "domain": "robotics", "question": "q1"}]
+
+        with patch("eval.report.REPORTS_DIR", tmp_path):
+            text = write_markdown_report(output, rows, "m", "j").read_text()
+
+        assert "1 of 50 questions" in text
+        assert "stratified sample" in text
+
+    def test_report_omits_spend_when_it_was_not_recorded(self, tmp_path):
+        from unittest.mock import patch
+
+        from eval.report import write_markdown_report
+
+        output = {
+            "variant": "fixed",
+            "means": {"faithfulness": 0.8},
+            "per_question": [{"user_input": "q1", "faithfulness": 0.8}],
+        }
+        rows = [{"category": "grounded", "domain": "robotics", "question": "q1"}]
+
+        with patch("eval.report.REPORTS_DIR", tmp_path):
+            text = write_markdown_report(output, rows, "m", "j").read_text()
+
+        assert "Judge spend" not in text
+        assert "1 questions" in text  # no "of N" when nothing was sampled
+
+    def test_ledger_round_trips_spend_and_real_question_count(self, tmp_path):
+        """The report is the only surviving record of the early judged runs,
+        so whatever it states has to be parseable back out."""
+        from unittest.mock import patch
+
+        from eval.ingest import parse_judged_report
+        from eval.report import write_markdown_report
+
+        output = {
+            "variant": "agentic",
+            "means": {"faithfulness": 0.5, "answer_relevancy": 0.7},
+            "per_question": [{"user_input": "q1", "faithfulness": 0.5}],
+            "n_questions": 1,
+            "n_dataset": 50,
+            "judge_spend": {"input_tokens": 1234, "output_tokens": 56, "usd": 0.0043},
+        }
+        rows = [{"category": "grounded", "domain": "robotics", "question": "q1"}]
+
+        with patch("eval.report.REPORTS_DIR", tmp_path):
+            path = write_markdown_report(output, rows, "claude-haiku-4-5", "claude-haiku-4-5")
+
+        record = parse_judged_report(path)
+
+        assert record["n_questions"] == 1
+        assert record["judge_spend"] == {
+            "input_tokens": 1234,
+            "output_tokens": 56,
+            "usd": 0.0043,
+        }
+        assert record["metrics"] == {"faithfulness": 0.5, "answer_relevancy": 0.7}
+
+    def test_old_reports_without_spend_still_parse(self, tmp_path):
+        """Every committed report predates #26. Backfilling the ledger from
+        them must keep working, spend simply absent."""
+        from eval.ingest import parse_judged_report
+
+        path = tmp_path / "fixed-20260828T152436Z.md"
+        path.write_text(
+            "# Eval report — `fixed` pipeline\n\n"
+            "- **Run at (UTC)**: 2026-08-28T15:24:36+00:00\n"
+            "- **Pipeline model**: `claude-haiku-4-5`\n"
+            "- **Judge model**: `claude-haiku-4-5` (via Ragas)\n"
+            "- **Dataset**: `eval/dataset.jsonl` — 50 questions (48 grounded, 2 edge case)\n"
+            "\n## Summary (mean across all questions)\n\n"
+            "| Metric | Mean score |\n|---|---|\n| faithfulness | 0.829 |\n"
+        )
+
+        record = parse_judged_report(path)
+
+        assert record["n_questions"] == 50
+        assert record["judge_spend"] == {}
+        assert record["metrics"] == {"faithfulness": 0.829}

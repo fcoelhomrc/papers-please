@@ -26,6 +26,24 @@ def _bullet(text: str, label: str) -> str | None:
     return m.group(1).strip().strip("`").split("`")[0].strip()
 
 
+def _judge_spend(text: str) -> dict:
+    """Token/USD line, absent from every report written before #26."""
+    m = re.search(
+        r"^- \*\*Judge spend\*\*: ([\d,]+) in / ([\d,]+) out tokens(?: — \$([\d.]+))?",
+        text,
+        re.M,
+    )
+    if not m:
+        return {}
+    spend = {
+        "input_tokens": int(m.group(1).replace(",", "")),
+        "output_tokens": int(m.group(2).replace(",", "")),
+    }
+    if m.group(3):
+        spend["usd"] = float(m.group(3))
+    return spend
+
+
 def parse_judged_report(path: Path) -> dict | None:
     """Pull the summary table and metadata back out of a committed report."""
     text = path.read_text()
@@ -47,10 +65,21 @@ def parse_judged_report(path: Path) -> dict | None:
         "model": _bullet(text, "Pipeline model") or "",
         "judge_model": _bullet(text, "Judge model") or "",
         "prompt": f"{prompt.group(1)}/{prompt.group(2)}" if prompt else None,
-        "n_questions": 50,
+        # Read, not assumed: --sample makes a judged run smaller than the
+        # dataset, and a ledger row claiming 50 for a 15-question run would
+        # make two rows look comparable when they aren't.
+        "n_questions": _n_questions(text),
         "metrics": means,
+        "judge_spend": _judge_spend(text),
         "source": f"eval/reports/{path.name}",
     }
+
+
+def _n_questions(text: str, default: int = 50) -> int:
+    """How many questions the run actually scored. Reports predating #26 have
+    no sample notion, hence the default matching the full dataset."""
+    m = re.search(r"^- \*\*Dataset\*\*: .*? — (\d+)(?: of \d+)? questions", text, re.M)
+    return int(m.group(1)) if m else default
 
 
 def _best(results: list[dict], metric: str) -> dict:

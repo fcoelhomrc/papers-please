@@ -114,10 +114,24 @@ def _pr_chart(title, subtitle, series_points, label_series=None) -> str:
     return "".join(parts)
 
 
+def _cost_cell(row) -> str:
+    """What the run cost, where it was recorded. Retrieval sweeps are free by
+    construction and say so - a blank there would read as "unknown" when the
+    answer is a definite zero, which is the whole argument for running them."""
+    if row["kind"] != "judged":
+        return '<td class="free">free</td>'
+    spend = row.get("judge_spend") or {}
+    if "usd" in spend:
+        tokens = spend["input_tokens"] + spend["output_tokens"]
+        return f'<td title="{tokens:,} judge tokens">${spend["usd"]:.2f}</td>'
+    return '<td class="na">—</td>'
+
+
 def _ledger_table(rows) -> str:
     cols = [m for m in ALL_METRICS if any(m in r["metrics"] for r in rows)]
     head = (
         "<tr><th>Run</th><th>Kind</th><th>Best config</th><th>Model</th><th>N</th>"
+        + '<th title="judge spend; retrieval sweeps use no LLM at all">cost</th>'
         + "".join(
             f'<th title="{SHORT.get(c, (c, c))[1]}">{SHORT.get(c, (c, c))[0]}</th>'
             for c in cols
@@ -136,7 +150,7 @@ def _ledger_table(rows) -> str:
             f"<td><span class='kind kind-{r['kind']}'>{r['kind'].replace('_',' ')}</span></td>"
             f"<td>{r['variant']}{f' <span class=dim>({n} configs)</span>' if n else ''}</td>"
             f"<td><code>{r.get('model') or '—'}</code></td>"
-            f"<td>{r.get('n_questions','—')}</td>{cells}</tr>"
+            f"<td>{r.get('n_questions','—')}</td>{_cost_cell(r)}{cells}</tr>"
         )
     return f"<table><thead>{head}</thead><tbody>{''.join(body)}</tbody></table>"
 
@@ -280,6 +294,7 @@ th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),
 th:nth-child(3),td:nth-child(3) {{ text-align:left; }}
 th {{ color:var(--text-secondary); font-weight:600; }}
 td.na {{ color:var(--text-muted); }}
+td.free {{ color:var(--s-hybrid); }}
 .dim {{ color:var(--text-muted); }}
 code {{ background:color-mix(in srgb,var(--grid) 60%,transparent); padding:1px 5px;
   border-radius:4px; font-size:0.92em; }}
