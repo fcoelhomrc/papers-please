@@ -17,6 +17,8 @@ export const keys = {
   documentChunks: (id) => ['document', id, 'chunks'],
   status: () => ['status'],
   queue: () => ['queue'],
+  workers: () => ['workers'],
+  workerLogs: (service) => ['workers', service, 'logs'],
 }
 
 export function useSearch({ mode, query, topK, rerank, enabled }) {
@@ -73,6 +75,27 @@ export function useQueue({ refetchInterval } = {}) {
     queryFn: () => api.getQueue(),
     refetchInterval,
     staleTime: 0,
+  })
+}
+
+export function useWorkers({ refetchInterval } = {}) {
+  return useQuery({
+    queryKey: keys.workers(),
+    queryFn: api.getWorkers,
+    refetchInterval,
+    staleTime: 0,
+  })
+}
+
+export function useWorkerLogs(service, { enabled } = {}) {
+  return useQuery({
+    queryKey: keys.workerLogs(service),
+    queryFn: () => api.getWorkerLogs(service),
+    // Fetched only when a worker's logs are actually expanded - polling
+    // three log tails every 10s would be a lot of traffic for something
+    // nobody is looking at most of the time.
+    enabled: Boolean(enabled),
+    staleTime: 5_000,
   })
 }
 

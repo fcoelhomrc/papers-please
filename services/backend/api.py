@@ -13,6 +13,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from orchestrator.graph import MAX_AGENT_RECURSION, build_agent
 from orchestrator.llm import make_agent_parts
 from orchestrator.evidence import extract_evidence, extract_trace
+from fastapi.responses import PlainTextResponse
 from schemas import (
     ChatRequest,
     ChatResponse,
@@ -24,6 +25,8 @@ from schemas import (
     QueueItem,
     SearchResponse,
     StatusResponse,
+    WorkersResponse,
+    WorkerStatus,
 )
 from search import SearchEngine, get_search_engine, keyword_search
 from sqlalchemy import exists, select
@@ -98,6 +101,41 @@ def status():
 def queue(limit: int = Query(default=50, ge=1, le=200)):
     """What is in the pipeline and where each paper has got to."""
     return queue_items(limit=limit)
+
+
+@app.get("/workers", response_model=WorkersResponse)
+def workers():
+    """Whether the pipeline workers are actually running.
+
+    The Queue page can show a full backlog and a stopped worker at the same
+    time and, before this, looked identical in both cases - which is how six
+    stuck downloads got reported as a broken pipeline when the download
+    worker simply wasn't up.
+    """
+    import containers
+
+    try:
+        return WorkersResponse(
+            workers=[WorkerStatus(**w) for w in containers.list_workers()]
+        )
+    except Exception as e:
+        # Never a 500: running the backend outside compose, or without the
+        # podman socket enabled, is a normal setup and not an error.
+        return WorkersResponse(unavailable=str(e))
+
+
+@app.get("/workers/{service}/logs", response_class=PlainTextResponse)
+def worker_logs(service: str, tail: int = Query(default=200, ge=1, le=2000)):
+    """Recent output from one worker, so a failure is readable without a
+    terminal. Read-only - there is no start/stop here."""
+    import containers
+
+    try:
+        return containers.worker_logs(service, tail=tail)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"container runtime unavailable: {e}") from e
 
 
 @app.post("/agent/chat", response_model=ChatResponse)

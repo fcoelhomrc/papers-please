@@ -97,6 +97,30 @@ class QueueItem(BaseModel):
     embedded: int = 0
 
 
+class WorkerStatus(BaseModel):
+    """One pipeline worker as the container runtime sees it.
+
+    `state` is the runtime's own word (`running`, `exited`, `created`, ...)
+    plus `missing` for a service with no container, and `unknown` when the
+    runtime itself couldn't be reached.
+    """
+
+    service: str
+    container: str | None = None
+    state: str
+    status: str = ""
+    exit_code: int | None = None
+
+
+class WorkersResponse(BaseModel):
+    workers: list[WorkerStatus] = []
+    # Set when the container runtime is unreachable - normal when the
+    # backend runs outside compose. The UI shows "unknown" rather than
+    # treating it as workers being down, which would be a worse lie than
+    # saying nothing.
+    unavailable: str | None = None
+
+
 class StatusResponse(BaseModel):
     documents_total: int
     pending_download: int

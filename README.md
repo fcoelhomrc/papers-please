@@ -236,6 +236,15 @@ that fires the requeue: one broken file could hold the chunker at 100% CPU
 indefinitely. OCR is the most expensive step in the pipeline, so this was
 not a small leak.
 
+The Queue page also shows whether the stage workers are actually running,
+read from the container runtime (`GET /workers`), with each worker's recent
+logs expandable in place. Counters say how much work is left; that strip
+says whether anything is doing it — a full backlog and a stopped worker
+looked identical before, which is how a stopped `worker-download` got
+reported as a broken pipeline. It needs the podman/docker socket mounted
+read-only into the backend (see `compose.yaml`); without it the strip says
+so rather than claiming the workers are down.
+
 The Queue page lists what is actually in flight — each paper, its stage, its
 chunk/embedding progress and its attempt count — with anything that needs
 attention sorted to the top.

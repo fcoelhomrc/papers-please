@@ -35,18 +35,28 @@ services:
       context: ./services/backend
       dockerfile: Dockerfile
     image: papers-please-backend:latest
+    restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
       - papers_data:/data
       - ./services/backend:/app
       - backend_venv:/app/.venv
+      # Read-only view of the container runtime so GET /workers can report
+      # whether the stage workers are up. :ro matters - the API only reads,
+      # and a writable socket would be control over every container on the
+      # host from a web request.
+      - ${PODMAN_SOCKET:-/run/user/1000/podman/podman.sock}:/run/podman.sock:ro
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       PINECONE_API_KEY: ${PINECONE_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # Lets GET /workers report whether the stage workers are running.
+      # Read-only, and the API only ever reads - see services/backend/containers.py.
+      DOCKER_HOST: unix:///run/podman.sock
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-papers-please}
       # Set to 1 to run the agent from recorded fixtures in eval/replay/
       # instead of calling an LLM - the chat panel works end to end with no
       # API key and no tokens spent. Empty (the default) means normal mode.
@@ -61,6 +71,7 @@ services:
 
   worker-download:
     image: papers-please-backend:latest
+    restart: unless-stopped
     volumes:
       - papers_data:/data
       - ./services/backend:/app
@@ -77,6 +88,7 @@ services:
 
   worker-chunk:
     image: papers-please-backend:latest
+    restart: unless-stopped
     volumes:
       - papers_data:/data
       - ./services/backend:/app
@@ -93,6 +105,7 @@ services:
 
   worker-embed:
     image: papers-please-backend:latest
+    restart: unless-stopped
     volumes:
       - papers_data:/data
       - ./services/backend:/app

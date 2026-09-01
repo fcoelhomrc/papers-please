@@ -2,7 +2,8 @@ import clsx from 'clsx'
 import { Inbox } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge, Card, EmptyState, ErrorState, PageHeader, Skeleton } from '../components/ui.jsx'
-import { useQueue, useStatus } from '../hooks/queries'
+import WorkerStrip from '../components/WorkerStrip.jsx'
+import { useQueue, useStatus, useWorkers } from '../hooks/queries'
 
 const REFRESH_MS = 10_000
 
@@ -78,6 +79,7 @@ function QueueRow({ item }) {
 export default function Queue() {
   const { data, error, isLoading, isFetching } = useStatus({ refetchInterval: REFRESH_MS })
   const queue = useQueue({ refetchInterval: REFRESH_MS })
+  const workers = useWorkers({ refetchInterval: REFRESH_MS })
 
   const pendingChunk = data?.objects_by_status?.pending ?? 0
   const failedChunk = data?.objects_by_status?.failed ?? 0
@@ -97,6 +99,10 @@ export default function Queue() {
       />
 
       <ErrorState error={error} />
+
+      {/* Above the counters on purpose: if nothing is running, the numbers
+          below are a backlog rather than progress. */}
+      <WorkerStrip query={workers} />
 
       {isLoading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

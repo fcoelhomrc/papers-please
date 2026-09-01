@@ -71,6 +71,18 @@ export function getQueue({ limit = 50 } = {}) {
   return fetch(`${BASE}/queue?limit=${limit}`).then(handle)
 }
 
+export function getWorkers() {
+  return fetch(`${BASE}/workers`).then(handle)
+}
+
+export function getWorkerLogs(service, { tail = 200 } = {}) {
+  // Plain text, not JSON - it's a log.
+  return fetch(`${BASE}/workers/${service}/logs?tail=${tail}`).then(async (res) => {
+    if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`)
+    return res.text()
+  })
+}
+
 export function getStatus() {
   return fetch(`${BASE}/status`).then(handle)
 }
