@@ -20,7 +20,13 @@ class DevicesConfig(BaseModel):
 
 class EmbedderConfig(BaseModel):
     model: str = "bge-small"
-    max_tokens: int = 512
+    # Chunk size, in the embedding model's own tokens. 256 rather than
+    # bge-small's full 512 window: a smaller chunk is a sharper vector,
+    # because averaging a passage that covers two topics lands the embedding
+    # between both and near neither. The context a generator needs is
+    # recovered after ranking instead, by search.neighbour_window - which is
+    # what makes shrinking this affordable rather than lossy.
+    max_tokens: int = 256
     max_chunks: int = 1_000
 
 
@@ -50,6 +56,19 @@ class SearchConfig(BaseModel):
     # every search, and recall gains flatten well before 50 while latency
     # does not.
     rerank_candidates: int = 40
+    # How many chunks either side of a hit to glue on as context (0 = off).
+    #
+    # HybridChunker emits no overlap, so a sentence spanning a boundary is
+    # split and neither half reads as an answer on its own. Expanding after
+    # ranking - never before - keeps the cross-encoder scoring the precise
+    # chunk while generation gets the surrounding prose.
+    #
+    # Paired with the drop in embedder.max_tokens (512 -> 256): a 3-chunk
+    # window of 256-token chunks is about the same context as one old
+    # 512-token chunk, so this buys retrieval precision rather than spending
+    # tokens. Widening the window without shrinking the chunks would just be
+    # a bigger bill.
+    neighbour_window: int = 1
     # Keyword's weight in RRF, relative to dense retrieval's 1.0. Not 1.0
     # because the two are not equally good rankers (nDCG 0.598 vs 0.787 alone
     # at top_k=5), and weighting them equally measured *worse* than dense

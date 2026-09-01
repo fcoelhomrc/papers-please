@@ -16,7 +16,7 @@ from pinecone.grpc import PineconeGRPC as Pinecone
 from process.embedder import MODELS, Reranker
 from schemas import ChunkResult, SearchResponse
 from sentence_transformers import SentenceTransformer
-from sqlalchemy import Text, func, literal_column, select
+from sqlalchemy import Text, func, literal_column, select, tuple_
 from sqlalchemy.orm import Session
 
 SEMANTIC = "semantic"
@@ -77,6 +77,8 @@ def _chunk_rows_stmt(chunk_ids=None):
     stmt = (
         select(
             Chunk.id,
+            Chunk.chunk_index,
+            Chunk.obj_id,
             Chunk.chunk_text,
             Chunk.page_num,
             Object.path,
@@ -94,6 +96,10 @@ def _chunk_rows_stmt(chunk_ids=None):
 def _row_to_chunk(r, score: float) -> dict:
     return {
         "chunk_id": r.id,
+        "chunk_index": r.chunk_index,
+        # Not part of ChunkResult - only neighbour expansion needs it, and it
+        # is dropped before the response is built.
+        "obj_id": r.obj_id,
         "doc_id": r.doc_id,
         "text": r.chunk_text,
         "page_num": r.page_num,
@@ -140,6 +146,53 @@ def _keyword_rows(session, query: str, top_k: int, min_score: float | None = Non
         stmt = stmt.where(rank >= min_score)
     stmt = stmt.order_by(rank.desc()).limit(top_k)
     return [_row_to_chunk(r, float(r.score)) for r in session.execute(stmt).all()]
+
+
+def expand_neighbours(session, chunks: list[dict], window: int) -> list[dict]:
+    """Glue each hit's neighbouring chunks onto it as `context`.
+
+    Small-to-big: the vector is built from one tight chunk so it means one
+    thing, and the prose handed to a reader is the window around it. This runs
+    *after* ranking on purpose - expanding first would mean the cross-encoder
+    scored a blur of three chunks and the score would no longer say which one
+    matched.
+
+    One batched query for every neighbour of every hit, keyed on
+    (obj_id, chunk_index): a query per hit is 5-10 round trips per search on
+    the request path, and this is the same cost regardless of how many hits
+    came back.
+
+    Neighbours are looked up within the same `obj_id`, not the same document:
+    chunk_index restarts per PDF, so a document with two objects would
+    otherwise splice one paper's text into another's.
+    """
+    if window <= 0 or not chunks:
+        return chunks
+
+    wanted = {
+        (c["obj_id"], c["chunk_index"] + offset)
+        for c in chunks
+        for offset in range(-window, window + 1)
+        if c["chunk_index"] + offset >= 0
+    }
+    rows = session.execute(
+        select(Chunk.obj_id, Chunk.chunk_index, Chunk.chunk_text).where(
+            tuple_(Chunk.obj_id, Chunk.chunk_index).in_(wanted)
+        )
+    ).all()
+    by_position = {(r.obj_id, r.chunk_index): r.chunk_text for r in rows}
+
+    expanded = []
+    for c in chunks:
+        parts = [
+            by_position.get((c["obj_id"], c["chunk_index"] + offset))
+            for offset in range(-window, window + 1)
+        ]
+        # Missing neighbours are normal at a document's edges, and gaps close
+        # up rather than leaving blank joins in the middle of the prose.
+        text = "\n\n".join(p for p in parts if p)
+        expanded.append({**c, "context": text or c["text"]})
+    return expanded
 
 
 class SearchEngine(PostgresInterface):
@@ -189,6 +242,10 @@ class SearchEngine(PostgresInterface):
         with Session(self.engine) as session:
             return _keyword_rows(session, query, top_k, min_score=min_score)
 
+    def _expand(self, chunks: list[dict], window: int) -> list[dict]:
+        with Session(self.engine) as session:
+            return expand_neighbours(session, chunks, window)
+
     def search(
         self,
         query: str,
@@ -198,12 +255,17 @@ class SearchEngine(PostgresInterface):
         mode: str | None = None,
         thresholds: dict | None = None,
         candidates: int | None = None,
+        neighbour_window: int | None = None,
     ) -> SearchResponse:
         """`candidates` widens retrieval ahead of the reranker: fetch this
         many, then let the cross-encoder cut to `rerank_top_k`. Without it,
         retrieval fetches exactly `top_k` and reranking can only reorder what
         it was given - never promote a chunk that ranked 12th into the top 5,
         which is most of what a cross-encoder is for.
+
+        `neighbour_window` widens each surviving hit with the chunks either
+        side of it, exposed as `context` while `text` stays the chunk that
+        actually matched. Also opt-in, and also applied only at the end.
 
         Opt-in rather than the default because `top_k` means "how many to
         retrieve" to callers that are measuring retrieval itself (eval.sweep,
@@ -272,12 +334,21 @@ class SearchEngine(PostgresInterface):
             if t["min_rerank_score"] is not None:
                 chunks = [c for c in chunks if c["score"] >= t["min_rerank_score"]]
 
+        # Last, on the handful of chunks that survived - expanding the
+        # candidate pool instead would fetch neighbours for 40 chunks to
+        # throw 35 of them away.
+        window = cfg.neighbour_window if neighbour_window is None else neighbour_window
+        if window and chunks:
+            chunks = self._expand(chunks, window)
+
         return SearchResponse(
             query=query,
             model=self._model_key,
             mode=mode,
             reranked=did_rerank,
-            results=[ChunkResult(**c) for c in chunks],
+            # obj_id is an internal join key that neighbour expansion needs
+            # and the API contract doesn't have.
+            results=[ChunkResult(**{k: v for k, v in c.items() if k != "obj_id"}) for c in chunks],
         )
 
 
@@ -295,7 +366,9 @@ def keyword_search(query: str, top_k: int = 10) -> SearchResponse:
         model="keyword",
         mode=KEYWORD,
         reranked=False,
-        results=[ChunkResult(**c) for c in results],
+        results=[
+            ChunkResult(**{k: v for k, v in c.items() if k != "obj_id"}) for c in results
+        ],
     )
 
 

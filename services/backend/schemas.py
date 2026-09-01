@@ -28,13 +28,21 @@ class StatusResponse(BaseModel):
 
 class ChunkResult(BaseModel):
     chunk_id: int
+    chunk_index: int
     doc_id: int
     title: str
     authors: list[str] | None
     year: int | None
     page_num: int | None
     pdf_path: str
+    # `text` is the chunk that actually matched - what the score refers to and
+    # what the UI highlights. `context` is that chunk plus its neighbours, for
+    # a reader (human or LLM) who needs the sentence that ran over the chunk
+    # boundary. Kept separate rather than widening `text` in place: conflating
+    # them would make `score` look like it applied to the whole window, and
+    # the UI would lose the ability to show what actually matched.
     text: str
+    context: str | None = None
     score: float
 
 

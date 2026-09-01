@@ -15,7 +15,7 @@ devices:
 
 embedder:
   model: bge-small
-  max_tokens: 512
+  max_tokens: 256          # small chunks embed sharper; context comes from neighbour_window
   max_chunks: 1000
 
 search:
@@ -25,6 +25,7 @@ search:
   mode: hybrid            # semantic | keyword | hybrid
   keyword_weight: 0.1     # keyword's RRF weight relative to dense retrieval's 1.0
   rerank_candidates: 40   # pool retrieved before the cross-encoder cuts to top_k
+  neighbour_window: 1     # chunks either side glued on as context after ranking (0 = off)
   min_rerank_score: -8.0  # cross-encoder logits, ms-marco-MiniLM specific
 
 stages:

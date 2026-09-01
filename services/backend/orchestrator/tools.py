@@ -85,7 +85,11 @@ def search_chunks(query: str, top_k: int = 5, rerank: bool = True) -> list[dict]
                 "authors": r.authors,
                 "year": r.year,
                 "page_num": r.page_num,
-                "text": r.text,
+                # The widened window when there is one: the model is reading
+                # for meaning, and a sentence cut at a chunk boundary reads
+                # as a non-answer. The UI still shows r.text, the chunk that
+                # actually matched.
+                "text": r.context or r.text,
                 "score": r.score,
             }
             for r in response.results

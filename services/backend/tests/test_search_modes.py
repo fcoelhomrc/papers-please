@@ -4,16 +4,27 @@ No Pinecone, no Postgres, no models: rrf_fuse is a pure function, and the
 mode dispatch is tested by stubbing the two candidate sources so what's
 under test is the routing/fusion, not the I/O.
 """
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from search import HYBRID, KEYWORD, RETRIEVAL_MODES, SEMANTIC, SearchEngine, rrf_fuse
+from search import (
+    HYBRID,
+    KEYWORD,
+    RETRIEVAL_MODES,
+    SEMANTIC,
+    SearchEngine,
+    expand_neighbours,
+    rrf_fuse,
+)
 
 
-def chunk(cid, score=0.0, text=None):
+def chunk(cid, score=0.0, text=None, chunk_index=None, obj_id=1):
     return {
         "chunk_id": cid,
+        "chunk_index": cid if chunk_index is None else chunk_index,
+        "obj_id": obj_id,
         "doc_id": cid * 10,
         "text": text or f"chunk {cid}",
         "page_num": 1,
@@ -77,6 +88,10 @@ def make_engine():
     engine = SearchEngine.__new__(SearchEngine)  # skip __init__ (Pinecone/DB)
     engine._model_key = "bge-small"
     engine._reranker = MagicMock()
+    # Neighbour expansion is on by default in config and needs a real
+    # session; these tests are about mode dispatch and ranking, so it's
+    # stubbed to a pass-through. expand_neighbours has its own tests below.
+    engine._expand = MagicMock(side_effect=lambda chunks, window: chunks)
     return engine
 
 
@@ -438,3 +453,110 @@ class TestRerankCandidatePool:
         # one would let the narrow source cap what fusion has to work with
         assert engine._vector_candidates.call_args.args[1] == 40
         assert engine._keyword_candidates.call_args.args[1] == 40
+
+
+class _FakeSession:
+    """Stands in for a SQLAlchemy session over a chunks table held in a dict
+    keyed by (obj_id, chunk_index). Only expand_neighbours' one query shape
+    is supported, which is the point - it asserts on that shape."""
+
+    def __init__(self, rows: dict):
+        self._rows = rows
+        self.queries = 0
+        self.asked_for: set = set()
+
+    def execute(self, stmt):
+        self.queries += 1
+        wanted = set(stmt.whereclause.right.value)
+        self.asked_for |= wanted
+        return SimpleNamespace(
+            all=lambda: [
+                SimpleNamespace(obj_id=o, chunk_index=i, chunk_text=text)
+                for (o, i), text in sorted(self._rows.items())
+                if (o, i) in wanted
+            ]
+        )
+
+
+class TestExpandNeighbours:
+    """#29 — HybridChunker emits no overlap, so a sentence spanning a chunk
+    boundary is split and neither half reads as an answer."""
+
+    def test_glues_the_window_around_the_hit(self):
+        session = _FakeSession(
+            {(1, 3): "before.", (1, 4): "the hit.", (1, 5): "after."}
+        )
+
+        [got] = expand_neighbours(session, [chunk(4, chunk_index=4, obj_id=1)], window=1)
+
+        assert got["context"] == "before.\n\nthe hit.\n\nafter."
+
+    def test_matched_chunk_text_is_left_alone(self):
+        """`score` refers to `text`. Widening it in place would make the score
+        look like it applied to all three chunks."""
+        session = _FakeSession(
+            {(1, 3): "before.", (1, 4): "the hit.", (1, 5): "after."}
+        )
+
+        [got] = expand_neighbours(
+            session, [chunk(4, chunk_index=4, obj_id=1, text="the hit.")], window=1
+        )
+
+        assert got["text"] == "the hit."
+
+    def test_document_edges_close_up_rather_than_leaving_blanks(self):
+        session = _FakeSession({(1, 0): "first chunk.", (1, 1): "second."})
+
+        [got] = expand_neighbours(session, [chunk(0, chunk_index=0, obj_id=1)], window=1)
+
+        assert got["context"] == "first chunk.\n\nsecond."
+
+    def test_never_crosses_into_another_pdf(self):
+        """chunk_index restarts per object, so matching on index alone would
+        splice one paper's text into another's."""
+        session = _FakeSession(
+            {(1, 4): "paper one.", (2, 3): "paper two before.", (2, 5): "paper two after."}
+        )
+
+        [got] = expand_neighbours(session, [chunk(4, chunk_index=4, obj_id=1)], window=1)
+
+        assert got["context"] == "paper one."
+
+    def test_widening_the_window_pulls_more(self):
+        session = _FakeSession({(1, i): f"c{i}." for i in range(6)})
+
+        [got] = expand_neighbours(session, [chunk(3, chunk_index=3, obj_id=1)], window=2)
+
+        assert got["context"] == "c1.\n\nc2.\n\nc3.\n\nc4.\n\nc5."
+
+    def test_one_query_regardless_of_hit_count(self):
+        """A query per hit is 5-10 round trips on the request path."""
+        session = _FakeSession({(1, i): f"c{i}." for i in range(20)})
+        hits = [chunk(i, chunk_index=i, obj_id=1) for i in (2, 7, 12, 17)]
+
+        expand_neighbours(session, hits, window=1)
+
+        assert session.queries == 1
+
+    def test_window_zero_is_a_no_op(self):
+        session = _FakeSession({(1, 4): "x"})
+        hits = [chunk(4, chunk_index=4, obj_id=1)]
+
+        assert expand_neighbours(session, hits, window=0) is hits
+        assert session.queries == 0
+
+    def test_empty_results_never_hit_the_database(self):
+        session = _FakeSession({})
+
+        assert expand_neighbours(session, [], window=1) == []
+        assert session.queries == 0
+
+    def test_never_asks_for_a_negative_index(self):
+        """A hit at index 0 has no chunk -1. Sending impossible keys would
+        still return the right answer, so this checks the IN clause itself
+        rather than the result."""
+        session = _FakeSession({(1, 0): "first."})
+
+        expand_neighbours(session, [chunk(0, chunk_index=0, obj_id=1)], window=2)
+
+        assert session.asked_for == {(1, 0), (1, 1), (1, 2)}

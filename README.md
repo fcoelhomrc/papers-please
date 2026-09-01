@@ -100,6 +100,18 @@ keyword retriever for nearly any author or topic query and scores well doing
 it - a whole class of confident, useless hits, removed at the source.
 Appendices are deliberately kept: they hold ablations and proofs.
 
+Chunks are 256 tokens, half of bge-small's window. A smaller chunk is a
+sharper vector - averaging a passage that spans two topics lands the
+embedding between both and near neither. The context a generator needs is
+recovered *after* ranking instead: `search.neighbour_window` glues the chunks
+either side of each surviving hit into a `context` field, while `text` stays
+the chunk that actually matched, so the score keeps meaning what it says and
+the UI can still show what matched. Expanding before ranking would hand the
+cross-encoder a blur of three chunks to score.
+
+Net context per search is roughly flat against the old 512-token chunks
+(5 x 256 x 3 vs 5 x 512); the gain is precision, not free tokens.
+
 ### Re-indexing after a chunking change
 
 Chunk text and vector metadata are inputs to the embedding, so changing

@@ -62,6 +62,7 @@ class TestSearchChunks:
             results=[
                 ChunkResult(
                     chunk_id=1,
+                    chunk_index=0,
                     doc_id=9,
                     title="Deep Learning for Cervical Cancer Survival",
                     authors=["A. Author"],
@@ -197,3 +198,65 @@ class TestSearchChunksCandidatePool:
             result = tools.search_chunks.invoke({"query": "attention"})
 
         assert "error" in result[0]
+
+
+class TestSearchChunksContext:
+    """#29 — the model reads for meaning, so it gets the widened window; the
+    UI keeps showing the chunk that actually matched."""
+
+    def test_prefers_the_neighbour_expanded_context(self):
+        from schemas import ChunkResult, SearchResponse
+
+        response = SearchResponse(
+            query="q",
+            model="bge-small",
+            reranked=True,
+            results=[
+                ChunkResult(
+                    chunk_id=1,
+                    chunk_index=4,
+                    doc_id=9,
+                    title="T",
+                    authors=None,
+                    year=None,
+                    page_num=3,
+                    pdf_path="x.pdf",
+                    text="the matched chunk",
+                    context="before\n\nthe matched chunk\n\nafter",
+                    score=1.0,
+                )
+            ],
+        )
+        with patch("orchestrator.tools.get_search_engine") as mock_engine:
+            mock_engine.return_value.search.return_value = response
+            result = tools.search_chunks.invoke({"query": "q"})
+
+        assert result[0]["text"] == "before\n\nthe matched chunk\n\nafter"
+
+    def test_falls_back_to_the_chunk_when_expansion_is_off(self):
+        from schemas import ChunkResult, SearchResponse
+
+        response = SearchResponse(
+            query="q",
+            model="bge-small",
+            reranked=True,
+            results=[
+                ChunkResult(
+                    chunk_id=1,
+                    chunk_index=4,
+                    doc_id=9,
+                    title="T",
+                    authors=None,
+                    year=None,
+                    page_num=3,
+                    pdf_path="x.pdf",
+                    text="the matched chunk",
+                    score=1.0,
+                )
+            ],
+        )
+        with patch("orchestrator.tools.get_search_engine") as mock_engine:
+            mock_engine.return_value.search.return_value = response
+            result = tools.search_chunks.invoke({"query": "q"})
+
+        assert result[0]["text"] == "the matched chunk"
