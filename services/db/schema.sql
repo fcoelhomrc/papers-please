@@ -14,11 +14,18 @@ CREATE TABLE objects (
     id SERIAL PRIMARY KEY,
     doc_id INT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     path TEXT NOT NULL,
+    -- 'downloading' is the row's state before a file exists: it is written
+    -- when a download is first attempted, so a failed download has
+    -- somewhere to be recorded. Without it the absence of a row meant both
+    -- "not tried yet" and "will never work", and a dead URL was retried
+    -- forever with nothing to show for it.
+    --
     -- 'failed' means "try again", 'dead' means "stop trying". Collapsing
-    -- them loses the ability to tell a transient OCR failure from a PDF
-    -- that will never parse - and the retry loop needs that distinction to
-    -- know when to stop.
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'chunked', 'failed', 'dead')),
+    -- them loses the ability to tell a transient failure from a PDF that
+    -- will never parse - and both retry loops need that distinction to know
+    -- when to stop.
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('downloading', 'pending', 'chunked', 'failed', 'dead')),
     -- Chunking attempts so far. Without this the requeue loop flips every
     -- failure back to pending whenever the queue empties, so one malformed
     -- PDF is re-OCR'd forever - and keeps the queue non-empty, which

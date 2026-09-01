@@ -219,7 +219,7 @@ CREATE INDEX idx_feedback_created ON feedback(created_at DESC);
 ALTER TABLE objects ADD COLUMN attempts INT NOT NULL DEFAULT 0;
 ALTER TABLE objects DROP CONSTRAINT objects_status_check;
 ALTER TABLE objects ADD CONSTRAINT objects_status_check
-    CHECK (status IN ('pending', 'chunked', 'failed', 'dead'));
+    CHECK (status IN ('downloading', 'pending', 'chunked', 'failed', 'dead'));
 ```
 
 ### Failed PDFs

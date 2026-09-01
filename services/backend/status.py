@@ -14,7 +14,16 @@ from process.embedder import MODELS
 # moving, then what is finished. Sorting by id or timestamp instead would
 # bury a dead object under hundreds of completed ones, which is the opposite
 # of what a queue view is for.
-STATUS_ORDER = ["dead", "failed", "awaiting_download", "pending", "chunked", "embedded"]
+STATUS_ORDER = [
+    "dead",
+    "download_failed",
+    "failed",
+    "awaiting_download",
+    "downloading",
+    "pending",
+    "chunked",
+    "embedded",
+]
 
 
 def queue_items(limit: int = 50) -> list[dict]:
@@ -70,6 +79,11 @@ def queue_items(limit: int = 50) -> list[dict]:
             # listing it as "awaiting download" would be a queue that never
             # drains.
             status = "awaiting_download" if r.pdf_url else "metadata_only"
+        elif r.status == "failed" and chunks == 0:
+            # 'failed' with nothing chunked means the download never
+            # produced a file - a different problem from a PDF that
+            # downloaded and then wouldn't OCR, and a different fix.
+            status = "download_failed"
         elif r.status == "chunked" and chunks and embedded >= chunks:
             # 'chunked' is where the objects table stops; whether the chunks
             # reached the index lives in chunk_embeddings, and "done" is the
@@ -109,12 +123,22 @@ def pipeline_status() -> dict:
             select(func.count()).select_from(Document)
         ).scalar_one()
 
+        # Documents whose download hasn't finished: never attempted, or
+        # attempted and still being retried. A download that gave up is
+        # 'failed' and is deliberately not counted here - it is not pending,
+        # nothing will move it, and leaving it in this number is what made
+        # the counter look permanently stuck.
         pending_download = session.execute(
             select(func.count())
             .select_from(Document)
             .where(Document.pdf_url.is_not(None))
             .where(Document.pdf_url != "")
-            .where(~Document.id.in_(select(Object.doc_id)))
+            .where(
+                ~Document.id.in_(select(Object.doc_id))
+                | Document.id.in_(
+                    select(Object.doc_id).where(Object.status == "downloading")
+                )
+            )
         ).scalar_one()
 
         objects_by_status = dict(

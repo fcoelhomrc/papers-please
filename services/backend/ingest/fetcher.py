@@ -6,7 +6,7 @@ from pathlib import Path
 
 import requests
 from retry import retry
-from sqlalchemy import delete, exists, select
+from sqlalchemy import exists, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -110,15 +110,34 @@ class PdfFetcher(PostgresInterface):
         from config import load
         super().__init__()
         self.max_workers = max_workers
+        self.max_attempts = load().stages.download.max_attempts
         self.store_root = Path(store_root or load().storage.root)
         self._tmp_dir = self.store_root / ".tmp"
 
     def pending(self) -> list[tuple[int, str, str]]:
+        """Documents still worth attempting a download for.
+
+        Either never attempted (no objects row) or attempted and still under
+        the cap. A row that reached the cap is 'failed' and is deliberately
+        not re-selected - that is the whole point of recording the attempt.
+
+        Ordered by id: without an ORDER BY, Postgres may return rows in any
+        order, and `execute(limit=...)` then slices an arbitrary subset -
+        so a document could be starved indefinitely while others are
+        retried. Oldest-first also means a backlog drains in the order it
+        arrived.
+        """
+        retryable = exists().where(
+            (Object.doc_id == Document.id)
+            & (Object.status == "downloading")
+            & (Object.attempts < self.max_attempts)
+        )
         stmt = (
             select(Document.id, Document.source_id, Document.pdf_url)
             .where(Document.pdf_url.is_not(None))
             .where(Document.pdf_url != "")
-            .where(~exists().where(Object.doc_id == Document.id))
+            .where((~exists().where(Object.doc_id == Document.id)) | retryable)
+            .order_by(Document.id)
         )
         with Session(self.engine) as session:
             rows = session.execute(stmt).all()
@@ -129,10 +148,33 @@ class PdfFetcher(PostgresInterface):
     @staticmethod
     @retry(tries=3, delay=1, backoff=2)
     def download(url: str) -> bytes:
+        """Fetch a PDF, or raise.
+
+        A 200 is not enough. Many open-access links resolve to an HTML
+        landing page, and some publishers serve one with a 200 rather than
+        an error - so the old status-code-only check would write the page to
+        `<source_id>.pdf`, register it as a real object, and hand it to
+        Docling, which then burned the chunker's whole retry budget on OCR
+        of a web page.
+
+        Checked here rather than in a sweep afterwards: this is the boundary
+        where bad bytes enter the system, and rejecting them costs one `if`
+        while cleaning them up later costs a reconciliation pass.
+        """
         response = requests.get(url, timeout=90)
-        if response.status_code == 200:
-            return response.content
-        raise requests.HTTPError(response.status_code)
+        if response.status_code != 200:
+            raise requests.HTTPError(response.status_code)
+
+        # The magic bytes decide, not the header: servers lie in both
+        # directions - a real PDF is routinely served as octet-stream, and a
+        # landing page is sometimes labelled application/pdf. The header is
+        # only used to make the error message useful.
+        if not response.content.startswith(PDF_MAGIC):
+            content_type = response.headers.get("content-type", "?").split(";")[0].strip()
+            raise ValueError(f"not a PDF (no %PDF header; content-type: {content_type})")
+        if len(response.content) < MIN_PDF_BYTES:
+            raise ValueError(f"truncated PDF ({len(response.content)} bytes)")
+        return response.content
 
     def save(self, content: bytes, path: Path):
         self._tmp_dir.mkdir(parents=True, exist_ok=True)
@@ -140,22 +182,65 @@ class PdfFetcher(PostgresInterface):
         tmp.write_bytes(content)
         tmp.rename(path)  # atomic on same filesystem
 
-    def register(self, doc_id: int, filename: str):
+    def _begin_attempt(self, doc_id: int, filename: str):
+        """Record the attempt *before* the request goes out.
+
+        Counting after the fact loses the attempt whenever the process dies
+        mid-download - and an uncounted attempt is an infinite retry with
+        extra steps, which is exactly the bug this replaces.
+        """
         with Session(self.engine) as session:
-            session.add(Object(doc_id=doc_id, path=filename))
+            obj = session.execute(
+                select(Object).where(Object.doc_id == doc_id)
+            ).scalar_one_or_none()
+            if obj is None:
+                session.add(
+                    Object(
+                        doc_id=doc_id, path=filename, status="downloading", attempts=1
+                    )
+                )
+            else:
+                obj.status = "downloading"
+                obj.attempts += 1
+                obj.path = filename
+            session.commit()
+
+    def _finish_attempt(self, doc_id: int, ok: bool):
+        """Move the row out of 'downloading', or give up on it.
+
+        'pending' is the chunker's entry condition, so a successful download
+        hands the object straight to the next stage. A failure stays
+        'downloading' - meaning "will be retried" - until the cap is
+        reached, at which point 'failed' takes it out of pending() for good.
+        """
+        with Session(self.engine) as session:
+            obj = session.execute(
+                select(Object).where(Object.doc_id == doc_id)
+            ).scalar_one_or_none()
+            if obj is None:
+                return
+            if ok:
+                obj.status = "pending"
+            elif obj.attempts >= self.max_attempts:
+                obj.status = "failed"
+                logger.warning(
+                    f"Giving up on doc {doc_id} after {obj.attempts} download attempts"
+                )
             session.commit()
 
     def task(self, doc_id: int, url: str, filename: str) -> bool:
         path = self.store_root / filename
+        self._begin_attempt(doc_id, filename)
         try:
             content = self.download(url)
             self.save(content, path)
-            self.register(doc_id, filename)
-            logger.info(f"Downloaded {filename} ({len(content) / 1024:.0f} KB)")
-            return True
         except Exception as e:
+            self._finish_attempt(doc_id, ok=False)
             logger.error(f"Failed ({filename}): {e}")
             return False
+        self._finish_attempt(doc_id, ok=True)
+        logger.info(f"Downloaded {filename} ({len(content) / 1024:.0f} KB)")
+        return True
 
     def execute(self, limit: int | None = None):
         pending = self.pending()
@@ -171,55 +256,3 @@ class PdfFetcher(PostgresInterface):
                 if future.result():
                     done += 1
                 logger.info(f"Progress: {done}/{len(pending)}")
-
-    def reconcile(self):
-        store = self.store_root
-
-        # Remove leftover tmp files from interrupted downloads
-        if self._tmp_dir.exists():
-            for f in self._tmp_dir.iterdir():
-                f.unlink()
-                logger.warning(f"Removed incomplete download: {f.name}")
-
-        # Load registered objects from DB
-        with Session(self.engine) as session:
-            registered = {
-                r.path: r.id
-                for r in session.execute(select(Object.path, Object.id)).all()
-            }
-
-        # Check each registered file for existence / corruption
-        corrupt_ids = []
-        for filename, obj_id in registered.items():
-            path = store / filename
-            reason = None
-            if not path.exists():
-                reason = "missing"
-            elif path.stat().st_size < MIN_PDF_BYTES:
-                reason = f"too small ({path.stat().st_size} bytes)"
-                path.unlink()
-            else:
-                with open(path, "rb") as f:
-                    magic = f.read(4)
-                if magic != PDF_MAGIC:
-                    reason = "not a valid PDF"
-                    path.unlink()
-            if reason:
-                logger.warning(f"Corrupt object {obj_id} ({filename}): {reason} — will re-download")
-                corrupt_ids.append(obj_id)
-
-        if corrupt_ids:
-            with Session(self.engine) as session:
-                session.execute(delete(Object).where(Object.id.in_(corrupt_ids)))
-                session.commit()
-
-        # Remove stray PDFs not registered in DB
-        registered_names = set(registered.keys())
-        stray = 0
-        for f in store.iterdir():
-            if f.is_file() and f.suffix == ".pdf" and f.name not in registered_names:
-                f.unlink()
-                stray += 1
-                logger.warning(f"Removed stray file: {f.name}")
-
-        logger.info(f"Reconcile done — {len(corrupt_ids)} corrupt, {stray} stray removed")

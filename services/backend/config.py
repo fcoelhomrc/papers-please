@@ -102,6 +102,13 @@ class StageConfig(BaseModel):
 
 class DownloadStageConfig(StageConfig):
     workers: int = 4
+    # How many times to retry a PDF URL before giving up on it. Some
+    # open-access links are permanently broken - a DOI resolver that 403s to
+    # a landing page will never succeed - and without a cap the stage
+    # re-attempted them on every pass forever, hammering the remote host.
+    # Three, matching the chunk stage: the failures worth retrying are
+    # transient (a flaky host, a timeout) and clear well inside three passes.
+    max_attempts: int = 3
 
 
 class ChunkStageConfig(StageConfig):

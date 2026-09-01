@@ -12,8 +12,16 @@ const REFRESH_MS = 10_000
  */
 const STATUS = {
   dead: { label: 'gave up', tone: 'danger', hint: 'Chunking failed repeatedly — this PDF will not be retried' },
+  // A download that gave up and an OCR failure are different problems with
+  // different fixes: one means the URL is bad, the other means the PDF is.
+  download_failed: {
+    label: 'no download',
+    tone: 'danger',
+    hint: 'The PDF URL failed repeatedly (often a DOI link to a paywall) — not retried',
+  },
   failed: { label: 'failed', tone: 'warn', hint: 'Chunking failed; it will be retried' },
-  awaiting_download: { label: 'downloading', tone: 'neutral', hint: 'Waiting for the download stage' },
+  awaiting_download: { label: 'queued', tone: 'neutral', hint: 'Waiting for the download stage to pick it up' },
+  downloading: { label: 'downloading', tone: 'neutral', hint: 'Download in progress or being retried' },
   pending: { label: 'chunking', tone: 'neutral', hint: 'Waiting for OCR and chunking' },
   chunked: { label: 'embedding', tone: 'neutral', hint: 'Chunked; waiting for embeddings' },
   embedded: { label: 'searchable', tone: 'accent', hint: 'Fully indexed' },
@@ -105,7 +113,9 @@ export default function Queue() {
             />
             <Stat label="Pending chunk" value={pendingChunk} tone={pendingChunk > 0 ? 'warn' : 'ok'} />
             <Stat label="Chunked ok" value={chunkedOk} tone="ok" />
-            <Stat label="Chunk failed" value={failedChunk} tone={failedChunk > 0 ? 'warn' : 'default'} />
+            {/* status='failed' now covers a failed download as well as a
+                failed OCR; only the list below can tell them apart. */}
+            <Stat label="Failed" value={failedChunk} tone={failedChunk > 0 ? 'warn' : 'default'} />
             <Stat
               label="Pending embed"
               value={data.chunks_pending_embed}

@@ -33,6 +33,7 @@ stages:
     interval_s: 10
     limit: 20
     workers: 4
+    max_attempts: 3       # give up on a URL after this many failed downloads
   chunk:
     interval_s: 10
     limit: 10

@@ -412,7 +412,17 @@ def list_documents(
         if q:
             stmt = stmt.where(Document.title.ilike(f"%{q}%"))
         if only_available:
-            stmt = stmt.where(exists(select(1).where(Object.doc_id == Document.id)))
+            # Not merely "an objects row exists": a row is created when a
+            # download is first attempted, so that would list papers whose
+            # download is still running or has given up entirely.
+            stmt = stmt.where(
+                exists(
+                    select(1).where(
+                        (Object.doc_id == Document.id)
+                        & (Object.status.not_in(("downloading", "failed")))
+                    )
+                )
+            )
         if only_processed:
             stmt = stmt.where(
                 exists(

@@ -111,9 +111,42 @@ class TestQueueItems:
             self._row(4, obj_id=40, status="pending"),
         ]
 
-        items = self._run(rows, chunks={10: 1}, embedded={10: 1})
+        # obj 20 has chunks, so its 'failed' is an OCR failure rather than a
+        # download one - see the two tests below.
+        items = self._run(rows, chunks={10: 1, 20: 3}, embedded={10: 1})
 
         assert [i["status"] for i in items] == ["dead", "failed", "pending", "embedded"]
+
+    def test_a_failure_with_no_chunks_is_a_download_failure(self):
+        """#37 — 'failed' now covers two different problems with two
+        different fixes: a URL that never produced a file, and a PDF that
+        downloaded and then wouldn't OCR. Chunk count tells them apart."""
+        items = self._run(
+            [self._row(1, obj_id=10, status="failed", attempts=3)], chunks={}, embedded={}
+        )
+
+        assert items[0]["status"] == "download_failed"
+
+    def test_a_failure_with_chunks_is_still_an_ocr_failure(self):
+        items = self._run(
+            [self._row(1, obj_id=10, status="failed", attempts=1)],
+            chunks={10: 4},
+            embedded={},
+        )
+
+        assert items[0]["status"] == "failed"
+
+    def test_downloading_is_its_own_state(self):
+        """Distinct from 'awaiting_download' (never attempted) so the Queue
+        can say whether anything is actually happening."""
+        items = self._run(
+            [self._row(1, obj_id=10, status="downloading", attempts=1)],
+            chunks={},
+            embedded={},
+        )
+
+        assert items[0]["status"] == "downloading"
+        assert items[0]["attempts"] == 1
 
     def test_attempts_are_reported(self):
         items = self._run([self._row(1, obj_id=10, status="dead", attempts=3)])
