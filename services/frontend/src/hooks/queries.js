@@ -16,6 +16,7 @@ export const keys = {
   document: (id) => ['document', id],
   documentChunks: (id) => ['document', id, 'chunks'],
   status: () => ['status'],
+  queue: () => ['queue'],
 }
 
 export function useSearch({ mode, query, topK, rerank, enabled }) {
@@ -61,6 +62,15 @@ export function useStatus({ refetchInterval } = {}) {
   return useQuery({
     queryKey: keys.status(),
     queryFn: api.getStatus,
+    refetchInterval,
+    staleTime: 0,
+  })
+}
+
+export function useQueue({ refetchInterval } = {}) {
+  return useQuery({
+    queryKey: keys.queue(),
+    queryFn: () => api.getQueue(),
     refetchInterval,
     staleTime: 0,
   })

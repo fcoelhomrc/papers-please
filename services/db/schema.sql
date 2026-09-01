@@ -14,7 +14,16 @@ CREATE TABLE objects (
     id SERIAL PRIMARY KEY,
     doc_id INT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     path TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'chunked', 'failed')),
+    -- 'failed' means "try again", 'dead' means "stop trying". Collapsing
+    -- them loses the ability to tell a transient OCR failure from a PDF
+    -- that will never parse - and the retry loop needs that distinction to
+    -- know when to stop.
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'chunked', 'failed', 'dead')),
+    -- Chunking attempts so far. Without this the requeue loop flips every
+    -- failure back to pending whenever the queue empties, so one malformed
+    -- PDF is re-OCR'd forever - and keeps the queue non-empty, which
+    -- re-fires the condition.
+    attempts INT NOT NULL DEFAULT 0,
     downloaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

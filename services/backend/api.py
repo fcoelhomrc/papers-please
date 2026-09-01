@@ -21,13 +21,14 @@ from schemas import (
     FeedbackOut,
     FeedbackRequest,
     FetchRequest,
+    QueueItem,
     SearchResponse,
     StatusResponse,
 )
 from search import SearchEngine, get_search_engine, keyword_search
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
-from status import pipeline_status
+from status import pipeline_status, queue_items
 
 log.setup()
 
@@ -91,6 +92,12 @@ def fetch(req: FetchRequest):
 @app.get("/status", response_model=StatusResponse)
 def status():
     return pipeline_status()
+
+
+@app.get("/queue", response_model=list[QueueItem])
+def queue(limit: int = Query(default=50, ge=1, le=200)):
+    """What is in the pipeline and where each paper has got to."""
+    return queue_items(limit=limit)
 
 
 @app.post("/agent/chat", response_model=ChatResponse)

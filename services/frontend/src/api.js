@@ -67,6 +67,10 @@ export function sendFeedback(body) {
   }).then(handle)
 }
 
+export function getQueue({ limit = 50 } = {}) {
+  return fetch(`${BASE}/queue?limit=${limit}`).then(handle)
+}
+
 export function getStatus() {
   return fetch(`${BASE}/status`).then(handle)
 }

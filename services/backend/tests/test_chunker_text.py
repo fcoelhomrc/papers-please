@@ -218,3 +218,76 @@ class TestNormaliseHeading:
         from process.chunker import normalise_heading
 
         assert normalise_heading("Reference implementation") == "reference implementation"
+
+
+class TestRetryCap:
+    """#35 — without a cap, _requeue_failed flipped every failure back to
+    pending whenever the queue emptied, so a PDF that will never parse was
+    re-OCR'd forever. Requeueing also kept the queue non-empty, which is the
+    condition that fires the method: one broken file could hold the chunker
+    at 100% CPU indefinitely."""
+
+    def _chunker(self, failed_rows, max_attempts=3):
+        from unittest.mock import MagicMock
+
+        chunker = PdfChunker.__new__(PdfChunker)
+        chunker.max_attempts = max_attempts
+        chunker.engine = MagicMock()
+
+        session = MagicMock()
+        session.__enter__ = lambda s: s
+        session.__exit__ = lambda s, *a: None
+        session.execute.return_value = MagicMock(all=MagicMock(return_value=failed_rows))
+        chunker._session = session
+        return chunker
+
+    def _requeue(self, chunker):
+        from unittest.mock import patch
+
+        import process.chunker as mod
+
+        updates = []
+        original_execute = chunker._session.execute
+
+        def execute(stmt):
+            compiled = str(stmt)
+            if compiled.strip().upper().startswith("UPDATE"):
+                updates.append(stmt.compile().params)
+                return MagicMock()
+            return original_execute(stmt)
+
+        chunker._session.execute = execute
+        with patch.object(mod, "Session", return_value=chunker._session):
+            chunker._requeue_failed()
+        return updates
+
+    def test_a_retryable_failure_goes_back_to_pending(self):
+        chunker = self._chunker([(1, 0)])
+
+        [update] = self._requeue(chunker)
+
+        assert update["status"] == "pending"
+
+    def test_a_repeat_offender_is_marked_dead_not_pending(self):
+        """'failed' means try again, 'dead' means stop trying. Collapsing
+        them loses the ability to tell a transient OCR failure from a PDF
+        that will never parse."""
+        chunker = self._chunker([(1, 3)])
+
+        [update] = self._requeue(chunker)
+
+        assert update["status"] == "dead"
+
+    def test_the_boundary_is_the_configured_attempt_count(self):
+        chunker = self._chunker([(1, 2), (2, 3)], max_attempts=3)
+
+        updates = self._requeue(chunker)
+
+        assert [u["status"] for u in updates] == ["pending", "dead"]
+
+    def test_a_lower_cap_gives_up_sooner(self):
+        chunker = self._chunker([(1, 1)], max_attempts=1)
+
+        [update] = self._requeue(chunker)
+
+        assert update["status"] == "dead"

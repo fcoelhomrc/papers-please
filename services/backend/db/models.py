@@ -28,7 +28,10 @@ class Object(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     doc_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"))
     path: Mapped[str]
+    # 'pending' | 'chunked' | 'failed' | 'dead' - see schema.sql for why
+    # failed and dead are separate.
     status: Mapped[str] = mapped_column(String, default="pending")
+    attempts: Mapped[int] = mapped_column(default=0)
     downloaded_at: Mapped[datetime.datetime] = mapped_column(
         default=datetime.datetime.now
     )

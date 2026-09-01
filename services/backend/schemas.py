@@ -80,6 +80,23 @@ class FeedbackOut(BaseModel):
     created_at: datetime
 
 
+class QueueItem(BaseModel):
+    """One paper's position in the pipeline, for the Queue page.
+
+    The page showed aggregate counts only, so "what is it doing right now"
+    was unanswerable and a stuck document was indistinguishable from a busy
+    pipeline.
+    """
+
+    doc_id: int
+    title: str
+    obj_id: int | None = None
+    status: str  # 'awaiting_download' | 'pending' | 'chunked' | 'failed' | 'dead' | 'embedded'
+    attempts: int = 0
+    chunks: int = 0
+    embedded: int = 0
+
+
 class StatusResponse(BaseModel):
     documents_total: int
     pending_download: int

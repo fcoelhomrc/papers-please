@@ -214,7 +214,31 @@ CREATE TABLE feedback (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_feedback_created ON feedback(created_at DESC);
+
+-- Chunk retry accounting (see "Failed PDFs" below)
+ALTER TABLE objects ADD COLUMN attempts INT NOT NULL DEFAULT 0;
+ALTER TABLE objects DROP CONSTRAINT objects_status_check;
+ALTER TABLE objects ADD CONSTRAINT objects_status_check
+    CHECK (status IN ('pending', 'chunked', 'failed', 'dead'));
 ```
+
+### Failed PDFs
+
+`stages.chunk.max_attempts` (default 3) caps how many times a PDF that
+failed to chunk is retried. Past it the object becomes `dead` rather than
+`failed` — `failed` means "try again", `dead` means "stop trying", and only
+the second is a state the requeue loop can safely leave alone.
+
+Without the cap, `_requeue_failed` flipped every failure back to `pending`
+whenever the queue emptied, so a PDF that will never parse was re-OCR'd
+forever. Requeueing also kept the queue non-empty, which is the condition
+that fires the requeue: one broken file could hold the chunker at 100% CPU
+indefinitely. OCR is the most expensive step in the pipeline, so this was
+not a small leak.
+
+The Queue page lists what is actually in flight — each paper, its stage, its
+chunk/embedding progress and its attempt count — with anything that needs
+attention sorted to the top.
 
 ## Evaluation
 

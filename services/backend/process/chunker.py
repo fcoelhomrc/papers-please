@@ -142,6 +142,7 @@ class PdfChunker(PostgresInterface):
             if config.devices.chunker == "cpu"
             else AcceleratorDevice.CUDA
         )
+        self.max_attempts = config.stages.chunk.max_attempts
         pipeline_options = PdfPipelineOptions(ocr_options=RapidOcrOptions())
         pipeline_options.accelerator_options = AcceleratorOptions(device=device)
         tokenizer = HuggingFaceTokenizer(
@@ -216,21 +217,53 @@ class PdfChunker(PostgresInterface):
             session.commit()
 
     def _mark_failed(self, obj_id: int):
+        """Record the failure and count the attempt.
+
+        The attempt is counted here rather than at requeue time so a crash
+        between the two doesn't lose it - an uncounted attempt is an infinite
+        retry with extra steps.
+        """
         with Session(self.engine) as session:
             session.execute(
-                update(Object).where(Object.id == obj_id).values(status="failed")
+                update(Object)
+                .where(Object.id == obj_id)
+                .values(status="failed", attempts=Object.attempts + 1)
             )
             session.commit()
 
     def _requeue_failed(self):
-        failed = self.failed()
+        """Give failed objects another go - up to a point.
+
+        Without the cap this flipped every failure back to pending whenever
+        the queue emptied, so a PDF that will never parse was re-OCR'd
+        forever. Worse, requeueing kept the queue non-empty, which is the
+        condition that fires this method: one broken file could keep the
+        chunker at 100% CPU indefinitely.
+
+        Past the cap the object goes 'dead' rather than 'failed' - not the
+        same thing. 'failed' means "try again", 'dead' means "stop trying",
+        and only the second is a state the loop can safely leave alone.
+        """
+        requeued = dead = 0
         with Session(self.engine) as session:
-            for obj_id, _ in failed:
+            rows = session.execute(
+                select(Object.id, Object.attempts).where(Object.status == "failed")
+            ).all()
+            for obj_id, attempts in rows:
+                status = "pending" if attempts < self.max_attempts else "dead"
                 session.execute(
-                    update(Object).where(Object.id == obj_id).values(status="pending")
+                    update(Object).where(Object.id == obj_id).values(status=status)
                 )
-                session.commit()
-        logger.info(f"{len(failed)} objects requeued for chunking")
+                if status == "pending":
+                    requeued += 1
+                else:
+                    dead += 1
+            session.commit()
+
+        logger.info(
+            f"{requeued} objects requeued for chunking, {dead} gave up after "
+            f"{self.max_attempts} attempts"
+        )
 
     def process(self, obj_id: int, path: str):
         pdf_path = Path(self.store_root) / path

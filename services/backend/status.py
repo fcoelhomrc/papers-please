@@ -10,6 +10,94 @@ from db.connection import PostgresInterface
 from db.models import Chunk, ChunkEmbedding, Document, Object
 from process.embedder import MODELS
 
+# Order the Queue page lists work in: what needs attention, then what is
+# moving, then what is finished. Sorting by id or timestamp instead would
+# bury a dead object under hundreds of completed ones, which is the opposite
+# of what a queue view is for.
+STATUS_ORDER = ["dead", "failed", "awaiting_download", "pending", "chunked", "embedded"]
+
+
+def queue_items(limit: int = 50) -> list[dict]:
+    """Recent papers and where each one has got to.
+
+    Two queries, not one per document: the per-object chunk and embedding
+    counts come back as grouped aggregates and are joined in Python, which
+    keeps this O(1) round trips no matter how long the list is.
+    """
+    with Session(PostgresInterface.connect()) as session:
+        rows = session.execute(
+            select(
+                Document.id,
+                Document.title,
+                Document.pdf_url,
+                Object.id.label("obj_id"),
+                Object.status,
+                Object.attempts,
+            )
+            .outerjoin(Object, Object.doc_id == Document.id)
+            .order_by(Document.created_at.desc())
+            .limit(limit)
+        ).all()
+
+        obj_ids = [r.obj_id for r in rows if r.obj_id is not None]
+        chunk_counts: dict[int, int] = {}
+        embedded_counts: dict[int, int] = {}
+        if obj_ids:
+            chunk_counts = dict(
+                session.execute(
+                    select(Chunk.obj_id, func.count())
+                    .where(Chunk.obj_id.in_(obj_ids))
+                    .group_by(Chunk.obj_id)
+                ).all()
+            )
+            embedded_counts = dict(
+                session.execute(
+                    select(Chunk.obj_id, func.count())
+                    .select_from(Chunk)
+                    .join(ChunkEmbedding, ChunkEmbedding.chunk_id == Chunk.id)
+                    .where(Chunk.obj_id.in_(obj_ids))
+                    .group_by(Chunk.obj_id)
+                ).all()
+            )
+
+    items = []
+    for r in rows:
+        chunks = chunk_counts.get(r.obj_id, 0)
+        embedded = embedded_counts.get(r.obj_id, 0)
+        if r.obj_id is None:
+            # No objects row yet. A paper with no pdf_url is not queued for
+            # anything - it is metadata we will never be able to index, and
+            # listing it as "awaiting download" would be a queue that never
+            # drains.
+            status = "awaiting_download" if r.pdf_url else "metadata_only"
+        elif r.status == "chunked" and chunks and embedded >= chunks:
+            # 'chunked' is where the objects table stops; whether the chunks
+            # reached the index lives in chunk_embeddings, and "done" is the
+            # state a reader actually wants to see.
+            status = "embedded"
+        else:
+            status = r.status
+
+        items.append(
+            {
+                "doc_id": r.id,
+                "title": r.title,
+                "obj_id": r.obj_id,
+                "status": status,
+                "attempts": r.attempts or 0,
+                "chunks": chunks,
+                "embedded": embedded,
+            }
+        )
+
+    return sorted(
+        items,
+        key=lambda i: (
+            STATUS_ORDER.index(i["status"]) if i["status"] in STATUS_ORDER else len(STATUS_ORDER),
+            -i["doc_id"],
+        ),
+    )
+
 
 def pipeline_status() -> dict:
     """Counts of documents/objects/chunks at each pipeline stage."""

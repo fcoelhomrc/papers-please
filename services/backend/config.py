@@ -104,9 +104,18 @@ class DownloadStageConfig(StageConfig):
     workers: int = 4
 
 
+class ChunkStageConfig(StageConfig):
+    # How many times to retry a PDF that failed to chunk before giving up on
+    # it. OCR is the most expensive step in the pipeline, so a file that will
+    # never parse must not be allowed to consume it indefinitely. Three
+    # because the failures worth retrying are transient (a truncated
+    # download, a memory spike) and those clear well inside three passes.
+    max_attempts: int = 3
+
+
 class StagesConfig(BaseModel):
     download: DownloadStageConfig = DownloadStageConfig(limit=20)
-    chunk: StageConfig = StageConfig(limit=10)
+    chunk: ChunkStageConfig = ChunkStageConfig(limit=10)
     embed: StageConfig = StageConfig(limit=500)
 
 
