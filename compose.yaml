@@ -53,6 +53,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       PINECONE_API_KEY: ${PINECONE_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       # Lets GET /workers report whether the stage workers are running.
       # Read-only, and the API only ever reads - see services/backend/containers.py.
       DOCKER_HOST: unix:///run/podman.sock

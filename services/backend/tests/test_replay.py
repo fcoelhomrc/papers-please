@@ -251,7 +251,7 @@ class TestMakeAgentParts:
 
     def test_normal_mode_keeps_the_real_tools(self, monkeypatch):
         monkeypatch.delenv("PAPERS_PLEASE_REPLAY", raising=False)
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
+        monkeypatch.setenv("OPENROUTER_API_KEY", "not-a-real-key")
 
         _, tools = make_agent_parts(Config())
 

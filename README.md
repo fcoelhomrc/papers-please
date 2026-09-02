@@ -170,6 +170,62 @@ on demand.
 `llm.provider: replay` in `config.yaml` does the same thing; the environment
 variable wins, so it can override a checked-in config.
 
+## Models and OpenRouter
+
+The app talks to **OpenRouter** by default: one OpenAI-compatible endpoint
+fronting every provider, so "which model" is a config string rather than a
+code change. That is what makes an ablation across models possible at all.
+
+```yaml
+# services/backend/config.yaml
+llm:
+  provider: openrouter          # openrouter | anthropic | vllm
+  model: minimax/minimax-m2.7:free
+  judge_model: ""               # empty = same as model
+```
+
+```bash
+OPENROUTER_API_KEY=sk-or-v1-...   # .env
+```
+
+Model ids are namespaced `vendor/model`, and a **`:free`** suffix selects
+that model's free tier. `provider: anthropic` still goes direct to Claude,
+unchanged; you can also reach Claude *through* OpenRouter as
+`anthropic/claude-haiku-4.5`, at the same list price.
+
+`judge_model` is deliberately separate from `model`. Changing the model that
+*answers* is an experiment; changing the model that *scores* silently
+re-baselines every historical number in `eval/ledger.jsonl`. Pin the judge
+when you want scores to stay comparable across runs.
+
+### What free models can and cannot do here
+
+Measured, not assumed — 421 models on OpenRouter, 21 free, **18 of those
+support tool calling**, which the 4-tool agent requires. Of the ones tried
+against the real agent graph:
+
+| model | result |
+|---|---|
+| `minimax/minimax-m2.7:free` | works, ~6s/turn — the default |
+| `openrouter/free` | works, ~7-10s; auto-routes across free models, so it survives any one being rate-limited — but it won't tell you which model answered, which makes it a poor choice for eval |
+| `z-ai/glm-5.2:free`, `google/gemma-4-31b-it:free` | HTTP 429 — free capacity is frequently exhausted |
+| `nvidia/nemotron-3-super-120b-a12b:free` | HTTP 404 — listed but not actually served |
+
+Two limits worth knowing before planning around free models:
+
+- **They loop on open-ended prompts.** Both working models answered direct
+  questions correctly but hit `MAX_AGENT_RECURSION` on *"summarise what you
+  know, citing doc ids"* — repeatedly calling the tool without converging.
+  The recursion guard catches it, so it degrades to an error rather than a
+  runaway bill, but it is a real capability gap against Claude.
+- **Free tier rate limits are low.** Enough for the app and for a demo, not
+  enough for a 50-question judged eval, which issues several hundred judge
+  calls. Use `--sample` and the disk cache, or point `judge_model` at a paid
+  model for the runs that go in the ledger.
+
+The judge-free retrieval sweeps (`eval.sweep`, `eval.thresholds`) are
+unaffected by any of this — they use no LLM at all.
+
 ## Feedback
 
 Every search result and every cited source in an agent answer carries a

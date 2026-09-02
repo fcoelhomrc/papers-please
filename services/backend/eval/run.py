@@ -41,7 +41,11 @@ from pathlib import Path
 from langchain_anthropic import ChatAnthropic
 from ragas import EvaluationDataset, evaluate
 from ragas.cache import DiskCacheBackend
-from ragas.cost import TokenUsage, get_token_usage_for_anthropic
+from ragas.cost import (
+    TokenUsage,
+    get_token_usage_for_anthropic,
+    get_token_usage_for_openai,
+)
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import AnswerRelevancy, faithfulness
@@ -80,7 +84,39 @@ JUDGE_PRICING = {
     "claude-haiku-4-5": (1.00 / 1e6, 5.00 / 1e6),
     "claude-sonnet-5": (2.00 / 1e6, 10.00 / 1e6),
     "claude-opus-5": (5.00 / 1e6, 25.00 / 1e6),
+    # Same models reached through OpenRouter, which passes list price
+    # through. Namespaced ids, so they can't collide with the direct ones.
+    "anthropic/claude-haiku-4.5": (1.00 / 1e6, 5.00 / 1e6),
+    "anthropic/claude-sonnet-5": (2.00 / 1e6, 10.00 / 1e6),
+    "anthropic/claude-opus-5": (5.00 / 1e6, 25.00 / 1e6),
 }
+
+
+def token_usage_parser(cfg):
+    """The parser matching the judge's wire format.
+
+    Ragas reads token counts out of the raw provider response, and the two
+    shapes differ: Anthropic reports `usage.input_tokens`, OpenAI-compatible
+    endpoints (OpenRouter included) report `token_usage.prompt_tokens`.
+    Using the wrong one doesn't fail - it silently returns zeros, which
+    would quietly gut the cost reporting this harness exists to provide.
+    """
+    if cfg.llm.provider == "anthropic":
+        return get_token_usage_for_anthropic
+    return get_token_usage_for_openai
+
+
+def judge_price(model: str) -> tuple[float, float] | None:
+    """USD per (input, output) token, or None if unknown.
+
+    OpenRouter's `:free` tier is genuinely $0 - the tokens are still counted
+    and still worth reporting, they just cost nothing - so it reports a real
+    zero rather than "unknown". An unlisted paid model reports tokens with
+    no dollar figure rather than inventing one.
+    """
+    if model.endswith(":free"):
+        return (0.0, 0.0)
+    return JUDGE_PRICING.get(model)
 
 
 def load_dataset(path: Path) -> list[dict]:
@@ -161,8 +197,8 @@ def judge_spend(eval_result, judge_model_name: str) -> dict:
         usage = sum(usage, TokenUsage(input_tokens=0, output_tokens=0))
 
     spend = {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens}
-    price = JUDGE_PRICING.get(judge_model_name)
-    if price:
+    price = judge_price(judge_model_name)
+    if price is not None:
         spend["usd"] = round(usage.cost(*price), 4)
     return spend
 
@@ -203,6 +239,7 @@ def run_eval(
     retrieval: dict | None = None,
     sample: int | None = None,
     judge_cache_dir: Path | None = None,
+    usage_parser=get_token_usage_for_anthropic,
 ) -> dict:
     all_rows = load_dataset(dataset_path)
     rows = stratified_sample(all_rows, sample) if sample else all_rows
@@ -249,10 +286,11 @@ def run_eval(
         metrics=METRICS,
         llm=LangchainLLMWrapper(judge_llm, cache=cache),
         embeddings=LangchainEmbeddingsWrapper(judge_embeddings),
-        # Without this ragas records no usage at all and total_tokens() raises.
-        # A run that can't say what it cost is how you end up guessing at a
-        # 1M-token bill instead of reading it.
-        token_usage_parser=get_token_usage_for_anthropic,
+        # Without this ragas records no usage at all and total_tokens()
+        # raises. A run that can't say what it cost is how you end up
+        # guessing at a 1M-token bill instead of reading it - and the parser
+        # has to match the provider's wire format or it reports zeros.
+        token_usage_parser=usage_parser,
     )
 
     df = eval_result.to_pandas()
@@ -338,13 +376,29 @@ def _resolve_prompt_versions(overrides: list[str] | None) -> dict[str, str]:
     return versions
 
 
+def judge_model_name(cfg) -> str:
+    """`llm.judge_model` if set, else the pipeline model.
+
+    Separate from the pipeline model on purpose: changing the model that
+    *answers* is an experiment, while changing the model that *scores*
+    silently re-baselines every historical number in eval/ledger.jsonl.
+    Comparing a run judged by one model against a run judged by another is
+    not a comparison at all, so the two have to be movable independently.
+    """
+    return cfg.llm.judge_model or cfg.llm.model
+
+
 def _judge_llm(cfg):
     # Ragas' judge needs more room than the chat agent's UX-tuned 512 - its
     # metrics prompt for reasoning before a verdict, and briefer completions
     # were hitting LLMDidNotFinishException (truncated before it could
-    # finish). A separate, judge-specific construction rather than reusing
-    # make_llm()'s max_tokens=512.
-    return ChatAnthropic(model=cfg.llm.model, max_tokens=2048)
+    # finish). Hence a judge-specific construction rather than make_llm().
+    model = judge_model_name(cfg)
+    if cfg.llm.provider == "openrouter":
+        from orchestrator.llm import openrouter_chat
+
+        return openrouter_chat(model, max_tokens=2048, cfg=cfg)
+    return ChatAnthropic(model=model, max_tokens=2048)
 
 
 def main():
@@ -384,6 +438,7 @@ def main():
 
     cfg = load()
     judge_llm = _judge_llm(cfg)
+    judge_name = judge_model_name(cfg)
     judge_embeddings = HuggingFaceEmbeddings(model_name=MODELS[cfg.embedder.model]["hf_name"])
 
     # Makes eval reproducible regardless of the dev DB's current state (a
@@ -406,7 +461,7 @@ def main():
         judge_llm,
         judge_embeddings,
         model_name=cfg.llm.model,
-        judge_model_name=cfg.llm.model,
+        judge_model_name=judge_name,
         prompt_versions=versions,
         # Not a versioned prompt (see prompts/registry.py) but it does shape
         # every retrieval score, so a report should still name it.
@@ -416,6 +471,7 @@ def main():
         },
         sample=args.sample,
         judge_cache_dir=None if args.no_cache else JUDGE_CACHE_DIR,
+        usage_parser=token_usage_parser(cfg),
     )
 
     print(f"variant: {output['variant']}")

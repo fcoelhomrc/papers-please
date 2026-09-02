@@ -40,3 +40,17 @@ stages:
   embed:
     interval_s: 10
     limit: 500
+
+llm:
+  # OpenRouter: one OpenAI-compatible endpoint fronting every provider, so
+  # switching models is editing this file rather than editing llm.py.
+  # Set provider: anthropic to go direct to Claude instead (still supported).
+  provider: openrouter
+  # `vendor/model`, with `:free` selecting the free tier. Free models are
+  # rate limited hard - fine for the app, not enough for a 50-question
+  # judged eval on a free-tier account. See the README.
+  model: minimax/minimax-m2.7:free
+  # Empty = same as `model`. Set this to pin the eval judge independently:
+  # changing the model that scores re-baselines every historical number in
+  # eval/ledger.jsonl, so it should move deliberately and rarely.
+  judge_model: ""

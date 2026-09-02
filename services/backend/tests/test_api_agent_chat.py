@@ -93,11 +93,28 @@ def test_chat_caps_recursion_so_a_runaway_loop_cant_burn_unbounded_credits():
 
 
 def test_chat_503s_when_agent_cannot_be_built():
+    """A missing API key must be a 503 with a readable reason, not a 500 or
+    a traceback. Provider-neutral: which key is missing depends on
+    llm.provider, and the agent is built lazily precisely so the rest of the
+    app still starts without one."""
     api.app.dependency_overrides.pop(api.get_agent, None)
     api._agent = None
-    with patch("api.build_agent", side_effect=RuntimeError("no ANTHROPIC_API_KEY")):
+    with patch("api.make_agent_parts", side_effect=RuntimeError("no API key configured")):
         client = TestClient(api.app)
         response = client.post("/agent/chat", json={"message": "hi"})
 
     assert response.status_code == 503
-    assert "no ANTHROPIC_API_KEY" in response.json()["detail"]
+    assert "no API key configured" in response.json()["detail"]
+
+
+def test_chat_503s_when_the_provider_key_is_absent(monkeypatch):
+    """The real shape of the above: no key in the environment at all."""
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("PAPERS_PLEASE_REPLAY", raising=False)
+    api.app.dependency_overrides.pop(api.get_agent, None)
+    api._agent = None
+
+    response = TestClient(api.app).post("/agent/chat", json={"message": "hi"})
+
+    assert response.status_code == 503
+    assert "OPENROUTER_API_KEY" in response.json()["detail"]

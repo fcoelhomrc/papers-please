@@ -127,9 +127,33 @@ class StagesConfig(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    provider: str = "anthropic"  # "anthropic" | "vllm"
-    model: str = "claude-haiku-4-5"
+    """Which model answers, and through whom.
+
+    OpenRouter is the default because it turns "which model" into a config
+    string instead of a code change: one OpenAI-compatible endpoint fronting
+    every provider, so switching from a free model to Claude is editing
+    `model` rather than editing llm.py. The anthropic and vllm branches are
+    kept and still work - they are just not the default any more.
+    """
+
+    provider: str = "openrouter"  # "openrouter" | "anthropic" | "vllm"
+
+    # OpenRouter model ids are namespaced `vendor/model`, and a `:free`
+    # suffix selects the free tier of that model. Free models are rate
+    # limited hard enough to matter - see the README - so this is a "does it
+    # work" default, not a "run the whole eval" one.
+    model: str = "minimax/minimax-m2.7:free"
+
+    # The eval judge, kept separate from the pipeline model on purpose.
+    # Changing the model that *answers* is an experiment; changing the model
+    # that *scores* silently re-baselines every historical number in
+    # eval/ledger.jsonl, so the two must be movable independently. Empty
+    # means "same as model".
+    judge_model: str = ""
+
     max_tokens: int = 512  # keep replies (and cost) bounded - this agent's replies are short
+
+    openrouter_url: str = "https://openrouter.ai/api/v1"
     vllm_url: str = "http://localhost:8001/v1"
     vllm_model: str = ""
 

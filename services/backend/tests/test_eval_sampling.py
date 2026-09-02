@@ -206,3 +206,48 @@ class TestMetricSelection:
         relevancy = next(m for m in METRICS if m.name == "answer_relevancy")
 
         assert relevancy.strictness == 1
+
+
+class TestTokenUsageParser:
+    """#18 — ragas reads token counts out of the raw provider response, and
+    the shapes differ: Anthropic reports `usage.input_tokens`, OpenAI-style
+    endpoints report `token_usage.prompt_tokens`. The wrong parser doesn't
+    fail, it silently returns zeros — which would gut the cost reporting the
+    harness exists to provide."""
+
+    def _cfg(self, provider):
+        from config import Config, LLMConfig
+
+        return Config(llm=LLMConfig(provider=provider))
+
+    def test_anthropic_provider_uses_the_anthropic_parser(self):
+        from ragas.cost import get_token_usage_for_anthropic
+
+        from eval.run import token_usage_parser
+
+        assert token_usage_parser(self._cfg("anthropic")) is get_token_usage_for_anthropic
+
+    def test_openrouter_uses_the_openai_parser(self):
+        from ragas.cost import get_token_usage_for_openai
+
+        from eval.run import token_usage_parser
+
+        assert token_usage_parser(self._cfg("openrouter")) is get_token_usage_for_openai
+
+    def test_a_free_model_prices_at_zero_not_unknown(self):
+        """':free' really is $0 — the tokens still count and are still worth
+        reporting, they just cost nothing. Reporting 'unknown' would hide a
+        number we actually know."""
+        from eval.run import judge_price
+
+        assert judge_price("minimax/minimax-m2.7:free") == (0.0, 0.0)
+
+    def test_claude_through_openrouter_is_priced(self):
+        from eval.run import judge_price
+
+        assert judge_price("anthropic/claude-haiku-4.5") == (1.00 / 1e6, 5.00 / 1e6)
+
+    def test_an_unknown_paid_model_has_no_price(self):
+        from eval.run import judge_price
+
+        assert judge_price("some/unlisted-model") is None
