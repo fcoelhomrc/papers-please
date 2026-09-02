@@ -48,6 +48,74 @@ Two mitigations, and I'd take the first:
    retrievers that surface genuinely relevant unjudged documents, so any
    measured difference is a lower bound.
 
+### How big, and how to get there
+
+**Compute does not constrain this.** The sweep caches retrieved sources per
+(mode, question), so a 360-config sweep issues 150 Pinecone + 150 Postgres
+queries *regardless of corpus size* — sweep time is flat. Embedding is ~13s
+per 1,000 abstract-only docs on CPU; fetching 8,192 is ~10 bulk pages.
+Nothing here is expensive.
+
+**The constraint is unjudged relevance.** A fetched paper that genuinely
+answers a labelled question, but isn't in its `relevant_source_ids`, scores
+as a false positive. That risk grows with corpus size and grows *fastest*
+for papers topically close to the labelled ones — which are also the papers
+that make retrieval hard. That tension, not compute, sets the size.
+
+**Target 2,048, reached in stages.** Don't guess the number: grow until the
+metrics stop saturating, measuring at each step. Each stage is minutes.
+
+| stage | docs | why stop and look |
+|---|---|---|
+| now | 16 | |
+| 1 | 256 | first point where ranking has real competition |
+| 2 | 1,024 | |
+| 3 | **2,048** | expected landing spot |
+| 4 | 4,096+ | only if scores are still saturated at 2,048 |
+
+Beyond ~2k, more *far-domain* documents add nothing — they were already
+trivially rejected — while more *near-domain* documents add unjudged-relevant
+risk faster than they add difficulty. **Difficulty comes from composition,
+not count.**
+
+### Composition
+
+| slice | share of 2,048 | fetch queries | risk |
+|---|---|---|---|
+| labelled fixtures | 12 | — | — |
+| **far-domain** | ~1,700 | fields no question touches: marine biology, medieval history, polymer chemistry, macroeconomics, geology | none |
+| **near-domain** | ~350 | same broad fields as the fixtures — legged locomotion, medical imaging, federated learning | real, so it's capped |
+
+Two guards on the near-domain slice:
+
+- **Exclude papers matching a fixture.** The 12 fixtures are real papers
+  carrying synthetic `eval-fixture-*` ids. Fetching the same paper under its
+  real Semantic Scholar id creates a duplicate that *is* relevant and *isn't*
+  labelled. Filter fetched titles against fixture titles before inserting.
+- **Keep the near slice small and named**, so if a result looks odd the
+  suspect list is 350 documents rather than 2,000.
+
+### Implementation
+
+`PdfChunker` only ever reads `objects` rows, so a document with an abstract
+and no PDF is **never chunked and never searchable**. `eval/seed.py` works
+around this for the fixtures by inserting Document + a synthetic Object +
+Chunk directly.
+
+Distractors need the same path, so: **`eval/distractors.py`** — fetch by
+query, drop anything matching a fixture title, insert
+Document + synthetic Object (`status='chunked'`) + one Chunk holding the
+abstract, then let the existing embed worker pick them up. No PDF, no OCR,
+no changes to the pipeline.
+
+```bash
+uv run python -m eval.distractors --far 1700 --near 350
+```
+
+Worth doing alongside: download PDFs for a few dozen documents so the UI
+demo has real papers to preview at a cited page. Distractors don't need
+them; the demo does.
+
 ---
 
 ## 2. Sample sizes — computed, not assumed
