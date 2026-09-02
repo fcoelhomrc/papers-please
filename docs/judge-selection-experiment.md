@@ -145,6 +145,31 @@ Unsure verdicts are **dropped, not coerced**. An item nobody could decide
 isn't ground truth, and guessing puts noise into exactly the numbers this
 exercise exists to make trustworthy.
 
+## Labelling outcome
+
+All 83 labelled, 2 marked unsure and dropped, **81 usable at 43% positive**
+— still inside the balance kappa needs.
+
+**Agreement with my constructed labels: 95.1% (77/81).** The four
+disagreements all run the same way — I said supported, the labeller said
+not — and in all four the labeller is right or defensibly right:
+
+| case | type | why my label was wrong |
+|---|---|---|
+| `c003`, `c004` | supported | Both drop *"on flat ground"*. The labelling instructions I wrote say dropping a scope qualifier makes a statement unsupported. **My construction contradicted my own rule.** |
+| `c009` | paraphrase | "roughly nineteen of every twenty" for 94% asks the reader to do arithmetic the passage never does. |
+| `c061` | paraphrase | My wording said the review compares *"ways of organising a control hierarchy"*; the passage lists hierarchical as one of four architectures surveyed. The paraphrase misreads it. |
+
+This is precisely what the verification step was for. Had I scored judges
+against my own labels, two of the eighty-one would have been graded against
+a rule I had written down and then broken.
+
+**Human labels stand as ground truth.** The four are additionally recorded
+in `CONTESTED` and excluded from a sensitivity figure reported alongside the
+primary kappa — a case two careful readers could split on measures the
+case's ambiguity, not the judge's skill. A test asserts `CONTESTED` matches
+the actual disagreements, so the two cannot drift apart if a case is edited.
+
 ## Decision rule — fixed before any data is seen
 
 1. **Disqualify**: `NaN` rate > 5% · fails the `corrupted_number` cases · is

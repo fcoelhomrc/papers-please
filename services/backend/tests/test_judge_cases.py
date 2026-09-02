@@ -80,3 +80,45 @@ class TestLabelLoading:
         labels = {r["id"]: r["proposed_label"] for r in as_records()}
 
         assert agreement_with_proposed(labels)["rate"] == 0.0
+
+
+class TestContestedCases:
+    """The four cases where the human label overrode my construction. Kept
+    and flagged rather than silently reconciled — a case two careful readers
+    can split on measures the case's ambiguity, not the judge's skill."""
+
+    def test_human_labels_are_ground_truth_by_default(self):
+        from eval.judge_cases import CONTESTED, load_labels, scoring_labels
+
+        labels = load_labels()
+        assert labels, "eval/labelling/labels.json missing"
+
+        assert scoring_labels(labels) == labels
+        assert any(cid in labels for cid in CONTESTED)
+
+    def test_sensitivity_variant_drops_the_contested_cases(self):
+        from eval.judge_cases import CONTESTED, load_labels, scoring_labels
+
+        labels = load_labels()
+        reduced = scoring_labels(labels, drop_contested=True)
+
+        assert set(reduced) == set(labels) - set(CONTESTED)
+        assert len(reduced) == len(labels) - sum(1 for c in CONTESTED if c in labels)
+
+    def test_the_recorded_disagreements_match_the_actual_labels(self):
+        """If a case is edited, CONTESTED must be regenerated — this fails
+        loudly rather than letting the two drift apart."""
+        from eval.judge_cases import CONTESTED, agreement_with_proposed, load_labels
+
+        actual = {d["id"] for d in agreement_with_proposed(load_labels())["disagreed"]}
+
+        assert actual == set(CONTESTED)
+
+    def test_labels_are_usable_and_balanced(self):
+        from eval.judge_cases import load_labels
+
+        labels = load_labels()
+        positive = sum(labels.values()) / len(labels)
+
+        assert len(labels) >= 75, "too many dropped as unsure"
+        assert 0.35 <= positive <= 0.65, f"class balance {positive:.0%} too skewed for kappa"

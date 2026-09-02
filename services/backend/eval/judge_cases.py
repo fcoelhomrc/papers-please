@@ -256,6 +256,27 @@ def summary() -> dict[str, int]:
 
 LABELS_PATH = Path(__file__).parent / "labelling" / "labels.json"
 
+# Cases where the human label disagreed with my constructed one. Recorded
+# rather than quietly reconciled, because in all four the human is right or
+# defensibly right, and that is a fact about my case-writing:
+#
+#   c003, c004  I wrote "dropping a scope qualifier makes it unsupported"
+#               in the labelling instructions, then labelled two statements
+#               that drop "on flat ground" as supported. The labels follow
+#               my instruction; my construction contradicted it.
+#   c009        "roughly nineteen of every twenty" for 94% requires the
+#               reader to do arithmetic the passage never does.
+#   c061        my paraphrase said the review compares "ways of organising a
+#               control hierarchy"; the passage lists hierarchical as one of
+#               four architectures surveyed. The paraphrase misreads it.
+#
+# The human labels stand as ground truth - that was the design. These are
+# additionally flagged because a case two careful readers could split on is
+# a poor instrument: penalising a judge for either answer measures the
+# case's ambiguity, not the judge. Primary kappa uses every label; a
+# sensitivity figure excluding these gets reported alongside.
+CONTESTED = ("c003", "c004", "c009", "c061")
+
 
 def load_labels(path: Path | None = None) -> dict[str, int]:
     """Human labels exported from the labelling page, keyed by case id.
@@ -275,6 +296,18 @@ def load_labels(path: Path | None = None) -> dict[str, int]:
         for row in data.get("labels", [])
         if row.get("label") is not None
     }
+
+
+def scoring_labels(labels: dict[str, int], drop_contested: bool = False) -> dict[str, int]:
+    """Labels to score a judge against.
+
+    `drop_contested` produces the sensitivity figure: the same kappa over
+    only the cases where construction and human agreed, so a reader can see
+    whether a judge's ranking depends on the four ambiguous ones.
+    """
+    if not drop_contested:
+        return dict(labels)
+    return {k: v for k, v in labels.items() if k not in CONTESTED}
 
 
 def agreement_with_proposed(labels: dict[str, int]) -> dict:
