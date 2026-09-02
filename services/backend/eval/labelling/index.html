@@ -68,6 +68,8 @@
     border-radius:8px; padding:12px; }
   .row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px; }
   .ok { color:var(--yes); font-size:13px; min-height:18px; }
+  .tiny { padding:3px 9px; font-size:12px; font-weight:500; margin-left:auto; }
+  #exportbox { margin-bottom:18px; }
 </style>
 </head>
 <body>
@@ -92,6 +94,16 @@
   <div class="bar"><div id="fill" style="width:0%"></div></div>
   <div class="counts">
     <span id="pos">0 / 83</span><span id="tally"></span><span id="saved" class="ok"></span>
+    <button id="partial" class="ghost tiny" onclick="exportNow()">Export progress</button>
+  </div>
+  <div id="exportbox" hidden>
+    <div class="row" style="justify-content:flex-start">
+      <button class="yes" onclick="download()">Download labels.json</button>
+      <button onclick="copy()">Copy</button>
+      <button class="ghost" onclick="document.getElementById('exportbox').hidden=true">Close</button>
+      <span class="ok" id="msg"></span>
+    </div>
+    <textarea id="json" readonly></textarea>
   </div>
 
   <div id="stage"></div>
@@ -116,7 +128,12 @@ function save() {
     el("saved").textContent = "saved";
     setTimeout(() => { el("saved").textContent = ""; }, 900);
   } catch (e) {
-    el("saved").textContent = "could not save locally — export before closing";
+    // Private windows and "clear site data on close" both land here. Silence
+    // would mean losing 35 minutes of work without warning.
+    const w = el("saved");
+    w.textContent = "NOT SAVED — this browser is blocking local storage. Export before closing.";
+    w.style.color = "var(--no)";
+    w.style.fontWeight = "700";
   }
 }
 
@@ -161,21 +178,39 @@ function render() {
     </div>`;
 }
 
+// Only answered items are exported. Emitting nulls for statements never
+// reached would be indistinguishable from a deliberate "unsure", and the
+// analysis treats those differently.
+function payload() {
+  const out = CASES.filter(c => c.id in labels)
+                   .map(c => ({ id: c.id, label: labels[c.id] }));
+  return JSON.stringify({
+    labelled_at: new Date().toISOString(),
+    n_total: CASES.length,
+    n_labelled: out.length,
+    labels: out,
+  }, null, 1);
+}
+
+function exportNow() {
+  const box = el("exportbox");
+  el("json").value = payload();
+  box.hidden = false;
+  el("msg").textContent = "";
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
 function finish() {
-  const out = CASES.map(c => ({ id: c.id, label: labels[c.id] ?? null }));
-  const json = JSON.stringify({ labelled_at: new Date().toISOString(), labels: out }, null, 1);
   el("stage").innerHTML = `
     <div class="card done">
       <h2>All ${CASES.length} labelled</h2>
       <p class="sub">Save the file into <code>services/backend/eval/labelling/</code>.</p>
       <div class="row">
-        <button class="yes" onclick="download()">Download labels.json</button>
-        <button onclick="copy()">Copy to clipboard</button>
+        <button class="yes" onclick="exportNow()">Export labels.json</button>
         <button class="ghost" onclick="back()">← Review last</button>
       </div>
-      <p class="ok" id="msg"></p>
-      <textarea id="json" readonly>${esc(json)}</textarea>
     </div>`;
+  exportNow();
 }
 
 function download() {

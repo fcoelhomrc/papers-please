@@ -223,3 +223,11 @@ uv run python -m eval.labelling.build          # regenerate after editing cases
 xdg-open eval/labelling/index.html             # ~35 min, saves as you go
 # save the export to eval/labelling/labels.json
 ```
+
+Progress is written to localStorage after every answer and the page resumes
+at the first unlabelled statement, so the tab can be closed at will.
+**Export progress** is available at any point, not only on completion — a
+partial file is valid input, since `load_labels()` scores over whatever
+labels exist. If the browser blocks local storage (a private window, or
+"clear site data on close"), the page says so in red rather than losing the
+work silently.
