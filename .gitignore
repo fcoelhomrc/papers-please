@@ -25,3 +25,7 @@ dist/
 
 # Ragas judge-call cache (eval/run.py) - a local memo, not a result
 **/eval/.judge-cache/
+
+# Human labels are an input to be committed, but the browser export
+# lands here first - keep the directory, ignore stray downloads.
+services/backend/eval/labelling/*.download
