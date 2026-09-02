@@ -89,6 +89,9 @@ JUDGE_PRICING = {
     "anthropic/claude-haiku-4.5": (1.00 / 1e6, 5.00 / 1e6),
     "anthropic/claude-sonnet-5": (2.00 / 1e6, 10.00 / 1e6),
     "anthropic/claude-opus-5": (5.00 / 1e6, 25.00 / 1e6),
+    # The judge chosen in docs/judge-model-selection.md.
+    "deepseek/deepseek-v4-flash": (0.09 / 1e6, 0.18 / 1e6),
+    "qwen/qwen3-235b-a22b-2507": (0.09 / 1e6, 0.35 / 1e6),
 }
 
 

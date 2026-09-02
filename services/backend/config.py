@@ -149,7 +149,14 @@ class LLMConfig(BaseModel):
     # that *scores* silently re-baselines every historical number in
     # eval/ledger.jsonl, so the two must be movable independently. Empty
     # means "same as model".
-    judge_model: str = ""
+    #
+    # deepseek-v4-flash was measured against the incumbent claude-haiku-4.5
+    # on three known-answer faithfulness cases and returned identical scores
+    # at 1/15th the cost (docs/judge-model-selection.md). Deliberately NOT
+    # the pipeline model: a model grading its own output is self-preference
+    # bias, and it would inflate the exact metric this project has a known
+    # problem with.
+    judge_model: str = "deepseek/deepseek-v4-flash"
 
     max_tokens: int = 512  # keep replies (and cost) bounded - this agent's replies are short
 

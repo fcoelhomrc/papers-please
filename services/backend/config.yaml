@@ -50,7 +50,8 @@ llm:
   # rate limited hard - fine for the app, not enough for a 50-question
   # judged eval on a free-tier account. See the README.
   model: minimax/minimax-m2.7:free
-  # Empty = same as `model`. Set this to pin the eval judge independently:
-  # changing the model that scores re-baselines every historical number in
-  # eval/ledger.jsonl, so it should move deliberately and rarely.
-  judge_model: ""
+  # The judge, pinned separately from `model`. Must NOT be the pipeline
+  # model - a model grading its own output is self-preference bias. Scores
+  # identically to the old claude-haiku-4.5 judge at 1/15th the cost; see
+  # docs/judge-model-selection.md for the measurements.
+  judge_model: deepseek/deepseek-v4-flash
