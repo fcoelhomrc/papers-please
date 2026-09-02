@@ -189,7 +189,6 @@ def main():
     parser.add_argument("--top-k", default=",".join(map(str, DEFAULT_TOP_KS)))
     parser.add_argument("--rerank-top-k", default=",".join(map(str, DEFAULT_RERANK_TOP_KS)))
     parser.add_argument("--dataset", default=str(DATASET_PATH))
-    parser.add_argument("--skip-seed", action="store_true")
     parser.add_argument(
         "--rerankers",
         default="",
@@ -205,11 +204,6 @@ def main():
     rerank_top_ks = sorted(int(x) for x in args.rerank_top_k.split(","))
 
     rows = load_labeled_dataset(Path(args.dataset))
-
-    if not args.skip_seed:
-        from eval.seed import ensure_fixtures_seeded
-
-        ensure_fixtures_seeded()
 
     from config import load
     from search import get_search_engine

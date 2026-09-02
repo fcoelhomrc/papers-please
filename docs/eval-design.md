@@ -310,3 +310,9 @@ is in this document.
 
 Every metric in the final table should carry a CI. A number without one is
 what produced the two claims above.
+
+---
+
+**Superseded 2026-09-03** by [`rag-evaluation.md`](rag-evaluation.md). Kept for the
+power-analysis tables and the record of why the earlier conclusions were
+underpowered; the corpus, dataset and ablation design here no longer apply.
