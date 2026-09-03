@@ -173,6 +173,23 @@ class LLMConfig(BaseModel):
     # problem with.
     judge_model: str = "deepseek/deepseek-v4-flash"
 
+    # The model that writes the test set. A third distinct family, so that
+    # across the whole evaluation no model grades its own output or a
+    # sibling's: glm writes the questions, minimax answers them, deepseek
+    # scores the answers.
+    #
+    # glm-5.3-flash scores 57 on the Artificial Analysis intelligence index -
+    # highest of the cheap tier, against a median of 29 for open-weight
+    # models its size - at $0.075/M in. Structured-output reliability is what
+    # actually decides this: ragas parses JSON out of every extraction call,
+    # and gpt-5-nano (LLMDidNotFinishException) and gpt-oss-120b
+    # (OutputParserException) both failed on that alone despite being cheap.
+    #
+    # Not a `:free` model: free tiers cap at 1,000 requests/day and a
+    # knowledge-graph build over 400 nodes is ~1,600 calls. Empty means
+    # "same as model".
+    generator_model: str = "z-ai/glm-5.3-flash"
+
     max_tokens: int = 512  # keep replies (and cost) bounded - this agent's replies are short
 
     openrouter_url: str = "https://openrouter.ai/api/v1"

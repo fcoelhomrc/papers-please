@@ -90,6 +90,11 @@ services:
   worker-chunk:
     image: papers-please-backend:latest
     restart: unless-stopped
+    # The 4GB card turns Docling/RapidOCR and bge-small from minutes per
+    # PDF into seconds. CDI device, so this needs nvidia-container-toolkit
+    # registered - podman resolves nvidia.com/gpu itself, no runtime flag.
+    devices:
+      - nvidia.com/gpu=all
     volumes:
       - papers_data:/data
       - ./services/backend:/app

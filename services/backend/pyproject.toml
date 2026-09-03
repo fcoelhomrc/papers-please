@@ -36,6 +36,11 @@ dependencies = [
     "nest-asyncio2>=1.7.2",
     "arize-phoenix-otel>=0.6.0",
     "openinference-instrumentation-langchain>=0.1.29",
+    # ragas' OverlapScoreBuilder raises ImportError at construction without
+    # it. That builder makes the entities_overlap relationships multi-hop
+    # specific questions are drawn from, so missing it silently costs a whole
+    # synthesizer.
+    "rapidfuzz>=3.14.6",
 ]
 
 
