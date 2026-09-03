@@ -36,11 +36,6 @@ services:
       dockerfile: Dockerfile
     image: papers-please-backend:latest
     restart: unless-stopped
-    # The search engine loads the same bge-small encoder as the embed
-    # worker; without the device it would crash on devices.embedder: cuda.
-    # ~130MB of VRAM, which does not meaningfully compete with the ingest.
-    devices:
-      - nvidia.com/gpu=all
     ports:
       - "8000:8000"
     volumes:
@@ -117,11 +112,6 @@ services:
   worker-embed:
     image: papers-please-backend:latest
     restart: unless-stopped
-    # The 4GB card turns Docling/RapidOCR and bge-small from minutes per
-    # PDF into seconds. CDI device, so this needs nvidia-container-toolkit
-    # registered - podman resolves nvidia.com/gpu itself, no runtime flag.
-    devices:
-      - nvidia.com/gpu=all
     volumes:
       - papers_data:/data
       - ./services/backend:/app

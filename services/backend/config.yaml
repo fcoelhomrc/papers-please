@@ -9,13 +9,18 @@ storage:
   root: /data
 
 devices:
-  # OCR and embedding are the ingest bottleneck - Docling/RapidOCR on CPU is
-  # minutes per PDF. The workers get the GPU (compose attaches
-  # nvidia.com/gpu=all); the reranker stays on CPU because it runs per search
-  # request on the long-lived backend and holding VRAM there starves the
-  # ingest on a 4GB card.
+  # Only the chunker gets the GPU. OCR is the ingest bottleneck - Docling on
+  # CPU is minutes per PDF - and Docling's layout/table models alone take
+  # ~2.2GB of the 4GB card.
+  #
+  # The embedder was on cuda for one run and OOM'd every pass: bge-small
+  # could not get 2MB alongside Docling, so the embed worker crashed, was
+  # restarted by compose, and embeddings sat at 616 while chunks climbed past
+  # 1200. It costs nothing to move back - bge-small on CPU is ~13s per 1,000
+  # chunks against hours of OCR. Same reasoning for the reranker, which also
+  # runs per search request on the long-lived backend.
   chunker: cuda
-  embedder: cuda
+  embedder: cpu
   reranker: cpu
 
 embedder:
@@ -62,3 +67,8 @@ llm:
   # identically to the old claude-haiku-4.5 judge at 1/15th the cost; see
   # docs/judge-model-selection.md for the measurements.
   judge_model: deepseek/deepseek-v4-flash
+  # Writes the test set. A third distinct family, so nothing across the
+  # evaluation grades its own output: glm asks, minimax answers, deepseek
+  # scores. Not a :free model - the KG build is ~1,600 calls against a
+  # 1,000/day free-tier cap.
+  generator_model: z-ai/glm-5.3-flash
