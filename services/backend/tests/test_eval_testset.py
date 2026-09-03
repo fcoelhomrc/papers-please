@@ -426,3 +426,70 @@ class TestPruneIncomplete:
         kg = self._kg(self._node(entities=["a"], summary_embedding=[0.1]))
 
         assert prune_incomplete(kg) == [] and len(kg.nodes) == 1
+
+
+class TestGeneratorTokenBudget:
+    """glm-5.3-flash is a reasoning model: Phoenix measured 342 reasoning
+    tokens out of 350 completion tokens on a typical call. At 2048 the
+    theme/persona matching prompt ran out mid-thought and raised
+    LLMDidNotFinishException, killing generation outright."""
+
+    def test_budget_leaves_room_for_reasoning_tokens(self):
+        from config import RagasConfig
+
+        assert RagasConfig().generator_max_tokens >= 8192
+
+    def test_generator_uses_the_configured_budget(self):
+        from unittest.mock import MagicMock, patch
+
+        import config as config_module
+        from config import Config, RagasConfig
+        from eval.testset import generator_llm
+
+        original = config_module._config
+        try:
+            config_module._config = Config(ragas=RagasConfig(generator_max_tokens=4321))
+            with (
+                patch("orchestrator.llm.openrouter_chat") as chat,
+                patch("ragas.llms.LangchainLLMWrapper", side_effect=lambda c: MagicMock()),
+            ):
+                generator_llm()
+        finally:
+            config_module._config = original
+
+        assert chat.call_args.args[1] == 4321
+
+
+class TestHopMarkers:
+    """Multi-hop synthesizers prefix each context with the hop it came from.
+    An exact lookup misses every one: on a 7-question trial this emptied
+    reference_chunk_ids for all four multi-hop rows - 8 of 11 contexts
+    unresolved - which downstream reads as "retrieval found nothing" on every
+    run forever."""
+
+    def test_strips_the_one_hop_marker(self):
+        from eval.testset import map_chunk_ids
+
+        assert map_chunk_ids(["<1-hop>\n\nalpha"], {"alpha": 7}) == [7]
+
+    def test_strips_higher_hop_markers(self):
+        from eval.testset import map_chunk_ids
+
+        assert map_chunk_ids(["<2-hop>\n\nbeta"], {"beta": 8}) == [8]
+
+    def test_leaves_single_hop_text_untouched(self):
+        from eval.testset import map_chunk_ids
+
+        assert map_chunk_ids(["alpha"], {"alpha": 7}) == [7]
+
+    def test_does_not_strip_a_marker_mid_text(self):
+        """Only a leading marker is ragas'. One inside the passage is the
+        paper's own prose and must not be edited away."""
+        from eval.testset import map_chunk_ids
+
+        assert map_chunk_ids(["see <1-hop>\n\nhere"], {"see <1-hop>\n\nhere": 9}) == [9]
+
+    def test_still_drops_a_genuinely_unresolvable_context(self):
+        from eval.testset import map_chunk_ids
+
+        assert map_chunk_ids(["<1-hop>\n\nmangled"], {"alpha": 7}) == []

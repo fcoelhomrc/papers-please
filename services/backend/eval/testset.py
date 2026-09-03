@@ -36,6 +36,7 @@ import argparse
 import json
 import logging
 import random
+import re
 from pathlib import Path
 
 from sqlalchemy import select
@@ -83,6 +84,14 @@ SEED = 0
 # 0.80 gives far more clusters than the ~32 multi-hop-abstract questions
 # need, and stays tractable.
 COSINE_THRESHOLD = 0.80
+
+# Multi-hop synthesizers prefix each retrieved context with the hop it came
+# from - "<1-hop>\n\n", "<2-hop>\n\n" - so the string is the marker plus
+# the node text, and an exact lookup misses every multi-hop context. On a
+# 7-question trial this silently emptied `reference_chunk_ids` for all four
+# multi-hop rows: 8 of 11 contexts unresolved, which downstream reads as
+# "retrieval found nothing" on every run forever.
+HOP_MARKER = re.compile(r"^<\d+-hop>\s*\n+")
 
 # 50/25/25 rather than ragas' default third each. Single-hop questions are the
 # ones a retrieval ablation can actually discriminate on; multi-hop are the
@@ -383,11 +392,18 @@ def map_chunk_ids(reference_contexts: list[str], lookup: dict[str, int]) -> list
     free metrics be exact set arithmetic on integers instead of Levenshtein
     against a 0.5 cutoff that breaks the moment chunking changes.
 
-    A context that does not resolve is dropped and counted by the caller: it
-    means ragas transformed the text somewhere, and a silently empty
-    `reference_chunk_ids` would read as "retrieval found nothing" forever.
+    The one transformation ragas does apply is the multi-hop marker, which
+    is stripped first - see HOP_MARKER.
+
+    A context that still does not resolve is dropped and counted by the
+    caller, because a silently empty `reference_chunk_ids` reads as
+    "retrieval found nothing" on every run forever.
     """
-    return [lookup[c] for c in reference_contexts if c in lookup]
+    return [
+        lookup[key]
+        for key in (HOP_MARKER.sub("", c) for c in reference_contexts)
+        if key in lookup
+    ]
 
 
 def to_rows(testset, pool: list[dict]) -> tuple[list[dict], int]:
@@ -455,9 +471,11 @@ def generator_llm(cost_handler=None):
 
     cfg = load()
     model = cfg.llm.generator_model or cfg.llm.model
-    # 2048 rather than the agent's 512: ragas' extraction prompts return
-    # structured JSON and truncate into LLMDidNotFinishException at 512.
-    chat = openrouter_chat(model, 2048, cfg)
+    chat = openrouter_chat(model, cfg.ragas.generator_max_tokens, cfg)
+    if cfg.ragas.reasoning_effort:
+        # Provider-specific, so it rides in extra_body rather than a named
+        # ChatOpenAI argument.
+        chat.extra_body = {"reasoning": {"effort": cfg.ragas.reasoning_effort}}
     if cost_handler is not None:
         chat.callbacks = [cost_handler]
     wrapped = LangchainLLMWrapper(chat)

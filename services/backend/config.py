@@ -234,6 +234,36 @@ class RagasConfig(BaseModel):
     # topics; each one costs a single LLM call.
     num_personas: int = 3
 
+    # Output budget per generator call. Not 2048, which is what the judge
+    # uses: glm-5.3-flash is a reasoning model and spends almost all of its
+    # completion budget thinking - Phoenix measured 342 reasoning tokens out
+    # of 350 completion tokens on a typical call. At 2048 the theme/persona
+    # matching prompt ran out mid-thought and raised
+    # LLMDidNotFinishException, killing generation outright.
+    #
+    # The cost is bounded by what the model actually emits, not by this
+    # ceiling, so headroom is close to free while truncation is fatal.
+    generator_max_tokens: int = 8192
+
+    # OpenRouter reasoning effort for the generator.
+    #
+    # glm-5.3-flash reasons by default and cannot be told not to - asking
+    # for reasoning.enabled=false returns 400 "Reasoning is mandatory for
+    # this endpoint". Left alone it loops on ragas' theme/persona matching
+    # prompt and spends the whole completion budget thinking: Phoenix
+    # recorded 472 prompt tokens in, 8192 completion tokens out, of which
+    # 8192 were reasoning and none were answer. ragas then raises
+    # LLMDidNotFinishException and generation dies. Raising max_tokens does
+    # not help - it buys more reasoning.
+    #
+    # Measured on that prompt: default 346 completion / 267 reasoning,
+    # effort=low 93 / 20, both returning correct JSON. Low is ~4x cheaper on
+    # output tokens, which is where nearly all the spend is.
+    #
+    # Empty string leaves the provider default alone, for a model that does
+    # not accept the parameter.
+    reasoning_effort: str = "low"
+
 
 class Config(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
