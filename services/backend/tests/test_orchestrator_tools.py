@@ -93,6 +93,7 @@ class TestSearchChunks:
         )
         assert result == [
             {
+                "chunk_id": 1,
                 "doc_id": 9,
                 "title": "Deep Learning for Cervical Cancer Survival",
                 "authors": ["A. Author"],

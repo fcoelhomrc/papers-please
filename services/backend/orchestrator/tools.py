@@ -80,6 +80,12 @@ def search_chunks(query: str, top_k: int = 5, rerank: bool = True) -> list[dict]
         )
         return [
             {
+                # Not for the model to cite - it is what extract_evidence
+                # dedupes on. Omitting it made evidence extraction a silent
+                # no-op on live runs: every chunk failed the "chunk_id in
+                # chunk" guard and the citation cards came back empty, while
+                # replay fixtures happened to include the key and looked fine.
+                "chunk_id": r.chunk_id,
                 "doc_id": r.doc_id,
                 "title": r.title,
                 "authors": r.authors,
