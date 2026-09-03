@@ -291,3 +291,34 @@ class TestRetryCap:
         [update] = self._requeue(chunker)
 
         assert update["status"] == "dead"
+
+
+class TestSanitise:
+    """OCR over an unusual glyph can emit a NUL byte, and psycopg rejects the
+    whole insert - failing the entire paper, not the one chunk, and failing it
+    again on every retry until the cap marks it dead. A 100-page survey was
+    lost to one stray byte."""
+
+    def test_strips_nul_bytes(self):
+        from process.chunker import sanitise
+
+        assert sanitise("ab\x00cd") == "abcd"
+
+    def test_leaves_other_control_characters_alone(self):
+        """Only NUL is genuinely unstorable in a Postgres text column;
+        rewriting the rest would be silently editing OCR output."""
+        from process.chunker import sanitise
+
+        assert sanitise("a\tb\nc") == "a\tb\nc"
+
+    def test_contextualize_sanitises_what_it_returns(self):
+        """The guard belongs on the value that reaches the insert, not at the
+        call site - a new caller must not be able to reintroduce this."""
+        from process.chunker import contextualize
+
+        assert "\x00" not in contextualize("bo\x00dy", ["Methods"])
+
+    def test_contextualise_sanitises_when_there_are_no_headings(self):
+        from process.chunker import contextualize
+
+        assert contextualize("bo\x00dy", None) == "body"

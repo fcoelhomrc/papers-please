@@ -127,7 +127,23 @@ def contextualize(text: str, headings: list[str] | None) -> str:
     breadcrumb where a stack of bare newlines reads as part of the passage.
     """
     path = heading_path(headings)
-    return f"{path}\n\n{text}" if path else text
+    return sanitise(f"{path}\n\n{text}" if path else text)
+
+
+def sanitise(text: str) -> str:
+    """Strip characters Postgres refuses to store in a text column.
+
+    OCR over an unusual glyph can emit a NUL byte, and psycopg rejects the
+    whole insert with "A string literal cannot contain NUL (0x00)
+    characters" - which fails the entire paper, not the one chunk, and then
+    fails it again on every retry until the attempt cap marks it dead. A
+    100-page survey was lost to a single stray byte.
+
+    NUL is the only character Postgres genuinely cannot store in `text`;
+    other control characters are legal and are left alone rather than
+    silently rewriting OCR output.
+    """
+    return text.replace("\x00", "")
 
 
 class PdfChunker(PostgresInterface):
