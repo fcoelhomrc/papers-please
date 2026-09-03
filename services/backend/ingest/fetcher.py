@@ -18,7 +18,14 @@ logger = logging.getLogger(__name__)
 
 SEMANTIC_SCHOLAR_API_KEY = os.environ.get("SEMANTIC_SCHOLAR_API_KEY")
 BASE_URL = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
-FIELDS = "paperId,title,abstract,authors,venue,year,openAccessPdf"
+FIELDS = (
+    "paperId,title,abstract,authors,venue,year,openAccessPdf,"
+    # externalIds carries the arXiv id, which is the only reliable route to a
+    # PDF: openAccessPdf.url points at ACL Anthology, MDPI or doi.org for most
+    # papers, and doi.org serves a landing page (403 to a scripted fetch)
+    # rather than a file. citationCount drives the candidate review ordering.
+    "externalIds,citationCount"
+)
 
 MIN_PDF_BYTES = 1024
 PDF_MAGIC = b"%PDF"
@@ -53,12 +60,17 @@ class SemanticScholarFetcher(PostgresInterface):
                 break
             self.rate_limit(1)
 
-    def _write(self, documents: list[dict]) -> int:
+    def _write(
+        self, documents: list[dict], corpus: str = "main", topic: str | None = None
+    ) -> int:
         """Insert, skipping documents whose source_id already exists (dedup
         guard - source_id is UNIQUE). Returns the count actually inserted,
         not len(documents), so callers can tell real new papers from
         duplicates silently skipped."""
-        rows = [DocumentTemplate.from_s2(d).model_dump() for d in documents]
+        rows = [
+            DocumentTemplate.from_s2(d, corpus=corpus, topic=topic).model_dump()
+            for d in documents
+        ]
         with Session(self.engine) as session:
             result = session.execute(
                 insert(Document)
@@ -76,10 +88,23 @@ class SemanticScholarFetcher(PostgresInterface):
         venue: str | None = None,
         year: str | None = None,
         max_papers: int = 500,
+        open_access_pdf: bool = False,
+        min_citations: int | None = None,
+        sort: str | None = None,
+        arxiv_only: bool = False,
+        corpus: str = "main",
+        topic: str | None = None,
     ) -> int:
         """Returns the count of genuinely new papers added - not the count
         of API results processed. Re-fetching an already-known query returns
-        0, rather than reporting max_papers as if all of them were new."""
+        0, rather than reporting max_papers as if all of them were new.
+
+        `arxiv_only` filters client-side rather than through a query
+        parameter: the API has no arXiv filter, and `venue` does not work as
+        a proxy because arXiv papers carry inconsistent venue strings. The
+        budget counts papers *kept*, so a topic still reaches max_papers when
+        most results are dropped.
+        """
         params = {"fields": FIELDS, "limit": 1000}
         if query:
             params["query"] = query
@@ -87,20 +112,30 @@ class SemanticScholarFetcher(PostgresInterface):
             params["venue"] = venue
         if year:
             params["year"] = year
+        if open_access_pdf:
+            # A valueless flag, not a boolean - `openAccessPdf=true` is
+            # rejected by the endpoint.
+            params["openAccessPdf"] = ""
+        if min_citations is not None:
+            params["minCitationCount"] = min_citations
+        if sort:
+            params["sort"] = sort
 
         processed = 0
         new_count = 0
         for batch in self._paginate(params):
+            if arxiv_only:
+                batch = [d for d in batch if (d.get("externalIds") or {}).get("ArXiv")]
             batch = batch[: max_papers - processed]
             if batch:
-                new_count += self._write(batch)
+                new_count += self._write(batch, corpus=corpus, topic=topic)
                 processed += len(batch)
             if processed >= max_papers:
                 break
         skipped = processed - new_count
         logger.info(
             f"Fetched {new_count} new papers ({skipped} already known, "
-            f"venue={venue}, query={query})"
+            f"venue={venue}, query={query}, corpus={corpus}, topic={topic})"
         )
         return new_count
 
@@ -126,6 +161,10 @@ class PdfFetcher(PostgresInterface):
         so a document could be starved indefinitely while others are
         retried. Oldest-first also means a backlog drains in the order it
         arrived.
+
+        Papers staged as 'candidate' are excluded: they exist to be read and
+        chosen from, and downloading 200 PDFs to keep 100 wastes hours of
+        OCR on papers that were never going to be in the corpus.
         """
         retryable = exists().where(
             (Object.doc_id == Document.id)
@@ -136,6 +175,7 @@ class PdfFetcher(PostgresInterface):
             select(Document.id, Document.source_id, Document.pdf_url)
             .where(Document.pdf_url.is_not(None))
             .where(Document.pdf_url != "")
+            .where(Document.corpus != "candidate")
             .where((~exists().where(Object.doc_id == Document.id)) | retryable)
             .order_by(Document.id)
         )
