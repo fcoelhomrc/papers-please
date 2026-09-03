@@ -307,10 +307,18 @@ attention sorted to the top.
 
 ## Evaluation
 
-Retrieval is measured against hand-labelled relevance judgements in
+> **Being rebuilt.** This section describes the evaluation as it stood against
+> a 12-document, abstract-only corpus that has since been removed, and the
+> commands below refer to modules that no longer exist. The figures and numbers
+> are kept as a record, not as current results. The design of the replacement —
+> a 100-paper corpus, a Ragas-generated question set mapped to exact chunk ids,
+> and a free/paid two-branch harness — is in
+> [`docs/rag-evaluation.md`](docs/rag-evaluation.md). This section is rewritten
+> when the new numbers exist.
+
+Retrieval was measured against hand-labelled relevance judgements in
 `eval/dataset.jsonl` — 50 questions, 42 with at least one relevant paper and 8
-where the library genuinely has nothing. Every figure below regenerates with
-`uv run python -m eval.figures`.
+where the library genuinely had nothing.
 
 ### The operating curve
 
