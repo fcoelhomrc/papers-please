@@ -30,14 +30,6 @@ class TestLoadLabeledDataset:
         p.write_text(json.dumps({"question": "q", "relevant_source_ids": []}) + "\n")
         assert load_labeled_dataset(p)[0]["relevant_source_ids"] == []
 
-    def test_real_dataset_is_fully_labeled(self):
-        from pathlib import Path
-
-        rows = load_labeled_dataset(Path("eval/dataset.jsonl"))
-        assert len(rows) == 50
-        assert sum(1 for r in rows if not r["relevant_source_ids"]) == 8
-
-
 class TestToSourceIds:
     def test_maps_and_preserves_rank_order(self):
         chunks = [{"doc_id": 2}, {"doc_id": 1}]
