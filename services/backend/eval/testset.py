@@ -87,7 +87,6 @@ def seed_pool(per_topic: int = SEED_PER_TOPIC, seed: int = SEED) -> list[dict]:
     """
     from db.connection import PostgresInterface
     from db.models import Chunk, Document, Object
-    from ragas.testset.transforms.default import num_tokens_from_string
 
     stmt = (
         select(Chunk.id, Chunk.chunk_text, Document.id.label("doc_id"), Document.topic)
@@ -102,7 +101,7 @@ def seed_pool(per_topic: int = SEED_PER_TOPIC, seed: int = SEED) -> list[dict]:
 
     by_topic: dict[str, list[dict]] = {}
     for r in rows:
-        if num_tokens_from_string(r.chunk_text) < MIN_CHUNK_TOKENS:
+        if count_tokens(r.chunk_text) < MIN_CHUNK_TOKENS:
             continue
         by_topic.setdefault(r.topic, []).append(
             {"chunk_id": r.id, "doc_id": r.doc_id, "topic": r.topic, "text": r.chunk_text}
@@ -130,6 +129,49 @@ def read_seed_pool(path: Path = SEED_PATH) -> list[dict]:
 # --- Stage 2: knowledge graph ----------------------------------------------
 
 
+class PermissiveTokenizer:
+    """tiktoken, but special-token literals are ordinary text.
+
+    `LLMBasedExtractor.split_text_by_token_limit` calls `tokenizer.encode`
+    unconditionally on every node, and tiktoken's default raises
+    `ValueError: Encountered text corresponding to disallowed special token
+    '<|endoftext|>'`. A corpus of LLM papers is exactly the corpus that
+    quotes those markers in running prose, so the graph build would die
+    partway through - after paying for every node before it.
+
+    Fixing the counter rather than the text is deliberate: stripping the
+    marker would make a node's `page_content` differ from `chunks.chunk_text`
+    and break the exact chunk-id mapping the free metrics rest on.
+    """
+
+    def __init__(self, encoding):
+        self._encoding = encoding
+
+    def encode(self, text: str):
+        return self._encoding.encode(text, disallowed_special=())
+
+    def decode(self, tokens):
+        return self._encoding.decode(tokens)
+
+
+def permissive_tokenizer():
+    import tiktoken
+
+    from ragas.testset.transforms.base import DEFAULT_TOKENIZER
+
+    return PermissiveTokenizer(DEFAULT_TOKENIZER)
+
+
+def count_tokens(text: str) -> int:
+    """Token count that does not raise on special-token literals.
+
+    ragas' own `num_tokens_from_string` does - see PermissiveTokenizer.
+    """
+    import tiktoken
+
+    return len(tiktoken.get_encoding("cl100k_base").encode(text, disallowed_special=()))
+
+
 def transforms(llm, embeddings):
     """The explicit transform list. Never `default_transforms`.
 
@@ -155,8 +197,9 @@ def transforms(llm, embeddings):
         ThemesExtractor,
     )
 
+    tokenizer = permissive_tokenizer()
     return [
-        SummaryExtractor(llm=llm),
+        SummaryExtractor(llm=llm, tokenizer=tokenizer),
         CustomNodeFilter(llm=llm),
         Parallel(
             EmbeddingExtractor(
@@ -164,8 +207,8 @@ def transforms(llm, embeddings):
                 property_name="summary_embedding",
                 embed_property_name="summary",
             ),
-            ThemesExtractor(llm=llm),
-            NERExtractor(llm=llm),
+            ThemesExtractor(llm=llm, tokenizer=tokenizer),
+            NERExtractor(llm=llm, tokenizer=tokenizer),
         ),
         Parallel(
             CosineSimilarityBuilder(

@@ -329,3 +329,49 @@ class TestPersonas:
         monkeypatch.setattr(ts, "PERSONAS_PATH", path)
 
         assert ts.load_personas()[0].name == "n"
+
+
+class TestPermissiveTokenizer:
+    """A corpus of LLM papers quotes `<|endoftext|>` in running prose, and
+    tiktoken's default raises on it. `LLMBasedExtractor.split_text_by_token_limit`
+    calls `tokenizer.encode` unconditionally on every node, so the graph build
+    would die partway through - after paying for every node before it."""
+
+    def test_counts_text_containing_a_special_token_literal(self):
+        from eval.testset import count_tokens
+
+        assert count_tokens("hello <|endoftext|> world") > 0
+
+    def test_ragas_own_counter_would_have_raised(self):
+        """Pins why count_tokens exists rather than reusing ragas'."""
+        import pytest
+        from ragas.utils import num_tokens_from_string
+
+        with pytest.raises(ValueError, match="disallowed special token"):
+            num_tokens_from_string("hello <|endoftext|> world")
+
+    def test_encode_decode_round_trips_the_literal(self):
+        """The marker must survive: stripping it would make a node's
+        page_content differ from chunks.chunk_text and break the chunk-id
+        mapping the free metrics rest on."""
+        from eval.testset import permissive_tokenizer
+
+        tok = permissive_tokenizer()
+
+        assert tok.decode(tok.encode("a <|endoftext|> b")) == "a <|endoftext|> b"
+
+    def test_llm_extractors_get_the_permissive_tokenizer(self):
+        from unittest.mock import MagicMock
+
+        from eval.testset import PermissiveTokenizer, transforms
+        from ragas.testset.transforms import Parallel
+        from ragas.testset.transforms.extractors.llm_based import LLMBasedExtractor
+
+        flat = []
+        for t in transforms(MagicMock(), MagicMock()):
+            flat.extend(t.transformations if isinstance(t, Parallel) else [t])
+        llm_based = [t for t in flat if isinstance(t, LLMBasedExtractor)]
+
+        assert llm_based and all(
+            isinstance(t.tokenizer, PermissiveTokenizer) for t in llm_based
+        )
