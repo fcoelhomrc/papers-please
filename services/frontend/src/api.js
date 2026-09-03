@@ -152,3 +152,15 @@ export function decideEvalCandidate(docId, decision) {
     body: JSON.stringify({ decision }),
   }).then(handle)
 }
+
+export function listEvalQuestions() {
+  return fetch(`${BASE}/eval/questions`).then(handle)
+}
+
+export function reviewEvalQuestion(qid, patch) {
+  return fetch(`${BASE}/eval/questions/${qid}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  }).then(handle)
+}

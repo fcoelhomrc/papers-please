@@ -134,3 +134,87 @@ class TestEndpoints:
             res = client.patch("/eval/candidates/999", json={"decision": "keep"})
 
         assert res.status_code == 404
+
+
+class TestQuestionReview:
+    """Review decisions live in a JSON sidecar, not in generated.jsonl, so
+    the generator's output stays immutable and a diff shows exactly what a
+    human changed."""
+
+    @pytest.fixture
+    def paths(self, tmp_path, monkeypatch):
+        import json
+
+        import eval.review as review
+
+        gen = tmp_path / "generated.jsonl"
+        gen.write_text(
+            "\n".join(
+                json.dumps(
+                    {
+                        "id": f"q{i:04d}",
+                        "question": f"q{i}?",
+                        "reference": f"a{i}",
+                        "reference_contexts": ["ctx"],
+                        "reference_chunk_ids": [i],
+                        "reference_doc_ids": [i],
+                        "topics": ["agents" if i else "retrieval"],
+                        "synthesizer": "single_hop_specific_query_synthesizer",
+                    }
+                )
+                for i in range(3)
+            )
+        )
+        monkeypatch.setattr(review, "GENERATED_PATH", gen)
+        monkeypatch.setattr(review, "REVIEW_PATH", tmp_path / "review.json")
+        return review
+
+    def test_starts_undecided(self, paths):
+        assert {q["decision"] for q in paths.questions()} == {"undecided"}
+
+    def test_keep_is_recorded_and_merged_back(self, paths):
+        paths.review_question("q0000", decision="keep")
+
+        assert next(q for q in paths.questions() if q["id"] == "q0000")["decision"] == "keep"
+
+    def test_generated_file_is_never_rewritten(self, paths):
+        before = paths.GENERATED_PATH.read_text()
+        paths.review_question("q0000", decision="drop", question="reworded?")
+
+        assert paths.GENERATED_PATH.read_text() == before
+
+    def test_edit_keeps_the_original_alongside(self, paths):
+        """So the UI can show what changed rather than quietly replacing it."""
+        paths.review_question("q0001", question="reworded?")
+        q = next(q for q in paths.questions() if q["id"] == "q0001")
+
+        assert (q["question"], q["original_question"], q["edited"]) == (
+            "reworded?",
+            "q1?",
+            True,
+        )
+
+    def test_decisions_survive_a_reload(self, paths):
+        paths.review_question("q0002", decision="keep", note="good one")
+        state = paths.load_review()
+
+        assert state["q0002"] == {"decision": "keep", "note": "good one"}
+
+    def test_unknown_question_id_raises(self, paths):
+        with pytest.raises(ValueError, match="no generated question"):
+            paths.review_question("q9999", decision="keep")
+
+    def test_unknown_decision_raises(self, paths):
+        with pytest.raises(ValueError, match="unknown decision"):
+            paths.review_question("q0000", decision="maybe")
+
+    def test_summary_counts_only_kept_by_topic(self, paths):
+        """The topic counters are what rebalances a skewed set - agents took
+        75 of 131 generated questions - so they must reflect keeps, not the
+        whole generated set."""
+        paths.review_question("q0000", decision="keep")
+        paths.review_question("q0001", decision="drop")
+        summary = paths.question_summary(paths.questions())
+
+        assert summary["kept_by_topic"] == {"retrieval": 1}
+        assert (summary["kept"], summary["dropped"], summary["undecided"]) == (1, 1, 1)

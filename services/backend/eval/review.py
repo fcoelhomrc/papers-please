@@ -10,13 +10,18 @@ are human work that ragas does not remove:
      unusable.
   3. **Judge validation** - human verdicts on statements, to get a kappa.
 
-Only (1) is implemented here so far; it is what unblocks the ingest.
+(1) and (2) are implemented here; (3) follows once there are answers to judge.
 
-Corpus state lives in Postgres rather than a JSON file, because `corpus` is
-already the column every retrieval path filters on - a second source of truth
-would let the UI and the retriever disagree about what the corpus is.
+The two use different stores, deliberately. Corpus state lives in Postgres
+because `corpus` is already the column every retrieval path filters on, and a
+second source of truth would let the UI and the retriever disagree about what
+the corpus is. Question review lives in a JSON sidecar because the generated
+set is a file: keeping decisions out of it leaves the generator's output
+immutable, so a diff shows exactly what a human changed.
 """
+import json
 import logging
+from pathlib import Path
 
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
@@ -125,3 +130,120 @@ def decide(doc_id: int, decision: str) -> str:
             raise ValueError(f"no staged candidate with id {doc_id}")
         session.commit()
     return target
+
+
+# --- Question review -------------------------------------------------------
+
+GENERATED_PATH = Path(__file__).parent / "testset" / "generated.jsonl"
+REVIEW_PATH = Path(__file__).parent / "testset" / "review.json"
+
+QUESTION_DECISIONS = ("keep", "drop", "undecided")
+
+
+def load_generated(path: Path | None = None) -> list[dict]:
+    # Resolved at call time, not bound as a default: a default argument is
+    # evaluated once at import, so tests pointing the module constant at a
+    # fixture directory would silently keep reading the real test set.
+    path = path or GENERATED_PATH
+    if not path.is_file():
+        return []
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def load_review(path: Path | None = None) -> dict[str, dict]:
+    """Review decisions, keyed by question id.
+
+    A sidecar rather than edits to generated.jsonl, so the generator's output
+    stays immutable: a diff then shows exactly what a human changed, and
+    re-inspecting or regenerating never silently discards review work.
+    """
+    path = path or REVIEW_PATH
+    if not path.is_file():
+        return {}
+    return json.loads(path.read_text())
+
+
+def save_review(state: dict[str, dict], path: Path | None = None) -> None:
+    path = path or REVIEW_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
+
+
+def review_question(
+    qid: str,
+    decision: str | None = None,
+    question: str | None = None,
+    reference: str | None = None,
+    note: str | None = None,
+) -> dict:
+    """Record one review decision. Returns the stored entry.
+
+    Editing a question without editing its reference is the trap this
+    interface exists to make visible: `context_recall` grades the pipeline's
+    answer against `reference`, so a reworded question with a stale gold
+    answer silently marks correct answers wrong.
+    """
+    if decision is not None and decision not in QUESTION_DECISIONS:
+        raise ValueError(f"unknown decision {decision!r}")
+    if qid not in {q["id"] for q in load_generated()}:
+        raise ValueError(f"no generated question with id {qid}")
+
+    state = load_review()
+    entry = state.get(qid, {})
+    for field, value in (
+        ("decision", decision),
+        ("question", question),
+        ("reference", reference),
+        ("note", note),
+    ):
+        if value is not None:
+            entry[field] = value
+    state[qid] = entry
+    save_review(state)
+    return entry
+
+
+def questions() -> list[dict]:
+    """Generated questions with their review state merged in.
+
+    `question` and `reference` carry the edited text where one exists, with
+    the original kept alongside so the UI can show what changed rather than
+    quietly replacing it.
+    """
+    state = load_review()
+    merged = []
+    for q in load_generated():
+        entry = state.get(q["id"], {})
+        merged.append(
+            {
+                **q,
+                "decision": entry.get("decision", "undecided"),
+                "note": entry.get("note", ""),
+                "question": entry.get("question", q["question"]),
+                "reference": entry.get("reference", q["reference"]),
+                "original_question": q["question"],
+                "original_reference": q["reference"],
+                "edited": bool(entry.get("question") or entry.get("reference")),
+            }
+        )
+    return merged
+
+
+def question_summary(merged: list[dict]) -> dict:
+    """Counts the reviewer steers by: progress, and the two distributions
+    that decide whether the kept set is balanced."""
+    kept = [q for q in merged if q["decision"] == "keep"]
+    by_topic: dict[str, int] = {}
+    by_synth: dict[str, int] = {}
+    for q in kept:
+        for topic in q["topics"] or ["(none)"]:
+            by_topic[topic] = by_topic.get(topic, 0) + 1
+        by_synth[q["synthesizer"]] = by_synth.get(q["synthesizer"], 0) + 1
+    return {
+        "total": len(merged),
+        "kept": len(kept),
+        "dropped": sum(1 for q in merged if q["decision"] == "drop"),
+        "undecided": sum(1 for q in merged if q["decision"] == "undecided"),
+        "kept_by_topic": by_topic,
+        "kept_by_synthesizer": by_synth,
+    }
