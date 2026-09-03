@@ -19,6 +19,11 @@ from schemas import (
     ChatResponse,
     DocumentChunk,
     DocumentOut,
+    EvalCandidate,
+    EvalCandidatesResponse,
+    EvalDecisionRequest,
+    EvalDecisionResponse,
+    EvalTopicSummary,
     FeedbackOut,
     FeedbackRequest,
     FetchRequest,
@@ -101,6 +106,39 @@ def status():
 def queue(limit: int = Query(default=50, ge=1, le=200)):
     """What is in the pipeline and where each paper has got to."""
     return queue_items(limit=limit)
+
+
+@app.get("/eval/candidates", response_model=EvalCandidatesResponse)
+def eval_candidates(topic: str | None = None):
+    """Staged papers awaiting a keep/reject decision, richest-cited first.
+
+    Papers already kept come back too: reviewing against a bare counter means
+    working blind, and the choice is comparative - whether to keep this paper
+    depends on what is already in the topic.
+    """
+    from eval.corpus import KEEP_PER_TOPIC
+    from eval.review import candidates, topic_summary
+
+    return EvalCandidatesResponse(
+        target_per_topic=KEEP_PER_TOPIC,
+        topics=[EvalTopicSummary(**t) for t in topic_summary()],
+        candidates=[EvalCandidate(**c) for c in candidates(topic)],
+    )
+
+
+@app.patch("/eval/candidates/{doc_id}", response_model=EvalDecisionResponse)
+def eval_decide(doc_id: int, body: EvalDecisionRequest):
+    """Promote a candidate into the eval corpus, or reject it.
+
+    Rejecting sets corpus='main' rather than deleting: the paper stays
+    fetched, so re-staging does not re-offer it and the decision survives.
+    """
+    from eval.review import decide
+
+    try:
+        return EvalDecisionResponse(id=doc_id, corpus=decide(doc_id, body.decision))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.get("/workers", response_model=WorkersResponse)

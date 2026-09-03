@@ -134,3 +134,21 @@ export async function chatStream(message, threadId, { onStep, signal } = {}) {
   if (!done) throw new Error('stream ended without a result')
   return done
 }
+
+// --- Evaluation review -----------------------------------------------------
+// The only screens that write to the eval corpus. Curation is comparative -
+// whether to keep a paper depends on what is already in its topic - so the
+// list endpoint returns kept papers alongside the undecided ones.
+
+export function listEvalCandidates(topic) {
+  const params = topic ? `?${new URLSearchParams({ topic })}` : ''
+  return fetch(`${BASE}/eval/candidates${params}`).then(handle)
+}
+
+export function decideEvalCandidate(docId, decision) {
+  return fetch(`${BASE}/eval/candidates/${docId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision }),
+  }).then(handle)
+}

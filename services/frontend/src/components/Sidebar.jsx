@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Download, FileStack, Library, ListChecks, MessageSquare, Search } from 'lucide-react'
+import { Download, FileStack, FlaskConical, Library, ListChecks, MessageSquare, Search } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useStatus } from '../hooks/queries'
 import ThemeToggle from './ThemeToggle.jsx'
@@ -10,6 +10,7 @@ const NAV = [
   { to: '/fetch', label: 'Fetch', icon: Download },
   { to: '/documents', label: 'Documents', icon: FileStack },
   { to: '/queue', label: 'Queue', icon: ListChecks },
+  { to: '/eval/corpus', label: 'Corpus', icon: FlaskConical },
 ]
 
 /* Ambient pipeline health, so you don't have to open Queue to notice a

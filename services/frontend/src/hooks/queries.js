@@ -19,6 +19,7 @@ export const keys = {
   queue: () => ['queue'],
   workers: () => ['workers'],
   workerLogs: (service) => ['workers', service, 'logs'],
+  evalCandidates: (topic) => ['eval', 'candidates', topic ?? null],
 }
 
 export function useSearch({ mode, query, topK, rerank, enabled }) {
@@ -125,5 +126,25 @@ export function useChat() {
     // per call by the component that wants the progress.
     mutationFn: ({ message, threadId, onStep }) =>
       api.chatStream(message, threadId, { onStep }),
+  })
+}
+
+export function useEvalCandidates(topic) {
+  return useQuery({
+    queryKey: keys.evalCandidates(topic),
+    queryFn: () => api.listEvalCandidates(topic),
+    // Curation is a deliberate one-at-a-time pass and nothing else writes to
+    // this list, so there is nothing to poll for.
+    staleTime: Infinity,
+  })
+}
+
+export function useEvalDecision() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, decision }) => api.decideEvalCandidate(docId, decision),
+    // Invalidates the whole eval namespace rather than one topic: the
+    // counters are cross-topic, and the total is what a reviewer steers by.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['eval'] }),
   })
 }
