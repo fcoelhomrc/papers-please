@@ -29,3 +29,7 @@ dist/
 # Human labels are an input to be committed, but the browser export
 # lands here first - keep the directory, ignore stray downloads.
 services/backend/eval/labelling/*.download
+
+# Review decisions are working state, not a build input: committing them
+# would make one reviewer's in-progress pass everybody else's starting point.
+services/backend/eval/testset/review.json
