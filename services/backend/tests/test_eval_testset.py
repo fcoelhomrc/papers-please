@@ -223,3 +223,109 @@ class TestSeedPool:
 
     def test_floor_matches_the_extractor_gate(self):
         assert MIN_CHUNK_TOKENS == 100
+
+
+class TestRunConfig:
+    def test_drives_the_provider_less_hard_than_ragas_defaults(self):
+        """ragas defaults to 16 workers and 10 retries. Against OpenRouter
+        that is the expensive failure mode: concurrency trips the rate limit
+        and ten retries keep paying rather than failing visibly."""
+        from eval.testset import run_config
+
+        rc = run_config()
+
+        assert rc.max_workers < 16 and rc.max_retries < 10
+
+    def test_reads_the_limits_from_config(self):
+        import config as config_module
+        from config import Config, RagasConfig
+        from eval.testset import run_config
+
+        original = config_module._config
+        try:
+            config_module._config = Config(ragas=RagasConfig(max_workers=2, max_retries=1))
+            rc = run_config()
+        finally:
+            config_module._config = original
+
+        assert (rc.max_workers, rc.max_retries) == (2, 1)
+
+
+class TestCostAccounting:
+    def test_handler_is_attached_to_the_langchain_model(self):
+        """apply_transforms takes a `callbacks` argument and never uses it,
+        so a handler passed to ragas collects nothing from the graph build -
+        which is the bulk of the spend. It has to ride on the model."""
+        from unittest.mock import MagicMock, patch
+
+        from eval.testset import generator_llm
+
+        handler = MagicMock()
+        chat = MagicMock()
+        with (
+            patch("orchestrator.llm.openrouter_chat", return_value=chat),
+            patch("ragas.llms.LangchainLLMWrapper", side_effect=lambda c: MagicMock()),
+        ):
+            generator_llm(handler)
+
+        assert chat.callbacks == [handler]
+
+    def test_reports_nothing_rather_than_zero_when_no_calls_were_made(self, capsys):
+        """A silent $0.0000 is indistinguishable from working accounting on
+        a run that spent money."""
+        from unittest.mock import MagicMock
+
+        from eval.testset import report_spend
+
+        handler = MagicMock(usage_data=[])
+        report_spend(handler, "z-ai/glm-5.3-flash", "graph")
+
+        assert "no usage recorded" in capsys.readouterr().out
+
+    def test_reports_dollars_for_a_priced_model(self, capsys):
+        from unittest.mock import MagicMock
+
+        from eval.testset import report_spend
+        from ragas.cost import TokenUsage
+
+        usage = TokenUsage(input_tokens=1_000_000, output_tokens=0, model="x")
+        handler = MagicMock(usage_data=[usage], total_tokens=lambda: usage)
+        report_spend(handler, "z-ai/glm-5.3-flash", "graph")
+
+        assert "$0.0750" in capsys.readouterr().out
+
+    def test_reports_tokens_without_dollars_for_an_unpriced_model(self, capsys):
+        from unittest.mock import MagicMock
+
+        from eval.testset import report_spend
+        from ragas.cost import TokenUsage
+
+        usage = TokenUsage(input_tokens=10, output_tokens=5, model="x")
+        handler = MagicMock(usage_data=[usage], total_tokens=lambda: usage)
+        report_spend(handler, "who/knows", "graph")
+
+        out = capsys.readouterr().out
+        assert "no price on record" in out and "$" not in out
+
+
+class TestPersonas:
+    def test_missing_file_is_not_an_error(self, tmp_path, monkeypatch):
+        """The graph stage writes them; generate must still run before it."""
+        import eval.testset as ts
+
+        monkeypatch.setattr(ts, "PERSONAS_PATH", tmp_path / "absent.json")
+
+        assert ts.load_personas() is None
+
+    def test_round_trips_through_disk(self, tmp_path, monkeypatch):
+        """Persisted so a regenerated test set is the same test set - new
+        personas mean differently-voiced questions."""
+        import json
+
+        import eval.testset as ts
+
+        path = tmp_path / "personas.json"
+        path.write_text(json.dumps([{"name": "n", "role_description": "r"}]))
+        monkeypatch.setattr(ts, "PERSONAS_PATH", path)
+
+        assert ts.load_personas()[0].name == "n"

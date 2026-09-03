@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 HERE = Path(__file__).parent
 TESTSET_DIR = HERE / "testset"
 SEED_PATH = TESTSET_DIR / "seed_pool.jsonl"
+PERSONAS_PATH = TESTSET_DIR / "personas.json"
 KG_PATH = TESTSET_DIR / "kg.json"
 GENERATED_PATH = TESTSET_DIR / "generated.jsonl"
 
@@ -327,11 +328,34 @@ def to_rows(testset, pool: list[dict]) -> tuple[list[dict], int]:
 # --- Wiring ----------------------------------------------------------------
 
 
-def generator_llm():
-    """The model that writes the questions.
+def run_config():
+    """Concurrency and retry limits, from config.ragas.
+
+    Ragas defaults to max_workers=16 / max_retries=10, which against
+    OpenRouter is the expensive failure mode: sixteen concurrent requests
+    trip the rate limit and ten retries per call keep paying for retries
+    rather than stopping and saying so.
+    """
+    from config import load
+    from ragas.run_config import RunConfig
+
+    r = load().ragas
+    return RunConfig(
+        max_workers=r.max_workers, max_retries=r.max_retries, timeout=r.timeout_s
+    )
+
+
+def generator_llm(cost_handler=None):
+    """The model that writes the questions, plus its id.
 
     Deliberately not the pipeline model and not the judge: a model that wrote
     the exam should not also sit it or mark it. See docs/rag-evaluation.md.
+
+    The cost handler is attached to the *LangChain model*, not passed to
+    ragas. `apply_transforms` accepts a `callbacks` argument and never uses
+    it, so a handler given to ragas collects nothing from the graph build -
+    which is the bulk of the spend. Attached here it sees every call from
+    every caller: extraction, persona generation and synthesis alike.
     """
     from config import load
     from orchestrator.llm import openrouter_chat
@@ -341,7 +365,89 @@ def generator_llm():
     model = cfg.llm.generator_model or cfg.llm.model
     # 2048 rather than the agent's 512: ragas' extraction prompts return
     # structured JSON and truncate into LLMDidNotFinishException at 512.
-    return LangchainLLMWrapper(openrouter_chat(model, 2048, cfg)), model
+    chat = openrouter_chat(model, 2048, cfg)
+    if cost_handler is not None:
+        chat.callbacks = [cost_handler]
+    wrapped = LangchainLLMWrapper(chat)
+    wrapped.set_run_config(run_config())
+    return wrapped, model
+
+
+def cost_handler():
+    """Counts tokens across every call the generator makes."""
+    from config import load
+    from ragas.cost import (
+        CostCallbackHandler,
+        get_token_usage_for_anthropic,
+        get_token_usage_for_openai,
+    )
+
+    # The wire shapes differ - Anthropic reports usage.input_tokens,
+    # OpenAI-compatible endpoints report token_usage.prompt_tokens - and the
+    # wrong parser returns zeros silently rather than failing.
+    parser = (
+        get_token_usage_for_anthropic
+        if load().llm.provider == "anthropic"
+        else get_token_usage_for_openai
+    )
+    return CostCallbackHandler(token_usage_parser=parser)
+
+
+def report_spend(handler, model: str, label: str) -> None:
+    """Print tokens and, where the rate is known, dollars.
+
+    An unlisted model reports tokens with no dollar figure rather than
+    inventing one - see eval/pricing.py.
+    """
+    from eval.pricing import model_price
+
+    if not handler.usage_data:
+        print(f"  {label}: no usage recorded")
+        return
+
+    usage = handler.total_tokens()
+    usages = usage if isinstance(usage, list) else [usage]
+    price = model_price(model)
+    for u in usages:
+        line = f"  {label}: {u.input_tokens:,} in + {u.output_tokens:,} out"
+        if price:
+            line += f" = ${u.cost(*price):.4f}"
+        else:
+            line += f" (no price on record for {model})"
+        print(line)
+
+
+def load_personas():
+    """Personas from disk, or None if the graph stage has not run yet."""
+    from ragas.testset.persona import Persona
+
+    if not PERSONAS_PATH.is_file():
+        return None
+    return [Persona(**p) for p in json.loads(PERSONAS_PATH.read_text())]
+
+
+def build_personas(kg, llm, num_personas: int):
+    """Generate and persist the personas the synthesizers ask questions as.
+
+    A persona is just {name, role_description}. ragas clusters node summaries
+    by embedding, invents one persona per cluster, matches personas to themes,
+    and then conditions every question on (persona, term, style, length) -
+    "create a question that aligns with the persona's perspective". It is a
+    diversity mechanism: without it the whole set reads in one voice.
+
+    Persisted because `generate()` would otherwise invent new ones on every
+    run, and different personas mean different questions - so a regenerated
+    test set would not be the same test set.
+    """
+    from ragas.testset.persona import generate_personas_from_kg
+
+    personas = generate_personas_from_kg(
+        kg=kg, llm=llm, num_personas=num_personas, callbacks=[]
+    )
+    PERSONAS_PATH.write_text(
+        json.dumps([p.model_dump() for p in personas], indent=2) + "\n"
+    )
+    return personas
 
 
 def local_embeddings():
@@ -367,6 +473,13 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     TESTSET_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Before any LangChain import runs, so ragas' calls are instrumented.
+    # No-op unless PHOENIX_COLLECTOR_ENDPOINT is set, which is what keeps
+    # this runnable with no collector listening.
+    from observability import setup_observability
+
+    setup_observability("eval-testset")
+
     if args.command == "seed":
         pool = seed_pool(args.per_topic)
         write_seed_pool(pool)
@@ -374,14 +487,32 @@ def main():
         return
 
     if args.command == "kg":
+        from config import load
+
         pool = read_seed_pool()
-        llm, model = generator_llm()
-        print(f"Building knowledge graph over {len(pool)} nodes with {model}")
+        handler = cost_handler()
+        llm, model = generator_llm(handler)
+        r = load().ragas
+        print(
+            f"Building knowledge graph over {len(pool)} nodes with {model} "
+            f"({r.max_workers} workers, {r.max_retries} retries)"
+        )
         kg = build_kg(pool, llm, local_embeddings())
         kg.save(str(KG_PATH))
         print(f"{len(kg.nodes)} nodes, {len(kg.relationships)} relationships -> {KG_PATH}")
         for name, n in cluster_counts(kg).items():
             print(f"  {name:<22} {n} clusters")
+
+        # Personas here rather than inside generate(): they are derived from
+        # the graph, and persisting them is what makes a regenerated test set
+        # the same test set.
+        personas = build_personas(kg, llm, r.num_personas)
+        print(f"{len(personas)} personas -> {PERSONAS_PATH}")
+        for pers in personas:
+            print(f"  {pers.name}: {pers.role_description}")
+
+        print("\nSpend:")
+        report_spend(handler, model, "graph + personas")
         return
 
     from ragas.testset.graph import KnowledgeGraph
@@ -395,15 +526,30 @@ def main():
 
     assert_clusters(kg)
     pool = read_seed_pool()
-    llm, model = generator_llm()
+    handler = cost_handler()
+    llm, model = generator_llm(handler)
 
+    from config import load
     from ragas.testset.synthesizers.generate import TestsetGenerator
 
+    r = load().ragas
+    personas = load_personas()
+    if personas:
+        print(f"Using {len(personas)} saved personas")
+    else:
+        print("No saved personas - ragas will invent new ones for this run")
+
     generator = TestsetGenerator(
-        llm=llm, embedding_model=local_embeddings(), knowledge_graph=kg
+        llm=llm,
+        embedding_model=local_embeddings(),
+        knowledge_graph=kg,
+        persona_list=personas,
     )
     testset = generator.generate(
-        testset_size=args.size, query_distribution=query_distribution(llm)
+        testset_size=args.size,
+        query_distribution=query_distribution(llm),
+        num_personas=r.num_personas,
+        run_config=run_config(),
     )
 
     rows, unmapped = to_rows(testset, pool)
@@ -417,6 +563,17 @@ def main():
         counts[r["synthesizer"]] = counts.get(r["synthesizer"], 0) + 1
     for name, n in sorted(counts.items()):
         print(f"  {name:<40} {n}")
+
+    by_topic: dict[str, int] = {}
+    for row in rows:
+        for topic in row["topics"] or ["(unmapped)"]:
+            by_topic[topic] = by_topic.get(topic, 0) + 1
+    print("\nQuestions per topic:")
+    for topic, n in sorted(by_topic.items()):
+        print(f"  {topic:<14} {n}")
+
+    print("\nSpend:")
+    report_spend(handler, model, "synthesis")
 
 
 if __name__ == "__main__":

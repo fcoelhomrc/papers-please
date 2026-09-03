@@ -206,6 +206,35 @@ class PromptsConfig(BaseModel):
     fixed_rag: str = "v1"
 
 
+class RagasConfig(BaseModel):
+    """How hard to drive the provider during test-set generation.
+
+    Ragas' own RunConfig defaults are tuned for a big paid account:
+    max_workers=16 and max_retries=10. Against OpenRouter that combination
+    is the expensive failure mode - sixteen concurrent requests trip the
+    rate limit, and ten retries per call means a throttled run keeps paying
+    for retries instead of stopping and telling you.
+    """
+
+    # 16 -> 8. Halving concurrency roughly doubles wall-clock on a 1,600-call
+    # graph build, which is minutes, against a rate-limit stall that costs
+    # the whole run.
+    max_workers: int = 8
+
+    # 10 -> 3. Enough to ride out a transient 429; few enough that a
+    # genuinely throttled account fails fast and visibly.
+    max_retries: int = 3
+
+    # Seconds per call. Generous: extraction prompts on a long chunk are
+    # slow, and a timeout mid-graph loses the node.
+    timeout_s: int = 180
+
+    # Personas shape the voice questions are asked in - see
+    # eval/testset.py. Three is ragas' default and is plenty for five
+    # topics; each one costs a single LLM call.
+    num_personas: int = 3
+
+
 class Config(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
     storage: StorageConfig = StorageConfig()
@@ -215,6 +244,7 @@ class Config(BaseModel):
     stages: StagesConfig = StagesConfig()
     llm: LLMConfig = LLMConfig()
     prompts: PromptsConfig = PromptsConfig()
+    ragas: RagasConfig = RagasConfig()
 
 
 _config: Config | None = None

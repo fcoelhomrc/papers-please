@@ -80,19 +80,11 @@ METRICS = [faithfulness, AnswerRelevancy(strictness=1)]
 # judge's token count into a number that means something. Only the models
 # this project would plausibly judge with; an unlisted model records tokens
 # and omits the cost rather than inventing a price.
-JUDGE_PRICING = {
-    "claude-haiku-4-5": (1.00 / 1e6, 5.00 / 1e6),
-    "claude-sonnet-5": (2.00 / 1e6, 10.00 / 1e6),
-    "claude-opus-5": (5.00 / 1e6, 25.00 / 1e6),
-    # Same models reached through OpenRouter, which passes list price
-    # through. Namespaced ids, so they can't collide with the direct ones.
-    "anthropic/claude-haiku-4.5": (1.00 / 1e6, 5.00 / 1e6),
-    "anthropic/claude-sonnet-5": (2.00 / 1e6, 10.00 / 1e6),
-    "anthropic/claude-opus-5": (5.00 / 1e6, 25.00 / 1e6),
-    # The judge chosen in docs/judge-model-selection.md.
-    "deepseek/deepseek-v4-flash": (0.09 / 1e6, 0.18 / 1e6),
-    "qwen/qwen3-235b-a22b-2507": (0.09 / 1e6, 0.35 / 1e6),
-}
+# Single source of truth in eval/pricing.py, aliased here so the two
+# long-standing names keep working. Both the judged run and test-set
+# generation report spend and must not disagree about the rates.
+from eval.pricing import PRICING as JUDGE_PRICING  # noqa: E402
+from eval.pricing import model_price as judge_price  # noqa: E402
 
 
 def token_usage_parser(cfg):
@@ -107,19 +99,6 @@ def token_usage_parser(cfg):
     if cfg.llm.provider == "anthropic":
         return get_token_usage_for_anthropic
     return get_token_usage_for_openai
-
-
-def judge_price(model: str) -> tuple[float, float] | None:
-    """USD per (input, output) token, or None if unknown.
-
-    OpenRouter's `:free` tier is genuinely $0 - the tokens are still counted
-    and still worth reporting, they just cost nothing - so it reports a real
-    zero rather than "unknown". An unlisted paid model reports tokens with
-    no dollar figure rather than inventing one.
-    """
-    if model.endswith(":free"):
-        return (0.0, 0.0)
-    return JUDGE_PRICING.get(model)
 
 
 def load_dataset(path: Path) -> list[dict]:
