@@ -188,3 +188,40 @@ class DocumentOut(BaseModel):
     abstract: str | None
     has_pdf: bool = False  # the PDF is readable on disk, not merely recorded
     processed: bool = False  # fully chunked + embedded, i.e. searchable
+
+
+class EvalCandidate(BaseModel):
+    """One staged paper awaiting a keep/reject decision."""
+
+    id: int
+    source_id: str
+    title: str
+    abstract: str | None
+    authors: list[str] | None
+    year: int | None
+    citation_count: int | None
+    corpus: str
+    topic: str | None
+    pdf_url: str | None
+
+
+class EvalTopicSummary(BaseModel):
+    topic: str
+    candidates: int
+    kept: int
+    rejected: int
+
+
+class EvalCandidatesResponse(BaseModel):
+    target_per_topic: int
+    topics: list[EvalTopicSummary]
+    candidates: list[EvalCandidate]
+
+
+class EvalDecisionRequest(BaseModel):
+    decision: str = Field(pattern="^(keep|reject|reset)$")
+
+
+class EvalDecisionResponse(BaseModel):
+    id: int
+    corpus: str
