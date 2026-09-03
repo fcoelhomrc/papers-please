@@ -23,7 +23,8 @@ from eval.testset import (
     query_distribution,
     seed_pool,
     to_rows,
-    transforms,
+    extraction_transforms,
+    relationship_transforms,
 )
 
 
@@ -34,7 +35,7 @@ class TestTransforms:
         from ragas.testset.transforms import HeadlineSplitter, Parallel
 
         flat = []
-        for t in transforms(MagicMock(), MagicMock()):
+        for t in extraction_transforms(MagicMock(), MagicMock()) + relationship_transforms():
             flat.extend(t.transformations if isinstance(t, Parallel) else [t])
 
         assert not any(isinstance(t, HeadlineSplitter) for t in flat)
@@ -49,26 +50,27 @@ class TestTransforms:
         )
 
         flat = []
-        for t in transforms(MagicMock(), MagicMock()):
+        for t in extraction_transforms(MagicMock(), MagicMock()) + relationship_transforms():
             flat.extend(t.transformations if isinstance(t, Parallel) else [t])
 
         cosine = next(t for t in flat if isinstance(t, CosineSimilarityBuilder))
         assert cosine.new_property_name == "summary_similarity"
         assert any(isinstance(t, OverlapScoreBuilder) for t in flat)
 
-    def test_similarity_threshold_is_loosened_from_the_class_default(self):
-        """0.9 is tuned for whole documents. On chunk summaries within five
-        adjacent topics nothing pairs at 0.9, and multi-hop abstract
-        vanishes without an error."""
+    def test_similarity_threshold_is_tuned_to_this_corpus(self):
+        """Neither ragas default fits. 0.9 pairs almost nothing; 0.5 admitted
+        94.7% of all possible pairs on 100 ML papers, making a complete graph
+        whose depth-3 cluster search never returns - it hung a run for 13
+        minutes at 0% CPU."""
+        from eval.testset import COSINE_THRESHOLD
         from ragas.testset.transforms import CosineSimilarityBuilder, Parallel
 
         flat = []
-        for t in transforms(MagicMock(), MagicMock()):
+        for t in relationship_transforms():
             flat.extend(t.transformations if isinstance(t, Parallel) else [t])
+        builder = next(t for t in flat if isinstance(t, CosineSimilarityBuilder))
 
-        assert next(
-            t for t in flat if isinstance(t, CosineSimilarityBuilder)
-        ).threshold == 0.5
+        assert builder.threshold == COSINE_THRESHOLD == 0.80
 
 
 class TestAssertClusters:
@@ -363,15 +365,64 @@ class TestPermissiveTokenizer:
     def test_llm_extractors_get_the_permissive_tokenizer(self):
         from unittest.mock import MagicMock
 
-        from eval.testset import PermissiveTokenizer, transforms
+        from eval.testset import PermissiveTokenizer
         from ragas.testset.transforms import Parallel
         from ragas.testset.transforms.extractors.llm_based import LLMBasedExtractor
 
         flat = []
-        for t in transforms(MagicMock(), MagicMock()):
+        for t in extraction_transforms(MagicMock(), MagicMock()):
             flat.extend(t.transformations if isinstance(t, Parallel) else [t])
         llm_based = [t for t in flat if isinstance(t, LLMBasedExtractor)]
 
         assert llm_based and all(
             isinstance(t.tokenizer, PermissiveTokenizer) for t in llm_based
         )
+
+
+class TestPruneIncomplete:
+    """One failed extraction must not cost a whole relationship type.
+    OverlapScoreBuilder raises on the first pair involving a node with no
+    entities and aborts entirely - which is how a run produced 75,223 cosine
+    relationships and zero entities_overlap ones, silently removing every
+    multi-hop-specific question from a test set that still looked complete."""
+
+    def _kg(self, *nodes):
+        from ragas.testset.graph import KnowledgeGraph
+
+        kg = KnowledgeGraph()
+        for n in nodes:
+            kg.add(n)
+        return kg
+
+    def _node(self, **props):
+        from ragas.testset.graph import Node, NodeType
+
+        return Node(type=NodeType.DOCUMENT, properties={"page_content": "t", **props})
+
+    def test_drops_a_node_with_no_entities(self):
+        from eval.testset import prune_incomplete
+
+        good = self._node(entities=["a"], summary_embedding=[0.1])
+        bad = self._node(summary_embedding=[0.1])
+        kg = self._kg(good, bad)
+
+        prune_incomplete(kg)
+
+        assert [n.id for n in kg.nodes] == [good.id]
+
+    def test_drops_a_node_with_no_summary_embedding(self):
+        from eval.testset import prune_incomplete
+
+        good = self._node(entities=["a"], summary_embedding=[0.1])
+        kg = self._kg(good, self._node(entities=["b"]))
+
+        prune_incomplete(kg)
+
+        assert [n.id for n in kg.nodes] == [good.id]
+
+    def test_keeps_a_complete_graph_intact(self):
+        from eval.testset import prune_incomplete
+
+        kg = self._kg(self._node(entities=["a"], summary_embedding=[0.1]))
+
+        assert prune_incomplete(kg) == [] and len(kg.nodes) == 1

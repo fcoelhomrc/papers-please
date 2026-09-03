@@ -64,6 +64,26 @@ MIN_CHUNK_TOKENS = 100
 # measuring different things.
 SEED = 0
 
+# Cosine similarity above which two chunk summaries count as related.
+#
+# NOT ragas' 0.9 default, and not the 0.5 its short-document branch uses -
+# both assume a topically diverse corpus. Ours is 100 ML papers, so every
+# summary resembles every other: measured over this corpus the *minimum*
+# pairwise similarity is 0.500 and the median 0.647, so 0.5 admitted 75,223
+# of 79,401 possible pairs (94.7%) - a complete graph, not a similarity
+# graph. `find_indirect_clusters` at depth 3 over that never returns; it hung
+# a run for 13 minutes at 0% CPU before it was killed.
+#
+# Measured on this corpus:
+#   0.85 ->    126 rels ->   394 clusters in  0.1s
+#   0.80 ->    788 rels -> 8,341 clusters in 12.9s
+#   0.75 ->  4,047 rels -> timed out at 60s
+#   0.70 -> 15,490 rels -> timed out at 60s
+#
+# 0.80 gives far more clusters than the ~32 multi-hop-abstract questions
+# need, and stays tractable.
+COSINE_THRESHOLD = 0.80
+
 # 50/25/25 rather than ragas' default third each. Single-hop questions are the
 # ones a retrieval ablation can actually discriminate on; multi-hop are the
 # ones that catch a pipeline that retrieves one good chunk and stops.
@@ -172,25 +192,15 @@ def count_tokens(text: str) -> int:
     return len(tiktoken.get_encoding("cl100k_base").encode(text, disallowed_special=()))
 
 
-def transforms(llm, embeddings):
-    """The explicit transform list. Never `default_transforms`.
+def extraction_transforms(llm, embeddings):
+    """The per-node LLM work: summary, filter, themes, entities, embedding.
 
-    This reproduces its short-document branch - four LLM calls per node - with
-    the branching removed, so a corpus of longer chunks can never silently
-    acquire a `HeadlineSplitter` and invalidate the chunk-id mapping.
-
-    Each relationship builder here feeds exactly one synthesizer:
-      summary_similarity  -> multi-hop abstract
-      entities_overlap    -> multi-hop specific
-      entities (property) -> single-hop specific
+    Never `default_transforms`. It branches on input length and inserts a
+    `HeadlineSplitter` when >=25% of documents exceed 500 tokens, which would
+    re-split chunks that are already the retrieval unit and break the
+    correspondence between a graph node and a row in `chunks`.
     """
-    from ragas.testset.transforms import (
-        CosineSimilarityBuilder,
-        CustomNodeFilter,
-        EmbeddingExtractor,
-        OverlapScoreBuilder,
-        Parallel,
-    )
+    from ragas.testset.transforms import CustomNodeFilter, EmbeddingExtractor, Parallel
     from ragas.testset.transforms.extractors.llm_based import (
         NERExtractor,
         SummaryExtractor,
@@ -210,18 +220,55 @@ def transforms(llm, embeddings):
             ThemesExtractor(llm=llm, tokenizer=tokenizer),
             NERExtractor(llm=llm, tokenizer=tokenizer),
         ),
+    ]
+
+
+def relationship_transforms():
+    """The edges each multi-hop synthesizer draws from. No LLM calls.
+
+      summary_similarity  -> multi-hop abstract
+      entities_overlap    -> multi-hop specific
+
+    Kept separate from extraction so incomplete nodes can be pruned in
+    between - see `prune_incomplete`.
+    """
+    from ragas.testset.transforms import (
+        CosineSimilarityBuilder,
+        OverlapScoreBuilder,
+        Parallel,
+    )
+
+    return [
         Parallel(
             CosineSimilarityBuilder(
                 property_name="summary_embedding",
                 new_property_name="summary_similarity",
-                # 0.5, not the class default of 0.9: these are chunk
-                # summaries within five adjacent topics, and at 0.9 nothing
-                # pairs up and multi-hop abstract silently disappears.
-                threshold=0.5,
+                threshold=COSINE_THRESHOLD,
             ),
             OverlapScoreBuilder(threshold=0.01),
-        ),
+        )
     ]
+
+
+def prune_incomplete(kg) -> list:
+    """Drop nodes missing a property the relationship builders require.
+
+    One failed extraction must not cost a whole relationship type.
+    `OverlapScoreBuilder` raises "Node X or Y has no entities" on the first
+    pair involving an incomplete node and aborts the entire builder - which
+    is how a run produced 75,223 cosine relationships and *zero*
+    entities_overlap ones, silently removing multi-hop-specific questions
+    from a test set that still looked complete.
+    """
+    required = ("entities", "summary_embedding")
+    dropped = [
+        n for n in kg.nodes if any(n.properties.get(p) is None for p in required)
+    ]
+    for node in dropped:
+        kg.remove_node(node)
+    if dropped:
+        logger.info(f"pruned {len(dropped)} nodes missing one of {required}")
+    return dropped
 
 
 def build_kg(pool: list[dict], llm, embeddings):
@@ -248,7 +295,9 @@ def build_kg(pool: list[dict], llm, embeddings):
             )
         )
     logger.info(f"Applying transforms to {len(kg.nodes)} nodes")
-    apply_transforms(kg, transforms(llm, embeddings))
+    apply_transforms(kg, extraction_transforms(llm, embeddings), run_config())
+    prune_incomplete(kg)
+    apply_transforms(kg, relationship_transforms(), run_config())
     return kg
 
 
@@ -508,7 +557,9 @@ def local_embeddings():
 
 def main():
     parser = argparse.ArgumentParser(description="Build the eval question set")
-    parser.add_argument("command", choices=["seed", "kg", "clusters", "generate"])
+    parser.add_argument(
+        "command", choices=["seed", "kg", "clusters", "personas", "generate"]
+    )
     parser.add_argument("--per-topic", type=int, default=SEED_PER_TOPIC)
     parser.add_argument("--size", type=int, default=TESTSET_SIZE)
     args = parser.parse_args()
@@ -565,6 +616,21 @@ def main():
     if args.command == "clusters":
         for name, n in assert_clusters(kg).items():
             print(f"  {name:<22} {n} clusters")
+        return
+
+    if args.command == "personas":
+        # Separate from `kg` so a graph that survived a crashed run does not
+        # have to be rebuilt just to get its personas.
+        from config import load
+
+        handler = cost_handler()
+        llm, model = generator_llm(handler)
+        personas = build_personas(kg, llm, load().ragas.num_personas)
+        print(f"{len(personas)} personas -> {PERSONAS_PATH}")
+        for pers in personas:
+            print(f"  {pers.name}: {pers.role_description}")
+        print("\nSpend:")
+        report_spend(handler, model, "personas")
         return
 
     assert_clusters(kg)

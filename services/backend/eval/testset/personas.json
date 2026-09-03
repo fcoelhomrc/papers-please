@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Knowledge Graph Research Scientist",
+    "role_description": "Conducts research on constructing and modeling knowledge graphs from document collections, working with node and edge representations to advance information retrieval and natural language processing systems."
+  },
+  {
+    "name": "NLP Research Scientist",
+    "role_description": "Studies multi-hop question answering systems by benchmarking datasets and analyzing knowledge graph structures to improve retrieval and reasoning models."
+  },
+  {
+    "name": "Dr. Elena Marsh",
+    "role_description": "A computational chemistry researcher who benchmarks AI agents and large language models on organic synthesis planning tasks, and studies how reliable automated evaluators are at judging chemical reasoning quality."
+  }
+]
