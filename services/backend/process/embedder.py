@@ -69,14 +69,18 @@ class Reranker:
 
 
 class PdfEmbedder(PostgresInterface):
-    def __init__(self, model_key: str | None = None, namespace: str = ""):
+    def __init__(self, model_key: str | None = None, namespace: str | None = None):
         from config import load
 
         super().__init__()
         config = load()
         cfg = MODELS[model_key or config.embedder.model]
         self._cfg = cfg
-        self._namespace = namespace
+        # Defaults to the configured namespace so the embed worker and the
+        # search engine cannot drift apart - writing to "" while search reads
+        # "eval" would produce an index that is silently always empty. Tests
+        # still pass "test" explicitly.
+        self._namespace = config.search.namespace if namespace is None else namespace
         self._encoder = SentenceTransformer(
             cfg["hf_name"], device=config.devices.embedder
         )
@@ -128,7 +132,14 @@ class PdfEmbedder(PostgresInterface):
             ChunkEmbedding.model_id == model_id
         )
         stmt = (
-            select(Chunk.id, Chunk.chunk_text, Chunk.page_num, Document.id.label("doc_id"), Document.year)
+            select(
+                Chunk.id,
+                Chunk.chunk_text,
+                Chunk.page_num,
+                Document.id.label("doc_id"),
+                Document.year,
+                Document.corpus,
+            )
             .join(Object, Chunk.obj_id == Object.id)
             .join(Document, Object.doc_id == Document.id)
             .where(Chunk.chunk_text.is_not(None))
@@ -138,7 +149,16 @@ class PdfEmbedder(PostgresInterface):
             rows = session.execute(stmt).all()
         logger.info(f"{len(rows)} chunks pending embedding (model_id={model_id})")
         return [
-            (r.id, r.chunk_text, chunk_metadata(page_num=r.page_num, doc_id=r.doc_id, year=r.year))
+            (
+                r.id,
+                r.chunk_text,
+                # corpus rides along as metadata even though isolation is by
+                # namespace: it makes a mis-filed vector visible in the
+                # Pinecone console instead of only in a wrong metric.
+                chunk_metadata(
+                    page_num=r.page_num, doc_id=r.doc_id, year=r.year, corpus=r.corpus
+                ),
+            )
             for r in rows
         ]
 

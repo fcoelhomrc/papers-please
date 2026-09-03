@@ -38,6 +38,21 @@ class SearchConfig(BaseModel):
     # at top_k=5 it scores recall 0.833 / nDCG 0.814 / MRR 0.820 against
     # semantic-only's 0.810 / 0.787 / 0.788 (eval/reports/, #23).
     mode: str = "hybrid"
+    # Which collection retrieval is allowed to see, matching documents.corpus.
+    # None = everything.
+    #
+    # This has to be enforced in two places because the two retrievers fail
+    # differently. Keyword search filters in SQL, which is exact. The dense
+    # path cannot: Pinecone returns top_k ids and filtering those in Postgres
+    # afterwards under-fills the result set - ask for 10, get 6, and the
+    # measured recall is of a shorter list than the one requested. So the
+    # dense side isolates by *namespace* instead, and never sees the other
+    # corpus at all.
+    corpus: str | None = "eval"
+    # Pinecone namespace vectors are written to and read from. Must match
+    # `corpus` in practice; they are separate settings because the namespace
+    # is a property of the index and the corpus a property of the database.
+    namespace: str = "eval"
     rrf_k: int = 60  # RRF damping; 60 is the original paper's default
     hybrid_candidates: int = 20  # per-source pool size before fusion narrows to top_k
     # How many candidates to retrieve before the cross-encoder cuts down to

@@ -25,6 +25,10 @@ KEYWORD = "keyword"
 HYBRID = "hybrid"
 RETRIEVAL_MODES = (SEMANTIC, KEYWORD, HYBRID)
 
+# "argument not supplied", distinct from an explicit None meaning "no corpus
+# filter at all".
+_UNSET = object()
+
 
 def rrf_fuse(
     ranked_lists: list[list[dict]],
@@ -84,9 +88,30 @@ def rrf_fuse(
     ]
 
 
-def _chunk_rows_stmt(chunk_ids=None):
+def _corpus_filter(corpus):
+    """Resolve the corpus a query may see.
+
+    `_UNSET` rather than None as the default because None is a meaningful
+    value here - it means "every corpus" - so a caller that omits the
+    argument and a caller that explicitly asks for everything have to be
+    distinguishable.
+    """
+    if corpus is _UNSET:
+        from config import load
+
+        return load().search.corpus
+    return corpus
+
+
+def _chunk_rows_stmt(chunk_ids=None, corpus=_UNSET):
     """The join every retrieval path needs: chunk text + page, the PDF it came
-    from, and its parent document's metadata."""
+    from, and its parent document's metadata.
+
+    Scoping to a corpus here rather than in `search()` is deliberate: the
+    ablation harness calls `_vector_candidates`/`_keyword_candidates`
+    directly, so a filter applied only at the top level would leave every
+    sweep measuring against the wrong haystack.
+    """
     stmt = (
         select(
             Chunk.id,
@@ -103,6 +128,9 @@ def _chunk_rows_stmt(chunk_ids=None):
         .join(Object, Chunk.obj_id == Object.id)
         .join(Document, Object.doc_id == Document.id)
     )
+    scope = _corpus_filter(corpus)
+    if scope is not None:
+        stmt = stmt.where(Document.corpus == scope)
     return stmt if chunk_ids is None else stmt.where(Chunk.id.in_(chunk_ids))
 
 
@@ -163,7 +191,9 @@ def _or_tsquery(query: str):
     return func.replace(func.cast(plain, Text), "&", "|").op("::")(literal_column("tsquery"))
 
 
-def _keyword_rows(session, query: str, top_k: int, min_score: float | None = None) -> list[dict]:
+def _keyword_rows(
+    session, query: str, top_k: int, min_score: float | None = None, corpus=_UNSET
+) -> list[dict]:
     """Postgres full-text search over chunk_text (tsvector/GIN, not a separate
     search service). Shared by the standalone keyword_search() below and by
     the engine's keyword/hybrid modes, so all of them rank identically."""
@@ -172,7 +202,7 @@ def _keyword_rows(session, query: str, top_k: int, min_score: float | None = Non
     rank = func.ts_rank(tsvector, tsquery)
 
     stmt = (
-        _chunk_rows_stmt()
+        _chunk_rows_stmt(corpus=corpus)
         .add_columns(rank.label("score"))
         .where(tsvector.op("@@")(tsquery))
     )
@@ -235,12 +265,18 @@ class SearchEngine(PostgresInterface):
         encoder: SentenceTransformer,
         reranker: Reranker,
         model_key: str = "bge-small",
+        namespace: str | None = None,
+        corpus=_UNSET,
     ):
+        from config import load
+
         super().__init__()
         self._cfg = MODELS[model_key]
         self._model_key = model_key
         self._encoder = encoder
         self._reranker = reranker
+        self._namespace = load().search.namespace if namespace is None else namespace
+        self._corpus = _corpus_filter(corpus)
         self._pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
 
     def _embed_query(self, query: str) -> list[float]:
@@ -254,7 +290,13 @@ class SearchEngine(PostgresInterface):
     def _vector_candidates(self, query: str, top_k: int, min_score: float | None = None) -> list[dict]:
         vec = self._embed_query(query)
         index = self._pc.Index(self._cfg["index_name"])
-        matches = index.query(vector=vec, top_k=top_k, include_metadata=True)["matches"]
+        # Isolation for the dense path is the namespace, not a post-filter:
+        # the index returns exactly top_k ids, so dropping the out-of-corpus
+        # ones afterwards would return a shorter list than was asked for and
+        # depress recall for reasons that have nothing to do with retrieval.
+        matches = index.query(
+            vector=vec, top_k=top_k, include_metadata=True, namespace=self._namespace
+        )["matches"]
         if not matches:
             return []
 
@@ -264,7 +306,9 @@ class SearchEngine(PostgresInterface):
             if not scores:
                 return []
         with Session(self.engine) as session:
-            rows = session.execute(_chunk_rows_stmt(list(scores))).all()
+            rows = session.execute(
+                _chunk_rows_stmt(list(scores), corpus=self._corpus)
+            ).all()
 
         chunks = [_row_to_chunk(r, scores[r.id]) for r in rows]
         # Pinecone returns ranked results; the SQL hydration doesn't preserve
@@ -274,7 +318,9 @@ class SearchEngine(PostgresInterface):
 
     def _keyword_candidates(self, query: str, top_k: int, min_score: float | None = None) -> list[dict]:
         with Session(self.engine) as session:
-            return _keyword_rows(session, query, top_k, min_score=min_score)
+            return _keyword_rows(
+                session, query, top_k, min_score=min_score, corpus=self._corpus
+            )
 
     def _expand(self, chunks: list[dict], window: int) -> list[dict]:
         with Session(self.engine) as session:

@@ -23,6 +23,8 @@ search:
   rerank_top_k: 5
   reranker_model: cross-encoder/ms-marco-MiniLM-L-6-v2
   mode: hybrid            # semantic | keyword | hybrid
+  corpus: eval            # documents.corpus retrieval may see (null = all)
+  namespace: eval         # Pinecone namespace; must match corpus
   keyword_weight: 0.1     # keyword's RRF weight relative to dense retrieval's 1.0
   rerank_candidates: 40   # pool retrieved before the cross-encoder cuts to top_k
   neighbour_window: 1     # chunks either side glued on as context after ranking (0 = off)

@@ -7,6 +7,22 @@ CREATE TABLE documents (
     venue TEXT,
     year INT,
     pdf_url TEXT,
+    citation_count INT,
+    -- Which collection this paper belongs to. 'eval' is the curated corpus
+    -- the retrieval ablations measure against; anything fetched ad-hoc
+    -- through the UI stays 'main'. Without the split, one paper fetched
+    -- mid-experiment changes what the questions are competing against and
+    -- every number before it becomes incomparable.
+    --
+    -- 'candidate' is the staging state: papers fetched for review but not
+    -- yet promoted into the corpus. They deliberately never download - see
+    -- PdfFetcher.pending().
+    corpus TEXT NOT NULL DEFAULT 'main'
+        CHECK (corpus IN ('main', 'candidate', 'eval')),
+    -- Which of the eval topics it was fetched for. Null outside the eval
+    -- corpus. Used to stratify question generation and to slice results,
+    -- never exposed to the retriever.
+    topic TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -80,6 +96,9 @@ CREATE TABLE feedback (
 CREATE INDEX idx_feedback_created ON feedback(created_at DESC);
 
 CREATE INDEX idx_documents_has_pdf ON documents(pdf_url) WHERE pdf_url IS NOT NULL;
+-- Every retrieval path joins chunks -> objects -> documents and filters on
+-- corpus, so this sits on the hot path of the ablation sweeps.
+CREATE INDEX idx_documents_corpus ON documents(corpus);
 CREATE INDEX idx_objects_pending ON objects(status) WHERE status = 'pending';
 CREATE INDEX idx_chunk_embeddings_model ON chunk_embeddings(model_id);
 

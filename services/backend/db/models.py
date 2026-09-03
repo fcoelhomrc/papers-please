@@ -19,6 +19,9 @@ class Document(Base):
     venue: Mapped[str | None]
     year: Mapped[int | None]
     pdf_url: Mapped[str | None]
+    citation_count: Mapped[int | None]
+    corpus: Mapped[str] = mapped_column(String, default="main")
+    topic: Mapped[str | None]
     created_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
 
 
