@@ -9,8 +9,13 @@ storage:
   root: /data
 
 devices:
-  chunker: cpu
-  embedder: cpu
+  # OCR and embedding are the ingest bottleneck - Docling/RapidOCR on CPU is
+  # minutes per PDF. The workers get the GPU (compose attaches
+  # nvidia.com/gpu=all); the reranker stays on CPU because it runs per search
+  # request on the long-lived backend and holding VRAM there starves the
+  # ingest on a 4GB card.
+  chunker: cuda
+  embedder: cuda
   reranker: cpu
 
 embedder:
