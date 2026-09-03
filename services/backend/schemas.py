@@ -225,3 +225,43 @@ class EvalDecisionRequest(BaseModel):
 class EvalDecisionResponse(BaseModel):
     id: int
     corpus: str
+
+
+class EvalQuestion(BaseModel):
+    """One generated question with its review state merged in."""
+
+    id: str
+    question: str
+    reference: str
+    original_question: str
+    original_reference: str
+    reference_contexts: list[str]
+    reference_chunk_ids: list[int]
+    reference_doc_ids: list[int]
+    topics: list[str]
+    synthesizer: str
+    decision: str
+    note: str
+    edited: bool
+
+
+class EvalQuestionSummary(BaseModel):
+    total: int
+    kept: int
+    dropped: int
+    undecided: int
+    kept_by_topic: dict[str, int]
+    kept_by_synthesizer: dict[str, int]
+
+
+class EvalQuestionsResponse(BaseModel):
+    target: int
+    summary: EvalQuestionSummary
+    questions: list[EvalQuestion]
+
+
+class EvalQuestionPatch(BaseModel):
+    decision: str | None = Field(default=None, pattern="^(keep|drop|undecided)$")
+    question: str | None = None
+    reference: str | None = None
+    note: str | None = None

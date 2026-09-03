@@ -20,6 +20,7 @@ export const keys = {
   workers: () => ['workers'],
   workerLogs: (service) => ['workers', service, 'logs'],
   evalCandidates: (topic) => ['eval', 'candidates', topic ?? null],
+  evalQuestions: () => ['eval', 'questions'],
 }
 
 export function useSearch({ mode, query, topK, rerank, enabled }) {
@@ -146,5 +147,24 @@ export function useEvalDecision() {
     // Invalidates the whole eval namespace rather than one topic: the
     // counters are cross-topic, and the total is what a reviewer steers by.
     onSuccess: () => qc.invalidateQueries({ queryKey: ['eval'] }),
+  })
+}
+
+export function useEvalQuestions() {
+  return useQuery({
+    queryKey: keys.evalQuestions(),
+    queryFn: api.listEvalQuestions,
+    // A deliberate one-pass review; nothing else writes to the set.
+    staleTime: Infinity,
+  })
+}
+
+export function useReviewQuestion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ qid, patch }) => api.reviewEvalQuestion(qid, patch),
+    // The kept-set counters are what the reviewer steers by, and they are
+    // cross-question - so refetch the set rather than patch one row.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['eval', 'questions'] }),
   })
 }

@@ -8,6 +8,7 @@ import { Button } from './components/ui.jsx'
 import Document from './pages/Document.jsx'
 import Documents from './pages/Documents.jsx'
 import EvalCorpus from './pages/EvalCorpus.jsx'
+import EvalQuestions from './pages/EvalQuestions.jsx'
 import Fetch from './pages/Fetch.jsx'
 import Queue from './pages/Queue.jsx'
 import Search from './pages/Search.jsx'
@@ -86,6 +87,7 @@ export default function App() {
               <Route path="/documents/:docId" element={<Document />} />
               <Route path="/queue" element={<Queue />} />
               <Route path="/eval/corpus" element={<EvalCorpus />} />
+              <Route path="/eval/questions" element={<EvalQuestions />} />
             </Routes>
           </div>
         </main>

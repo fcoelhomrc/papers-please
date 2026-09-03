@@ -23,6 +23,10 @@ from schemas import (
     EvalCandidatesResponse,
     EvalDecisionRequest,
     EvalDecisionResponse,
+    EvalQuestion,
+    EvalQuestionPatch,
+    EvalQuestionsResponse,
+    EvalQuestionSummary,
     EvalTopicSummary,
     FeedbackOut,
     FeedbackRequest,
@@ -39,6 +43,10 @@ from sqlalchemy.orm import Session
 from status import pipeline_status, queue_items
 
 log.setup()
+
+# How many curated questions the review pass is aiming at, from 131
+# generated - the ~20-30% attrition ragas' own docs expect.
+TESTSET_TARGET = 100
 
 _agent = None  # built lazily - needs ANTHROPIC_API_KEY, shouldn't block startup without it
 
@@ -139,6 +147,43 @@ def eval_decide(doc_id: int, body: EvalDecisionRequest):
         return EvalDecisionResponse(id=doc_id, corpus=decide(doc_id, body.decision))
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/eval/questions", response_model=EvalQuestionsResponse)
+def eval_questions():
+    """The generated test set with review decisions merged in.
+
+    Everything comes back in one response, including dropped questions: the
+    reviewer is balancing a set, not clearing a queue, and a decision that
+    cannot be seen cannot be revisited.
+    """
+    from eval.review import question_summary, questions
+
+    merged = questions()
+    return EvalQuestionsResponse(
+        target=TESTSET_TARGET,
+        summary=EvalQuestionSummary(**question_summary(merged)),
+        questions=[EvalQuestion(**q) for q in merged],
+    )
+
+
+@app.patch("/eval/questions/{qid}", response_model=EvalQuestion)
+def eval_review_question(qid: str, body: EvalQuestionPatch):
+    """Keep, drop, edit or annotate one question."""
+    from eval.review import question_summary, questions, review_question
+
+    try:
+        review_question(
+            qid,
+            decision=body.decision,
+            question=body.question,
+            reference=body.reference,
+            note=body.note,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return EvalQuestion(**next(q for q in questions() if q["id"] == qid))
 
 
 @app.get("/workers", response_model=WorkersResponse)

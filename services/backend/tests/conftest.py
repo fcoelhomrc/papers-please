@@ -123,3 +123,18 @@ def pinecone_index():
     _clear()
     yield index
     _clear()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_review_state(tmp_path, monkeypatch):
+    """No test may write review decisions into the repo.
+
+    `eval.review` persists to files next to the generated test set. Before
+    the path constants were resolved at call time, a test that monkeypatched
+    them still wrote to the real ones - which is how three fixture questions
+    ended up committed in eval/testset/review.json. Redirecting for every
+    test makes that unreachable rather than merely unlikely.
+    """
+    import eval.review as review
+
+    monkeypatch.setattr(review, "REVIEW_PATH", tmp_path / "review.json")
