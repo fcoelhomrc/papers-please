@@ -149,9 +149,13 @@ function QuestionCard({ q, onPatch, pending }) {
         </summary>
         <div className="mt-2 space-y-2">
           {q.reference_contexts.map((c, i) => (
+            /* Wrapped, not horizontally scrolled: the reviewer is skimming a
+               passage to judge whether it supports the answer, and a single
+               long line hides everything past the fold. Newlines from the
+               chunk are kept, since section breaks carry meaning. */
             <pre
               key={i}
-              className="max-h-56 overflow-auto rounded-lg bg-inset p-3 text-2xs leading-relaxed text-muted"
+              className="max-h-80 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-inset p-3 text-2xs leading-relaxed text-muted"
             >
               {c}
             </pre>
