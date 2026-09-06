@@ -48,6 +48,8 @@ class Chunk(Base):
     chunk_index: Mapped[int]
     chunk_text: Mapped[str | None]
     page_num: Mapped[int | None]
+    heading_path: Mapped[str | None]
+    element_type: Mapped[str | None]
 
 
 class Feedback(Base):

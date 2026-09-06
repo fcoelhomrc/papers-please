@@ -12,6 +12,7 @@ import pytest
 from process.chunker import (
     PdfChunker,
     contextualize,
+    element_type,
     heading_path,
     is_boilerplate,
 )
@@ -106,11 +107,18 @@ class TestIsBoilerplate:
         assert is_boilerplate([]) is False
 
 
-def _chunk(text, headings=None, page=1):
+def _item(label="text", page=1):
     prov = [SimpleNamespace(page_no=page)] if page is not None else []
+    return SimpleNamespace(prov=prov, label=label)
+
+
+def _chunk(text, headings=None, page=1, labels=("text",)):
     return SimpleNamespace(
         text=text,
-        meta=SimpleNamespace(headings=headings, doc_items=[SimpleNamespace(prov=prov)]),
+        meta=SimpleNamespace(
+            headings=headings,
+            doc_items=[_item(label, page) for label in labels],
+        ),
     )
 
 
@@ -128,7 +136,13 @@ class TestChunkPdf:
         chunker = _chunker_with([_chunk("We ablate.", ["Methods", "Ablations"], page=4)])
 
         assert chunker._chunk_pdf("x.pdf") == [
-            (0, "Methods > Ablations\n\nWe ablate.", 4)
+            {
+                "chunk_index": 0,
+                "chunk_text": "Methods > Ablations\n\nWe ablate.",
+                "page_num": 4,
+                "heading_path": "Methods > Ablations",
+                "element_type": "text",
+            }
         ]
 
     def test_boilerplate_never_reaches_the_index(self):
@@ -140,7 +154,7 @@ class TestChunkPdf:
             ]
         )
 
-        texts = [text for _, text, _ in chunker._chunk_pdf("x.pdf")]
+        texts = [c["chunk_text"] for c in chunker._chunk_pdf("x.pdf")]
 
         assert texts == ["Results\n\nReal finding."]
 
@@ -159,7 +173,7 @@ class TestChunkPdf:
             ]
         )
 
-        assert [i for i, _, _ in chunker._chunk_pdf("x.pdf")] == [0, 1, 2]
+        assert [c["chunk_index"] for c in chunker._chunk_pdf("x.pdf")] == [0, 1, 2]
 
     def test_empty_chunks_are_skipped(self):
         chunker = _chunker_with([_chunk("", ["Intro"]), _chunk("Real.", ["Intro"])])
@@ -169,7 +183,39 @@ class TestChunkPdf:
     def test_missing_provenance_yields_no_page(self):
         chunker = _chunker_with([_chunk("Body.", ["Intro"], page=None)])
 
-        assert chunker._chunk_pdf("x.pdf")[0][2] is None
+        assert chunker._chunk_pdf("x.pdf")[0]["page_num"] is None
+
+
+class TestElementType:
+    """Docling's TripletTableSerializer flattens a table into prose before the
+    chunker sees it, so this label is the only thing that will ever
+    distinguish a table chunk from a paragraph."""
+
+    def test_plain_prose_is_text(self):
+        assert element_type([_item("text")]) == "text"
+
+    def test_a_table_beats_the_prose_merged_with_it(self):
+        """HybridChunker merges peers, so a table chunk routinely carries
+        surrounding paragraphs too - and the table is the part retrieval
+        either finds or misses."""
+        assert element_type([_item("text"), _item("table")]) == "table"
+
+    def test_priority_order_holds_across_the_ladder(self):
+        assert element_type([_item("section_header"), _item("formula")]) == "formula"
+        assert element_type([_item("list_item"), _item("caption")]) == "caption"
+        assert element_type([_item("text"), _item("list_item")]) == "list"
+
+    def test_a_figure_item_reads_as_its_caption(self):
+        """Docling hands us no pixels - a chunk carrying a picture item is
+        whatever prose sat with that figure."""
+        assert element_type([_item("picture")]) == "caption"
+
+    def test_unknown_and_missing_labels_fall_back_to_text(self):
+        """A label we do not map must not become a null column or an unhandled
+        category - every chunk has to land in some slice."""
+        assert element_type([_item("checkbox_selected")]) == "text"
+        assert element_type([]) == "text"
+        assert element_type(None) == "text"
 
 
 class TestChunkMetadata:

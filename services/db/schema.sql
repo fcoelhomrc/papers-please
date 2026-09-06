@@ -56,6 +56,18 @@ CREATE TABLE chunks (
     chunk_index INT NOT NULL,
     chunk_text TEXT,
     page_num INT,
+    -- The section this chunk sits in ("Methods > Ablations"). Also prefixed
+    -- onto chunk_text so it is embedded and keyword-matched, but that copy is
+    -- only free text - a column is what lets eval group by section and what
+    -- a future filter would use.
+    heading_path TEXT,
+    -- What docling called the chunk's content: table, formula, code, caption,
+    -- list, section_header or text. Without it "which structural elements does
+    -- retrieval fail on" is unanswerable, and it cannot be recovered later -
+    -- docling's TripletTableSerializer flattens a table into prose before the
+    -- chunker sees it, so a table chunk is indistinguishable from a paragraph
+    -- once the label is dropped.
+    element_type TEXT,
     UNIQUE (obj_id, chunk_index)
 );
 

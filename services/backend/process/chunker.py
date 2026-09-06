@@ -146,6 +146,42 @@ def sanitise(text: str) -> str:
     return text.replace("\x00", "")
 
 
+# Docling's own labels, collapsed to categories a retrieval eval can act on.
+# The full enum has thirty entries covering forms and checkboxes; a paper uses
+# a handful of them.
+ELEMENT_PRIORITY = (
+    ("table", {"table"}),
+    ("formula", {"formula"}),
+    ("code", {"code"}),
+    # A chunk carrying a picture or chart item is that figure's caption text -
+    # docling gives us no pixels, only whatever prose sat with it.
+    ("caption", {"caption", "picture", "chart"}),
+    ("list", {"list_item"}),
+    ("section_header", {"section_header", "title"}),
+)
+DEFAULT_ELEMENT = "text"
+
+
+def element_type(doc_items) -> str:
+    """What kind of content a chunk holds, for slicing retrieval scores by it.
+
+    Highest priority label present, not the first one: HybridChunker merges
+    peers, so a chunk routinely spans a table and the prose around it, and the
+    table is the part retrieval either finds or misses.
+
+    This has to be captured here or not at all. Docling's
+    TripletTableSerializer flattens a table into triplet prose before the
+    chunker ever sees it, so once the label is dropped a table chunk is
+    indistinguishable from a paragraph - which is why "does retrieval fail on
+    tables?" was unanswerable.
+    """
+    labels = {str(item.label) for item in doc_items or () if getattr(item, "label", None)}
+    for name, matching in ELEMENT_PRIORITY:
+        if labels & matching:
+            return name
+    return DEFAULT_ELEMENT
+
+
 class PdfChunker(PostgresInterface):
     def __init__(self, store_root: str | None = None):
         from config import load
@@ -190,10 +226,10 @@ class PdfChunker(PostgresInterface):
         logger.info(f"{len(rows)} objects failed chunking")
         return [(r.id, r.path) for r in rows]
 
-    def _chunk_pdf(self, path: Path) -> list[tuple[int, str, int | None]]:
+    def _chunk_pdf(self, path: Path) -> list[dict]:
         doc = self._converter.convert(source=str(path)).document
-        result = []
-        # `i` counts kept chunks, not chunks seen: chunk_index is half of the
+        result: list[dict] = []
+        # chunk_index counts kept chunks, not chunks seen: it is half of the
         # (obj_id, chunk_index) key and is what neighbour expansion walks, so
         # it has to stay dense. Numbering by position in docling's output
         # would leave holes wherever boilerplate was dropped, and "the chunk
@@ -206,20 +242,29 @@ class PdfChunker(PostgresInterface):
             if is_boilerplate(headings):
                 continue
 
+            doc_items = chunk.meta.doc_items if chunk.meta else None
             page_num = None
-            if chunk.meta and chunk.meta.doc_items:
-                prov = chunk.meta.doc_items[0].prov
+            if doc_items:
+                prov = doc_items[0].prov
                 if prov:
                     page_num = prov[0].page_no
 
-            result.append((len(result), contextualize(chunk.text, headings), page_num))
+            result.append(
+                {
+                    "chunk_index": len(result),
+                    "chunk_text": contextualize(chunk.text, headings),
+                    "page_num": page_num,
+                    # Stored as its own column as well as prefixed onto the
+                    # text: the prefix is what gets embedded and keyword
+                    # matched, the column is what eval groups by.
+                    "heading_path": heading_path(headings) or None,
+                    "element_type": element_type(doc_items),
+                }
+            )
         return result
 
-    def _write_chunks(self, obj_id: int, chunks: list[tuple[int, str, int | None]]):
-        rows = [
-            {"obj_id": obj_id, "chunk_index": idx, "chunk_text": text, "page_num": page}
-            for idx, text, page in chunks
-        ]
+    def _write_chunks(self, obj_id: int, chunks: list[dict]):
+        rows = [{"obj_id": obj_id, **chunk} for chunk in chunks]
         with Session(self.engine) as session:
             session.execute(
                 insert(Chunk).on_conflict_do_nothing(
