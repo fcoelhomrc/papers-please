@@ -9,6 +9,8 @@ The two single-source modes are unchanged; hybrid is additive. Reranking
 candidates.
 """
 import os
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from db.connection import PostgresInterface
@@ -28,6 +30,29 @@ RETRIEVAL_MODES = (SEMANTIC, KEYWORD, HYBRID)
 # "argument not supplied", distinct from an explicit None meaning "no corpus
 # filter at all".
 _UNSET = object()
+
+
+@contextmanager
+def record(timings: dict | None, stage: str):
+    """Accumulate wall-clock milliseconds for one retrieval stage.
+
+    Accumulate rather than assign: hybrid hydrates chunk rows once per source
+    and the reranker can be entered more than once, so overwriting would
+    report a fraction of the real cost and make the stages fail to sum to the
+    total - which is the one sanity check this data has.
+
+    A None collector makes every call a no-op, so the private candidate
+    methods stay usable from eval/ablations.py without one.
+    """
+    if timings is None:
+        yield
+        return
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        timings[stage] = round(timings.get(stage, 0.0) + elapsed_ms, 3)
 
 
 def rrf_fuse(
@@ -287,16 +312,24 @@ class SearchEngine(PostgresInterface):
             convert_to_numpy=True,
         ).tolist()
 
-    def _vector_candidates(self, query: str, top_k: int, min_score: float | None = None) -> list[dict]:
-        vec = self._embed_query(query)
+    def _vector_candidates(
+        self,
+        query: str,
+        top_k: int,
+        min_score: float | None = None,
+        timings: dict | None = None,
+    ) -> list[dict]:
+        with record(timings, "embed"):
+            vec = self._embed_query(query)
         index = self._pc.Index(self._cfg["index_name"])
         # Isolation for the dense path is the namespace, not a post-filter:
         # the index returns exactly top_k ids, so dropping the out-of-corpus
         # ones afterwards would return a shorter list than was asked for and
         # depress recall for reasons that have nothing to do with retrieval.
-        matches = index.query(
-            vector=vec, top_k=top_k, include_metadata=True, namespace=self._namespace
-        )["matches"]
+        with record(timings, "pinecone"):
+            matches = index.query(
+                vector=vec, top_k=top_k, include_metadata=True, namespace=self._namespace
+            )["matches"]
         if not matches:
             return []
 
@@ -305,10 +338,11 @@ class SearchEngine(PostgresInterface):
             scores = {cid: sc for cid, sc in scores.items() if sc >= min_score}
             if not scores:
                 return []
-        with Session(self.engine) as session:
-            rows = session.execute(
-                _chunk_rows_stmt(list(scores), corpus=self._corpus)
-            ).all()
+        with record(timings, "hydrate"):
+            with Session(self.engine) as session:
+                rows = session.execute(
+                    _chunk_rows_stmt(list(scores), corpus=self._corpus)
+                ).all()
 
         chunks = [_row_to_chunk(r, scores[r.id]) for r in rows]
         # Pinecone returns ranked results; the SQL hydration doesn't preserve
@@ -316,11 +350,18 @@ class SearchEngine(PostgresInterface):
         chunks.sort(key=lambda c: c["score"], reverse=True)
         return chunks
 
-    def _keyword_candidates(self, query: str, top_k: int, min_score: float | None = None) -> list[dict]:
-        with Session(self.engine) as session:
-            return _keyword_rows(
-                session, query, top_k, min_score=min_score, corpus=self._corpus
-            )
+    def _keyword_candidates(
+        self,
+        query: str,
+        top_k: int,
+        min_score: float | None = None,
+        timings: dict | None = None,
+    ) -> list[dict]:
+        with record(timings, "keyword_sql"):
+            with Session(self.engine) as session:
+                return _keyword_rows(
+                    session, query, top_k, min_score=min_score, corpus=self._corpus
+                )
 
     def _expand(self, chunks: list[dict], window: int) -> list[dict]:
         with Session(self.engine) as session:
@@ -382,15 +423,25 @@ class SearchEngine(PostgresInterface):
         # reranker isn't there to narrow it afterwards.
         retrieve_k = max(candidates, top_k) if (rerank and candidates) else top_k
 
+        # Always collected. The cost is a handful of perf_counter calls, and
+        # making it opt-in means the one time you want it is the one time it
+        # was not switched on.
+        timings: dict = {}
+        started = time.perf_counter()
+
         if mode == SEMANTIC:
             chunks = [
                 {**c, "sources": [SEMANTIC]}
-                for c in self._vector_candidates(query, retrieve_k, t["min_vector_score"])
+                for c in self._vector_candidates(
+                    query, retrieve_k, t["min_vector_score"], timings=timings
+                )
             ]
         elif mode == KEYWORD:
             chunks = [
                 {**c, "sources": [KEYWORD]}
-                for c in self._keyword_candidates(query, retrieve_k, t["min_keyword_score"])
+                for c in self._keyword_candidates(
+                    query, retrieve_k, t["min_keyword_score"], timings=timings
+                )
             ]
         else:
             # Each source contributes a wider pool than the final top_k -
@@ -400,15 +451,21 @@ class SearchEngine(PostgresInterface):
             # Thresholds apply per source, before fusion: an RRF score is a
             # rank artefact with no notion of "relevant enough", so filtering
             # after fusion could not express this at all.
-            chunks = rrf_fuse(
-                [
-                    self._vector_candidates(query, pool, t["min_vector_score"]),
-                    self._keyword_candidates(query, pool, t["min_keyword_score"]),
-                ],
-                k=cfg.rrf_k,
-                weights=[1.0, cfg.keyword_weight],
-                labels=[SEMANTIC, KEYWORD],
-            )[:retrieve_k]
+            ranked_lists = [
+                self._vector_candidates(
+                    query, pool, t["min_vector_score"], timings=timings
+                ),
+                self._keyword_candidates(
+                    query, pool, t["min_keyword_score"], timings=timings
+                ),
+            ]
+            with record(timings, "fuse"):
+                chunks = rrf_fuse(
+                    ranked_lists,
+                    k=cfg.rrf_k,
+                    weights=[1.0, cfg.keyword_weight],
+                    labels=[SEMANTIC, KEYWORD],
+                )[:retrieve_k]
 
         # Tracked separately from `chunks` being non-empty: with a rerank
         # floor, an empty result can now mean "reranked, and nothing cleared
@@ -417,7 +474,8 @@ class SearchEngine(PostgresInterface):
         # opposite of what happened.
         did_rerank = bool(rerank and chunks)
         if did_rerank:
-            chunks = self._reranker.rerank(query, chunks, top_k=rerank_top_k)
+            with record(timings, "rerank"):
+                chunks = self._reranker.rerank(query, chunks, top_k=rerank_top_k)
             if t["min_rerank_score"] is not None:
                 chunks = [c for c in chunks if c["score"] >= t["min_rerank_score"]]
 
@@ -426,13 +484,20 @@ class SearchEngine(PostgresInterface):
         # throw 35 of them away.
         window = cfg.neighbour_window if neighbour_window is None else neighbour_window
         if window and chunks:
-            chunks = self._expand(chunks, window)
+            with record(timings, "expand"):
+                chunks = self._expand(chunks, window)
+
+        # Measured around everything above, so `total` minus the sum of the
+        # named stages is the unattributed remainder - list building, dict
+        # spreading, config load. If that gap is large, a stage is missing.
+        timings["total"] = round((time.perf_counter() - started) * 1000, 3)
 
         return SearchResponse(
             query=query,
             model=self._model_key,
             mode=mode,
             reranked=did_rerank,
+            timings=timings,
             # obj_id is an internal join key that neighbour expansion needs
             # and the API contract doesn't have.
             results=[ChunkResult(**{k: v for k, v in c.items() if k != "obj_id"}) for c in chunks],

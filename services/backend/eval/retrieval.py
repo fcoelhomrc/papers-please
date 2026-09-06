@@ -103,6 +103,40 @@ def r_precision(retrieved: list[str], relevant: set[str]) -> float:
     return len({d for d in retrieved[:r] if d in relevant}) / r
 
 
+def average_precision_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
+    """Mean of the precision measured at each relevant hit, over min(R, k).
+
+    MAP is the standard summary of a whole ranking: unlike MRR it credits
+    every relevant document, and unlike nDCG it does so without a log
+    discount, so it moves further when a hit climbs from rank 8 to rank 2.
+
+    Worth being explicit about the name collision this sits inside. **This is
+    the metric ragas calls `context_precision`** - and it is not the same
+    thing as `precision_at_k` above, which is the plain fraction of the k
+    slots that are relevant. The report prints both, so the docstring has to
+    say which is which: on the v1 corpus they read 0.626 and 0.079, and that
+    gap is a definition, not a discrepancy.
+
+    Dividing by min(R, k) rather than R keeps it in [0, 1] when there are more
+    relevant documents than slots to put them in.
+    """
+    if not relevant:
+        raise ValueError("average precision is undefined with no relevant documents")
+    if k <= 0:
+        raise ValueError("k must be positive")
+
+    seen: set[str] = set()
+    hits = 0
+    total = 0.0
+    for i, doc in enumerate(retrieved[:k], start=1):
+        if doc in relevant and doc not in seen:
+            seen.add(doc)
+            hits += 1
+            total += hits / i
+
+    return total / min(len(relevant), k)
+
+
 def score_question(retrieved: list[str], relevant: set[str], k: int) -> dict:
     """All metrics for one question.
 
@@ -125,12 +159,21 @@ def score_question(retrieved: list[str], relevant: set[str], k: int) -> dict:
         "precision": precision_at_k(retrieved, relevant, k),
         "hit_rate": hit_rate_at_k(retrieved, relevant, k),
         "r_precision": r_precision(retrieved, relevant),
+        "map": average_precision_at_k(retrieved, relevant, k),
         "mrr": mrr(retrieved, relevant),
         "ndcg": ndcg_at_k(retrieved, relevant, k),
     }
 
 
-RETRIEVAL_METRICS = ("recall", "precision", "r_precision", "hit_rate", "mrr", "ndcg")
+RETRIEVAL_METRICS = (
+    "recall",
+    "precision",
+    "r_precision",
+    "map",
+    "hit_rate",
+    "mrr",
+    "ndcg",
+)
 
 
 def aggregate(per_question: list[dict]) -> dict:

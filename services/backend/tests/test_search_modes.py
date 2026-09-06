@@ -5,7 +5,7 @@ mode dispatch is tested by stubbing the two candidate sources so what's
 under test is the routing/fusion, not the I/O.
 """
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -103,7 +103,7 @@ class TestSearchModeDispatch:
 
         resp = engine.search("q", top_k=5, mode=SEMANTIC)
 
-        engine._vector_candidates.assert_called_once_with("q", 5, None)  # None = no floor
+        engine._vector_candidates.assert_called_once_with("q", 5, None, timings=ANY)  # None = no floor
         engine._keyword_candidates.assert_not_called()
         assert resp.mode == "semantic"
         assert [r.chunk_id for r in resp.results] == [1]
@@ -115,7 +115,7 @@ class TestSearchModeDispatch:
 
         resp = engine.search("q", top_k=5, mode=KEYWORD)
 
-        engine._keyword_candidates.assert_called_once_with("q", 5, None)
+        engine._keyword_candidates.assert_called_once_with("q", 5, None, timings=ANY)
         engine._vector_candidates.assert_not_called()
         assert [r.chunk_id for r in resp.results] == [2]
 
@@ -384,7 +384,7 @@ class TestRerankCandidatePool:
         )
 
         # retrieval asked for the pool...
-        engine._vector_candidates.assert_called_once_with("q", 40, None)
+        engine._vector_candidates.assert_called_once_with("q", 40, None, timings=ANY)
         # ...the reranker saw all of it...
         assert len(engine._reranker.rerank.call_args.args[1]) == 40
         # ...and the caller still got what it asked for.
@@ -415,7 +415,7 @@ class TestRerankCandidatePool:
 
         engine.search("q", top_k=5, rerank=False, mode=SEMANTIC, candidates=40)
 
-        engine._vector_candidates.assert_called_once_with("q", 5, None)
+        engine._vector_candidates.assert_called_once_with("q", 5, None, timings=ANY)
 
     def test_pool_never_narrows_an_already_wider_request(self):
         engine = make_engine()
@@ -426,7 +426,7 @@ class TestRerankCandidatePool:
             "q", top_k=50, rerank=True, rerank_top_k=5, mode=SEMANTIC, candidates=40
         )
 
-        engine._vector_candidates.assert_called_once_with("q", 50, None)
+        engine._vector_candidates.assert_called_once_with("q", 50, None, timings=ANY)
 
     def test_omitting_the_pool_keeps_the_old_exact_top_k_behaviour(self):
         """eval.sweep and the /search endpoint measure retrieval itself, so
@@ -437,7 +437,7 @@ class TestRerankCandidatePool:
 
         engine.search("q", top_k=5, rerank=True, rerank_top_k=5, mode=SEMANTIC)
 
-        engine._vector_candidates.assert_called_once_with("q", 5, None)
+        engine._vector_candidates.assert_called_once_with("q", 5, None, timings=ANY)
 
     def test_hybrid_pool_covers_both_sources_before_fusion(self):
         engine = make_engine()
@@ -654,3 +654,54 @@ class TestChunkHasPdf:
         monkeypatch.setattr(config_module.load().storage, "root", "\x00 not a path")
 
         assert _pdf_exists("x.pdf") is False
+
+
+class TestTimings:
+    """Two of the eval figures plot quality against latency, and there was no
+    timing anywhere on the retrieval path to draw them from."""
+
+    def test_every_search_reports_a_total(self):
+        """Always collected rather than opt-in: the one run you want timings
+        for is the one where the flag was not set."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+
+        assert engine.search("q", top_k=5, mode=SEMANTIC).timings["total"] > 0
+
+    def test_named_stages_do_not_exceed_the_total(self):
+        """The sanity check this data has: total is measured around everything,
+        so the named stages must fit inside it. If they ever sum past it, a
+        stage is being double-counted."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._keyword_candidates = MagicMock(return_value=[chunk(2)])
+
+        timings = engine.search("q", top_k=5, mode=HYBRID).timings
+        named = sum(v for k, v in timings.items() if k != "total")
+
+        assert named <= timings["total"] + 1e-6
+
+    def test_fusion_is_timed_only_for_hybrid(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+
+        assert "fuse" not in engine.search("q", top_k=5, mode=SEMANTIC).timings
+
+    def test_a_stage_entered_twice_accumulates_rather_than_overwrites(self):
+        """Hybrid hydrates chunk rows once per source. Assigning instead of
+        adding would report half the real cost and break the sum check above."""
+        from search import record
+
+        timings = {"hydrate": 100.0}
+        with record(timings, "hydrate"):
+            pass
+
+        assert timings["hydrate"] > 100.0
+
+    def test_a_none_collector_is_a_no_op(self):
+        """eval/ablations.py calls the candidate methods directly without one,
+        so the timer has to tolerate being switched off."""
+        from search import record
+
+        with record(None, "hydrate"):
+            pass

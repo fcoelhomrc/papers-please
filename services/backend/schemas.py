@@ -173,6 +173,11 @@ class SearchResponse(BaseModel):
     model: str
     mode: str = "semantic"  # which retrieval mode produced these results
     reranked: bool
+    # Wall-clock milliseconds per retrieval stage, plus "total". Two of the
+    # eval figures are latency-against-quality, and there was previously no
+    # timing anywhere on the retrieval path to draw them from - search.py did
+    # not even import time.
+    timings: dict[str, float] | None = None
     results: list[ChunkResult]
 
 

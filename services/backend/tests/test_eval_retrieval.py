@@ -191,3 +191,57 @@ class TestRPrecision:
 
         with pytest.raises(ValueError, match="undefined"):
             r_precision(["a"], set())
+
+
+class TestAveragePrecision:
+    """MAP is the metric ragas reports as `context_precision`, which is a
+    different thing from precision_at_k despite the shared word - so these
+    pin the definition down by value, not by shape."""
+
+    def test_perfect_ranking_scores_one(self):
+        from eval.retrieval import average_precision_at_k
+
+        assert average_precision_at_k(["a", "b", "x"], {"a", "b"}, k=3) == 1.0
+
+    def test_rewards_hits_that_rank_higher(self):
+        """The whole reason to report it beside recall: recall cannot tell
+        these two apart, and the generator reads top-down."""
+        from eval.retrieval import average_precision_at_k
+
+        early = average_precision_at_k(["a", "x", "x"], {"a"}, k=3)
+        late = average_precision_at_k(["x", "x", "a"], {"a"}, k=3)
+
+        assert early > late
+
+    def test_precision_is_averaged_over_the_hits_not_the_slots(self):
+        """Relevant at ranks 1 and 3: (1/1 + 2/3) / 2 = 0.8333. Divided by the
+        number of relevant documents, not by k - dividing by k would make a
+        perfect ranking score 2/3 here."""
+        from eval.retrieval import average_precision_at_k
+
+        assert average_precision_at_k(["a", "x", "b"], {"a", "b"}, k=3) == pytest.approx(
+            (1.0 + 2 / 3) / 2
+        )
+
+    def test_capped_by_k_when_relevant_outnumbers_the_slots(self):
+        """Three gold chunks and two slots: a perfect top-2 is the best
+        possible, so it must score 1.0 rather than 2/3."""
+        from eval.retrieval import average_precision_at_k
+
+        assert average_precision_at_k(["a", "b"], {"a", "b", "c"}, k=2) == 1.0
+
+    def test_deduped_like_the_other_metrics(self):
+        from eval.retrieval import average_precision_at_k
+
+        assert average_precision_at_k(["a", "a"], {"a"}, k=2) == 1.0
+
+    def test_nothing_relevant_retrieved_scores_zero(self):
+        from eval.retrieval import average_precision_at_k
+
+        assert average_precision_at_k(["x", "y"], {"a"}, k=2) == 0.0
+
+    def test_undefined_without_relevant_documents(self):
+        from eval.retrieval import average_precision_at_k
+
+        with pytest.raises(ValueError, match="undefined"):
+            average_precision_at_k(["a"], set(), k=2)
