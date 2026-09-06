@@ -118,6 +118,23 @@ COSINE_THRESHOLD = 0.80
 # 7-question trial this silently emptied `reference_chunk_ids` for all four
 # multi-hop rows: 8 of 11 contexts unresolved, which downstream reads as
 # "retrieval found nothing" on every run forever.
+# How many summary_similarity edges each per-topic graph should end up with.
+#
+# Bounded from both sides. Below ~50 the graph is mostly isolated pairs, so a
+# topic yields roughly one cluster per edge and the ~8 multi-hop-abstract
+# questions it owes come from a barrel with nothing in it. Above a few hundred,
+# `find_indirect_clusters` walks depth 3 over a denser graph and cluster count
+# grows super-linearly - 788 edges became 8,341 clusters on v1 - while the
+# pairs being connected get weaker and the questions vaguer.
+#
+# 120 on a 100-node graph is ~2.4% of the 4,950 possible pairs. Measured on
+# raw chunk text it puts four topics at 0.80 and `agents`, the sparsest, at
+# 0.75 - which is the point: the threshold moves so the graphs match.
+TARGET_EDGES = 120
+THRESHOLD_FLOOR = 0.70
+THRESHOLD_CEILING = 0.90
+THRESHOLD_STEP = 0.01
+
 HOP_MARKER = re.compile(r"^<\d+-hop>\s*\n+")
 
 # 50/25/25 rather than ragas' default third each. Single-hop questions are the
@@ -268,19 +285,30 @@ def extraction_transforms(llm, embeddings):
     ]
 
 
-def choose_threshold(counts: dict[float, int], cap: int = 1500) -> float:
-    """The most generous threshold that still leaves a tractable graph.
+def choose_threshold(counts: dict[float, int], target: int = TARGET_EDGES) -> float:
+    """The threshold whose edge count lands closest to `target`.
 
-    Lower threshold means more edges means more clusters to draw multi-hop
-    questions from - up to the point where `find_indirect_clusters` stops
-    returning. So: take the smallest candidate whose edge count is still under
-    the cap, and fall back to the strictest if even that overflows.
+    Equalising *edges* across topics rather than fixing the threshold, because
+    a cosine value has no absolute meaning here - it is an artefact of
+    bge-small and the text, and nothing downstream ever reports it. What does
+    have meaning is how connected each topic's graph is, since that sets how
+    hard its multi-hop questions are. Letting that vary 5x between topics
+    while reporting by-topic slices would bake a confound into the test set,
+    which is the class of problem that produced v1's skew.
 
-    1500 is above the 788 that clustered in 12.9s on the pooled graph and well
-    under the 4,047 that timed out.
+    Ties break toward the stricter threshold: same edge count for less
+    semantic slack is free quality.
+
+    An earlier version of this took "the most generous threshold under a
+    1,500-edge cap", which was wrong twice over. The cap was calibrated on
+    v1's 400-node pooled graph, where 788 edges was sparse; on a 100-node
+    graph with 4,950 possible pairs the same number is proportionally far
+    denser. And it optimised the wrong direction - measured on this corpus it
+    would have chosen 0.70 for every topic, connecting chunks that merely
+    share a field, which is where vague "these approaches..." multi-hop
+    questions come from.
     """
-    affordable = [t for t in sorted(counts) if counts[t] <= cap]
-    return affordable[0] if affordable else max(counts)
+    return min(sorted(counts, reverse=True), key=lambda t: abs(counts[t] - target))
 
 
 def relationship_transforms(threshold: float = COSINE_THRESHOLD):
@@ -399,7 +427,17 @@ def cluster_counts(kg) -> dict[str, int]:
     }
 
 
-def measure_thresholds(kg, candidates=(0.90, 0.85, 0.80, 0.75, 0.70)) -> dict[float, int]:
+def threshold_grid() -> tuple[float, ...]:
+    """Candidate thresholds, fine enough to hit an edge target precisely.
+
+    Floored at 0.70 and capped at 0.90 rather than open-ended: below 0.70 two
+    chunks merely share a field, and above 0.90 nothing connects at all.
+    """
+    steps = int(round((THRESHOLD_CEILING - THRESHOLD_FLOOR) / THRESHOLD_STEP))
+    return tuple(round(THRESHOLD_FLOOR + i * THRESHOLD_STEP, 2) for i in range(steps + 1))
+
+
+def measure_thresholds(kg, candidates=None) -> dict[float, int]:
     """How many summary_similarity edges each cosine threshold would create.
 
     COSINE_THRESHOLD = 0.80 was measured on the *pooled* 400-node graph. Within
@@ -419,6 +457,7 @@ def measure_thresholds(kg, candidates=(0.90, 0.85, 0.80, 0.75, 0.70)) -> dict[fl
     """
     import numpy as np
 
+    candidates = threshold_grid() if candidates is None else candidates
     vectors = [
         n.properties.get("summary_embedding")
         for n in kg.nodes

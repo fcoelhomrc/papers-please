@@ -550,25 +550,57 @@ class TestThresholdMeasurement:
 
 
 class TestChooseThreshold:
-    def test_prefers_the_most_generous_affordable_threshold(self):
-        """Lower threshold means more clusters to draw multi-hop questions
-        from, right up to where clustering stops returning."""
+    """Equalising edges across topics, not fixing the threshold. A cosine
+    value has no absolute meaning - it is an artefact of bge-small - while how
+    connected a topic's graph is sets how hard its multi-hop questions are,
+    and that varying 5x between topics is a confound in every by-topic slice
+    we report."""
+
+    def test_picks_the_threshold_nearest_the_edge_target(self):
         from eval.testset import choose_threshold
 
-        assert choose_threshold({0.90: 10, 0.85: 100, 0.80: 900}, cap=1500) == 0.80
+        assert choose_threshold({0.90: 10, 0.85: 100, 0.80: 900}, target=120) == 0.85
 
-    def test_skips_thresholds_that_would_not_cluster(self):
+    def test_a_sparse_topic_gets_a_looser_threshold_to_reach_parity(self):
+        """The measured `agents` curve: sparsest graph of the five, so it
+        needs 0.75 to reach the same connectivity the others hit at 0.80."""
         from eval.testset import choose_threshold
 
-        assert choose_threshold({0.90: 10, 0.85: 100, 0.80: 9000}, cap=1500) == 0.85
+        agents = {0.85: 4, 0.80: 28, 0.75: 116, 0.70: 410}
+        retrieval = {0.85: 21, 0.80: 127, 0.75: 480, 0.70: 1232}
 
-    def test_falls_back_to_the_strictest_when_all_overflow(self):
-        """A complete graph at every candidate is a corpus problem, not a
-        reason to hang - take the strictest and let assert_clusters complain
-        if it left nothing to generate from."""
+        assert choose_threshold(agents) == 0.75 and choose_threshold(retrieval) == 0.80
+
+    def test_ties_break_toward_the_stricter_threshold(self):
+        """Same connectivity for less semantic slack is free quality."""
         from eval.testset import choose_threshold
 
-        assert choose_threshold({0.90: 9000, 0.85: 20000}, cap=1500) == 0.90
+        assert choose_threshold({0.85: 100, 0.80: 140}, target=120) == 0.85
+
+    def test_a_graph_too_sparse_everywhere_takes_the_loosest_available(self):
+        """Nothing reaches the target, so take the most connected option and
+        let assert_clusters complain if it still left nothing to generate."""
+        from eval.testset import choose_threshold
+
+        assert choose_threshold({0.90: 2, 0.85: 5, 0.80: 9}, target=120) == 0.80
+
+
+class TestThresholdGrid:
+    def test_is_bounded_at_both_ends(self):
+        """Below 0.70 two chunks merely share a field; above 0.90 nothing
+        connects at all."""
+        from eval.testset import threshold_grid
+
+        grid = threshold_grid()
+
+        assert grid[0] == 0.70 and grid[-1] == 0.90
+
+    def test_is_fine_enough_to_hit_an_edge_target(self):
+        """Five coarse candidates could not land near 120 on every topic;
+        the whole point of a target is being able to reach it."""
+        from eval.testset import threshold_grid
+
+        assert len(threshold_grid()) == 21
 
 
 class TestMergeGenerated:
