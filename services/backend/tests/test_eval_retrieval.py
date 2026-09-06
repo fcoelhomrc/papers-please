@@ -152,3 +152,42 @@ class TestAggregate:
     def test_no_abstention_keys_when_no_such_questions(self):
         out = aggregate([score_question(["a"], {"a"}, k=1)])
         assert "abstention_precision" not in out
+
+
+class TestRPrecision:
+    """Precision@k is capped at min(R,k)/k, so on a set where most questions
+    have one gold chunk precision@10 cannot exceed 0.1 - it measures the
+    set's shape more than the retriever. R-precision moves the cutoff to R,
+    so a perfect ranking scores 1.0 whatever R is."""
+
+    def test_perfect_ranking_scores_one_whatever_r_is(self):
+        from eval.retrieval import r_precision
+
+        assert r_precision(["a", "b", "c"], {"a"}) == 1.0
+        assert r_precision(["a", "b", "c"], {"a", "b"}) == 1.0
+        assert r_precision(["a", "b", "c"], {"a", "b", "c"}) == 1.0
+
+    def test_cutoff_is_r_not_the_retrieved_length(self):
+        """One relevant doc at rank 2 scores 0 when R=1: only rank 1 counts."""
+        from eval.retrieval import r_precision
+
+        assert r_precision(["x", "a"], {"a"}) == 0.0
+
+    def test_partial_credit(self):
+        from eval.retrieval import r_precision
+
+        assert r_precision(["a", "x", "b"], {"a", "b"}) == 0.5
+
+    def test_deduped_like_the_other_metrics(self):
+        """Retrieval returns chunks; the same one twice must not score twice."""
+        from eval.retrieval import r_precision
+
+        assert r_precision(["a", "a"], {"a", "b"}) == 0.5
+
+    def test_undefined_without_relevant_documents(self):
+        import pytest
+
+        from eval.retrieval import r_precision
+
+        with pytest.raises(ValueError, match="undefined"):
+            r_precision(["a"], set())

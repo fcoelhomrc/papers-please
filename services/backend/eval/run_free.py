@@ -45,6 +45,9 @@ logger = logging.getLogger(__name__)
 
 RESULTS_DIR = Path(__file__).parent / "results"
 
+# Reported alongside the chunk-id metrics, not instead of them.
+RAGAS_METRICS = ("ragas_precision", "ragas_recall")
+
 
 def mean_ci(values: list[float], z: float = 1.96) -> tuple[float, float]:
     """Mean and the half-width of its 95% confidence interval.
@@ -75,8 +78,37 @@ def paired_diff_ci(a: list[float], b: list[float], z: float = 1.96) -> tuple[flo
     return mean_ci([x - y for x, y in zip(a, b)], z=z)
 
 
-def retrieve(engine, question: str, cfg: dict) -> list[int]:
-    """Ranked chunk ids for one question.
+def ragas_non_llm(retrieved_texts: list[str], reference_contexts: list[str]) -> dict:
+    """ragas' own string-matching metrics, for parity with the ecosystem.
+
+    They answer a slightly different question from the chunk-id metrics
+    beside them. Ours is set membership on integers - exact, and immune to a
+    threshold. Ragas compares *strings* with Levenshtein at a 0.5 cutoff,
+    which is what anyone else reporting these numbers is measuring, so the
+    two are reported together: if they diverge, the difference is the
+    threshold, not retrieval.
+    """
+    import asyncio
+
+    from ragas.dataset_schema import SingleTurnSample
+    from ragas.metrics import NonLLMContextPrecisionWithReference, NonLLMContextRecall
+
+    sample = SingleTurnSample(
+        retrieved_contexts=retrieved_texts or ["(nothing retrieved)"],
+        reference_contexts=reference_contexts,
+    )
+    return {
+        "ragas_precision": asyncio.run(
+            NonLLMContextPrecisionWithReference()._single_turn_ascore(sample, None)
+        ),
+        "ragas_recall": asyncio.run(
+            NonLLMContextRecall()._single_turn_ascore(sample, None)
+        ),
+    }
+
+
+def retrieve(engine, question: str, cfg: dict) -> list[tuple[int, str]]:
+    """Ranked (chunk_id, text) pairs for one question.
 
     `text` not `context`: neighbour expansion rewrites `context` to include
     chunks that were never retrieved.
@@ -94,16 +126,23 @@ def retrieve(engine, question: str, cfg: dict) -> list[int]:
         # misleading for anything that reads it.
         neighbour_window=0,
     )
-    return [r.chunk_id for r in response.results]
+    return [(r.chunk_id, r.text) for r in response.results]
 
 
 def score(rows: list[dict], engine, cfg: dict) -> tuple[list[dict], dict]:
     """Per-question scores and their aggregate, with intervals."""
     per_question = []
     for row in rows:
-        retrieved = retrieve(engine, row["question"], cfg)
+        hits = retrieve(engine, row["question"], cfg)
+        retrieved = [cid for cid, _ in hits]
         scored = score_question(retrieved, set(row["reference_chunk_ids"]), cfg["top_k"])
+        if not scored["abstention"]:
+            scored.update(
+                ragas_non_llm([t for _, t in hits], row["reference_contexts"])
+            )
         scored["id"] = row["id"]
+        scored["n_relevant"] = len(row["reference_chunk_ids"])
+        scored["k"] = cfg["top_k"]
         scored["topics"] = row["topics"]
         scored["synthesizer"] = row["synthesizer"]
         scored["n_retrieved"] = len(retrieved)
@@ -119,7 +158,32 @@ def summarise(per_question: list[dict]) -> dict:
         mean, half = mean_ci([q[metric] for q in answerable])
         out[metric] = round(mean, 4)
         out[f"{metric}_ci"] = round(half, 4)
+    for metric in RAGAS_METRICS:
+        values = [q[metric] for q in answerable if metric in q]
+        if values:
+            mean, half = mean_ci(values)
+            out[metric] = round(mean, 4)
+            out[f"{metric}_ci"] = round(half, 4)
+
+    # Precision@k is bounded by how many gold chunks a question has: with one
+    # gold chunk, precision@10 cannot exceed 0.1. Reporting the raw figure
+    # alone reads as failure when it may be near its ceiling, so the ceiling
+    # is reported with it and `precision_of_max` is the fraction attained.
+    ceiling = _mean_ceiling(answerable)
+    if ceiling:
+        out["precision_ceiling"] = round(ceiling, 4)
+        out["precision_of_max"] = round(out["precision"] / ceiling, 4) if ceiling else 0.0
     return out
+
+
+def _mean_ceiling(answerable: list[dict]) -> float:
+    """Mean of min(gold, k)/k - the best precision@k the set allows."""
+    vals = [
+        min(q["n_relevant"], q["k"]) / q["k"]
+        for q in answerable
+        if q.get("n_relevant") and q.get("k")
+    ]
+    return sum(vals) / len(vals) if vals else 0.0
 
 
 def by_group(per_question: list[dict], key: str) -> dict[str, dict]:
@@ -172,6 +236,14 @@ def fmt(name: str, summary: dict) -> str:
     parts = [
         f"{m}={summary[m]:.3f}+/-{summary[f'{m}_ci']:.3f}" for m in RETRIEVAL_METRICS
     ]
+    if "precision_ceiling" in summary:
+        parts.append(
+            f"(prec ceiling {summary['precision_ceiling']:.3f}, "
+            f"{summary['precision_of_max']:.0%} of max)"
+        )
+    for m in RAGAS_METRICS:
+        if m in summary:
+            parts.append(f"{m}={summary[m]:.3f}+/-{summary[f'{m}_ci']:.3f}")
     return f"  {name:<22} n={summary['n']:<4} " + "  ".join(parts)
 
 

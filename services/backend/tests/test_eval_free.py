@@ -7,6 +7,7 @@ spread across questions rather than from repeated calls.
 """
 import math
 
+from eval.retrieval import RETRIEVAL_METRICS
 from eval.run_free import by_group, mean_ci, paired_diff_ci, retrieve, summarise
 
 
@@ -64,34 +65,45 @@ class TestRetrieveScoresTheRetrievedChunk:
 
         assert engine.search.call_args.kwargs["neighbour_window"] == 0
 
-    def test_returns_chunk_ids_in_rank_order(self):
+    def test_returns_chunk_ids_with_their_text_in_rank_order(self):
+        """The text rides along because the ragas non-LLM metrics score
+        strings while the chunk-id metrics score integers, and both are
+        computed from this one retrieval."""
         from types import SimpleNamespace
         from unittest.mock import MagicMock
 
         engine = MagicMock()
         engine.search.return_value = SimpleNamespace(
-            results=[SimpleNamespace(chunk_id=9), SimpleNamespace(chunk_id=4)]
+            results=[
+                SimpleNamespace(chunk_id=9, text="nine"),
+                SimpleNamespace(chunk_id=4, text="four"),
+            ]
         )
 
-        assert retrieve(engine, "q", {"mode": "hybrid", "top_k": 5, "rerank": False}) == [9, 4]
+        assert retrieve(engine, "q", {"mode": "hybrid", "top_k": 5, "rerank": False}) == [
+            (9, "nine"),
+            (4, "four"),
+        ]
+
+
+def scored(**overrides):
+    """A per-question score row carrying every metric summarise() reports.
+
+    Built from RETRIEVAL_METRICS rather than listed by hand: these fixtures
+    broke the whole module the last time a metric was added, which is a test
+    failing for a reason unrelated to what it tests."""
+    row = {"abstention": False, **{m: 0.5 for m in RETRIEVAL_METRICS}}
+    return {**row, **overrides}
 
 
 class TestSummarise:
     def _q(self, recall, **extra):
-        base = {
-            "abstention": False,
-            "recall": recall,
-            "precision": 0.1,
-            "hit_rate": 1.0,
-            "mrr": 0.5,
-            "ndcg": 0.5,
-        }
-        return {**base, **extra}
+        return scored(recall=recall, precision=0.1, hit_rate=1.0, **extra)
 
     def test_every_metric_carries_an_interval(self):
         out = summarise([self._q(0.4), self._q(0.8)])
 
-        assert {"recall_ci", "precision_ci", "hit_rate_ci", "mrr_ci", "ndcg_ci"} <= set(out)
+        assert {f"{m}_ci" for m in RETRIEVAL_METRICS} <= set(out)
 
     def test_reports_the_number_of_answerable_questions(self):
         assert summarise([self._q(1.0), self._q(0.0)])["n"] == 2
@@ -101,20 +113,12 @@ class TestByGroup:
     def test_splits_a_multi_valued_key_across_every_value(self):
         """A multi-hop question spans more than one topic and belongs to
         each of its slices."""
-        q = {
-            "abstention": False, "recall": 1.0, "precision": 0.1,
-            "hit_rate": 1.0, "mrr": 1.0, "ndcg": 1.0,
-            "topics": ["agents", "retrieval"],
-        }
+        q = scored(topics=["agents", "retrieval"])
 
         assert set(by_group([q], "topics")) == {"agents", "retrieval"}
 
     def test_handles_a_single_valued_key(self):
-        q = {
-            "abstention": False, "recall": 1.0, "precision": 0.1,
-            "hit_rate": 1.0, "mrr": 1.0, "ndcg": 1.0,
-            "synthesizer": "single_hop_specific_query_synthesizer",
-        }
+        q = scored(synthesizer="single_hop_specific_query_synthesizer")
 
         assert list(by_group([q], "synthesizer")) == [
             "single_hop_specific_query_synthesizer"

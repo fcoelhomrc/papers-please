@@ -86,6 +86,23 @@ def ndcg_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
     return dcg / idcg if idcg else 0.0
 
 
+def r_precision(retrieved: list[str], relevant: set[str]) -> float:
+    """Precision at k = R, where R is this question's own relevant count.
+
+    The standard answer to a test set whose questions have different numbers
+    of relevant documents. Plain precision@k is capped at min(R,k)/k, so on a
+    set where most questions have one gold chunk, precision@10 cannot exceed
+    0.1 and the metric measures the set's shape more than the retriever's.
+    R-precision moves the cutoff to R, so a perfect ranking scores 1.0 for
+    every question regardless of how many relevant documents it has - which
+    makes the number comparable across questions, and across sets.
+    """
+    if not relevant:
+        raise ValueError("R-precision is undefined with no relevant documents")
+    r = len(relevant)
+    return len({d for d in retrieved[:r] if d in relevant}) / r
+
+
 def score_question(retrieved: list[str], relevant: set[str], k: int) -> dict:
     """All metrics for one question.
 
@@ -107,12 +124,13 @@ def score_question(retrieved: list[str], relevant: set[str], k: int) -> dict:
         "recall": recall_at_k(retrieved, relevant, k),
         "precision": precision_at_k(retrieved, relevant, k),
         "hit_rate": hit_rate_at_k(retrieved, relevant, k),
+        "r_precision": r_precision(retrieved, relevant),
         "mrr": mrr(retrieved, relevant),
         "ndcg": ndcg_at_k(retrieved, relevant, k),
     }
 
 
-RETRIEVAL_METRICS = ("recall", "precision", "hit_rate", "mrr", "ndcg")
+RETRIEVAL_METRICS = ("recall", "precision", "r_precision", "hit_rate", "mrr", "ndcg")
 
 
 def aggregate(per_question: list[dict]) -> dict:
