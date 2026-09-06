@@ -734,7 +734,10 @@ class TestTimings:
 
         timings = {"hydrate": 100.0}
         with record(timings, "hydrate"):
-            pass
+            # Real work, not `pass`: timings are rounded to 3 decimals, so an
+            # empty block can measure 0.000ms and round straight back to the
+            # starting value.
+            sum(range(200_000))
 
         assert timings["hydrate"] > 100.0
 
