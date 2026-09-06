@@ -1,0 +1,14 @@
+[
+  {
+    "name": "NLP Evaluation Researcher",
+    "role_description": "Studies how AI models like GPT-4 and PROMETHEUS provide feedback, comparing human annotator preferences to improve LLM evaluation methods."
+  },
+  {
+    "name": "AI Security Researcher",
+    "role_description": "Studies adversarial robustness of large language models, evaluating vulnerabilities and developing defenses against prompt-based attacks."
+  },
+  {
+    "name": "AI Research Scientist",
+    "role_description": "Designs and refines evaluation frameworks for AGI and large language models, combining standard benchmarks with behavioral testing in real-world environments."
+  }
+]

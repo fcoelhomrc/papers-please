@@ -1,0 +1,14 @@
+[
+  {
+    "name": "NLP Research Scientist",
+    "role_description": "Works on improving large language models for multi-document reasoning and question answering, exploring knowledge graph-based prompting and agent-based retrieval methods."
+  },
+  {
+    "name": "AI Research Scientist",
+    "role_description": "Studies generative search engines and evaluates annotation quality and error rates in LLM outputs."
+  },
+  {
+    "name": "ML Systems Engineer",
+    "role_description": "Optimizes GPU memory management and caching strategies for retrieval-augmented generation systems, focusing on minimizing data transfer and improving inference latency."
+  }
+]

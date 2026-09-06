@@ -1,0 +1,14 @@
+[
+  {
+    "name": "AI Safety Researcher",
+    "role_description": "Studies methods for aligning large language models with human values, focusing on mitigating harmful behaviors through supervised fine-tuning with 3H data."
+  },
+  {
+    "name": "Anxious Father of a Detained Traveler",
+    "role_description": "A British parent seeking answers and support after his son was wrongfully arrested abroad, looking for legal assistance and media coverage to clear his son's name."
+  },
+  {
+    "name": "Reinforcement Learning Researcher",
+    "role_description": "Studies preference optimization and reward modeling for LLMs, comparing approaches like DPO and rejection sampling methods."
+  }
+]

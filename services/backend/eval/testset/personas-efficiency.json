@@ -1,0 +1,14 @@
+[
+  {
+    "name": "ML Systems Engineer",
+    "role_description": "Designs and optimizes LLM inference systems, focusing on KVCache management, quantization techniques, and system-algorithm co-design for low-latency performance."
+  },
+  {
+    "name": "Recommender Systems Researcher",
+    "role_description": "Studies and evaluates recommendation models, comparing LLM-based and traditional approaches like LC-Rec and SASRec on semantic and collaborative negative item performance."
+  },
+  {
+    "name": "Speech Synthesis Researcher",
+    "role_description": "A researcher evaluating Transformer-based text-to-speech model architectures who needs comparative performance metrics to select or design efficient high-quality TTS systems."
+  }
+]

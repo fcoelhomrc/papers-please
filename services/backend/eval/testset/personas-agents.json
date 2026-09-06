@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Elena Vasquez",
+    "role_description": "A data engineer who designs and analyzes task flow graphs for knowledge-driven workflow systems, tracking edge weights, transformation types, and change costs."
+  },
+  {
+    "name": "Alignment Research Scientist",
+    "role_description": "Studies RLHF and alternative preference optimization methods like DPO and PPO to align large language models with human intent."
+  },
+  {
+    "name": "Computational Chemistry Researcher",
+    "role_description": "Explores LLM-driven agents for autonomous synthesis planning and robotic execution in drug discovery and catalysis labs."
+  }
+]
