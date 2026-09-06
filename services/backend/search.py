@@ -1,12 +1,18 @@
-"""Retrieval over the indexed paper chunks, in three selectable modes.
+"""Retrieval over the indexed paper chunks, in five selectable modes.
 
-    semantic  - dense vector search (Pinecone), the original behaviour
-    keyword   - Postgres full-text search (tsvector/GIN)
-    hybrid    - both of the above, fused with Reciprocal Rank Fusion
+    semantic     - dense vector search (Pinecone), the original behaviour
+    keyword      - Postgres full-text search, ranked by ts_rank
+    bm25         - the same FTS candidates, ranked by real BM25 (see bm25.py)
+    hybrid       - semantic + keyword, fused with Reciprocal Rank Fusion
+    hybrid_bm25  - semantic + bm25, same fusion
 
-The two single-source modes are unchanged; hybrid is additive. Reranking
-(cross-encoder) is orthogonal and applies to whichever mode produced the
-candidates.
+`keyword` and `bm25` share a candidate generator and differ only in the
+ranking function, which is what makes comparing them meaningful: ts_rank has
+no IDF and no length normalisation, and whether that costs anything is a
+question for the ablation rather than for a comment.
+
+Reranking (cross-encoder) is orthogonal and applies to whichever mode produced
+the candidates.
 """
 import os
 import time
@@ -24,8 +30,15 @@ from sqlalchemy.orm import Session
 
 SEMANTIC = "semantic"
 KEYWORD = "keyword"
+BM25 = "bm25"
 HYBRID = "hybrid"
-RETRIEVAL_MODES = (SEMANTIC, KEYWORD, HYBRID)
+# Dense fused with BM25 rather than with ts_rank. A separate mode instead of a
+# flag on `hybrid`, so a run's mode string always says exactly which two
+# rankers produced it.
+HYBRID_BM25 = "hybrid_bm25"
+RETRIEVAL_MODES = (SEMANTIC, KEYWORD, BM25, HYBRID, HYBRID_BM25)
+# Which keyword-side ranker each hybrid fuses with.
+_HYBRID_KEYWORD_SIDE = {HYBRID: KEYWORD, HYBRID_BM25: BM25}
 
 # "argument not supplied", distinct from an explicit None meaning "no corpus
 # filter at all".
@@ -303,6 +316,7 @@ class SearchEngine(PostgresInterface):
         self._namespace = load().search.namespace if namespace is None else namespace
         self._corpus = _corpus_filter(corpus)
         self._pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
+        self._bm25 = None  # fitted on first use by _bm25_index()
 
     def _embed_query(self, query: str) -> list[float]:
         return self._encoder.encode(
@@ -362,6 +376,86 @@ class SearchEngine(PostgresInterface):
                 return _keyword_rows(
                     session, query, top_k, min_score=min_score, corpus=self._corpus
                 )
+
+    def _bm25_index(self):
+        """Fitted lazily and held for the process's life.
+
+        Not built in __init__: the engine is constructed on import by
+        get_search_engine(), and a mode nobody selected should not cost a
+        corpus scan at startup.
+        """
+        if self._bm25 is None:
+            from config import load
+
+            import bm25
+
+            with Session(self.engine) as session:
+                self._bm25 = bm25.load_or_fit(
+                    session, self._corpus, load().storage.root
+                )
+        return self._bm25
+
+    def _bm25_candidates(
+        self,
+        query: str,
+        top_k: int,
+        min_score: float | None = None,
+        timings: dict | None = None,
+    ) -> list[dict]:
+        """FTS finds the chunks containing a query lexeme; BM25 ranks them.
+
+        Two stages because each does what it is good at: Postgres has the GIN
+        index and Python will not beat it at candidate generation, while
+        ts_rank has neither IDF nor length normalisation and BM25 has both.
+
+        The pool is `search.bm25_pool`, deliberately much wider than top_k -
+        BM25 can only reorder what the first stage retrieved, so too narrow a
+        pool measures ts_rank's recall wearing BM25's name.
+        """
+        from config import load
+
+        pool = load().search.bm25_pool
+        with record(timings, "keyword_sql"):
+            with Session(self.engine) as session:
+                # No min_score here: the floor is in BM25's units, and
+                # ts_rank's are unrelated - filtering the pool by ts_rank
+                # would drop chunks BM25 might have ranked first.
+                candidates = _keyword_rows(
+                    session, query, max(pool, top_k), corpus=self._corpus
+                )
+        if not candidates:
+            return []
+
+        with record(timings, "bm25"):
+            scores = self._bm25_index().scores_for(
+                query, [c["chunk_id"] for c in candidates]
+            )
+        ranked = [
+            {**c, "score": scores[c["chunk_id"]]}
+            for c in candidates
+            if c["chunk_id"] in scores
+        ]
+        if min_score is not None:
+            ranked = [c for c in ranked if c["score"] >= min_score]
+        ranked.sort(key=lambda c: c["score"], reverse=True)
+        return ranked[:top_k]
+
+    def _lexical_candidates(
+        self, mode: str, query: str, top_k: int, thresholds: dict, timings=None
+    ) -> list[dict]:
+        """Whichever keyword-side ranker this mode selects.
+
+        One seam rather than a branch at each of the two call sites, so
+        `keyword` and `bm25` cannot drift apart in how they are invoked -
+        which is the whole premise of comparing them.
+        """
+        if mode == BM25:
+            return self._bm25_candidates(
+                query, top_k, thresholds.get("min_bm25_score"), timings=timings
+            )
+        return self._keyword_candidates(
+            query, top_k, thresholds["min_keyword_score"], timings=timings
+        )
 
     def _expand(self, chunks: list[dict], window: int) -> list[dict]:
         with Session(self.engine) as session:
@@ -436,11 +530,11 @@ class SearchEngine(PostgresInterface):
                     query, retrieve_k, t["min_vector_score"], timings=timings
                 )
             ]
-        elif mode == KEYWORD:
+        elif mode in (KEYWORD, BM25):
             chunks = [
-                {**c, "sources": [KEYWORD]}
-                for c in self._keyword_candidates(
-                    query, retrieve_k, t["min_keyword_score"], timings=timings
+                {**c, "sources": [mode]}
+                for c in self._lexical_candidates(
+                    mode, query, retrieve_k, t, timings=timings
                 )
             ]
         else:
@@ -451,20 +545,19 @@ class SearchEngine(PostgresInterface):
             # Thresholds apply per source, before fusion: an RRF score is a
             # rank artefact with no notion of "relevant enough", so filtering
             # after fusion could not express this at all.
+            lexical = _HYBRID_KEYWORD_SIDE[mode]
             ranked_lists = [
                 self._vector_candidates(
                     query, pool, t["min_vector_score"], timings=timings
                 ),
-                self._keyword_candidates(
-                    query, pool, t["min_keyword_score"], timings=timings
-                ),
+                self._lexical_candidates(lexical, query, pool, t, timings=timings),
             ]
             with record(timings, "fuse"):
                 chunks = rrf_fuse(
                     ranked_lists,
                     k=cfg.rrf_k,
                     weights=[1.0, cfg.keyword_weight],
-                    labels=[SEMANTIC, KEYWORD],
+                    labels=[SEMANTIC, lexical],
                 )[:retrieve_k]
 
         # Tracked separately from `chunks` being non-empty: with a rerank

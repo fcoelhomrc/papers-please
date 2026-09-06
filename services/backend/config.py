@@ -90,7 +90,19 @@ class SearchConfig(BaseModel):
     # alone. Chosen from a sweep on the 50-question eval set, where the trend
     # from 1.0 down to 0.1 is monotonic - a small set, so treat it as a
     # sensible default rather than a tuned constant.
+    #
+    # Known stale: this was fitted on the 12-document corpus the sentence
+    # above describes, where dense was the stronger ranker. On the current
+    # corpus that reversed, and at 0.1 a rank-1 keyword hit scores 0.00164
+    # against a rank-40 dense hit's 0.0100 - so keyword cannot outrank dense
+    # anywhere in the pool, which is why hybrid measures the same as semantic.
+    # eval/ablations.py sweeps it.
     keyword_weight: float = 0.1
+    # How many chunks Postgres FTS hands BM25 to rank. BM25's ordering is
+    # capped by what the first stage retrieved, so this has to be wide enough
+    # that widening it further stops changing the metric - which the ablation
+    # checks rather than assumes.
+    bm25_pool: int = 200
     # Minimum scores, each in its own source's units - cosine, ts_rank and
     # cross-encoder logits are not on comparable scales. None = no floor,
     # which is what shipped: retrieval always returned top_k and so could

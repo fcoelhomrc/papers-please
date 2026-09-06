@@ -10,7 +10,9 @@ from unittest.mock import ANY, MagicMock, patch
 import pytest
 
 from search import (
+    BM25,
     HYBRID,
+    HYBRID_BM25,
     KEYWORD,
     RETRIEVAL_MODES,
     SEMANTIC,
@@ -170,7 +172,45 @@ class TestSearchModeDispatch:
             engine.search("q", mode="magic")
 
     def test_all_modes_are_reachable(self):
-        assert set(RETRIEVAL_MODES) == {"semantic", "keyword", "hybrid"}
+        assert set(RETRIEVAL_MODES) == {
+            "semantic",
+            "keyword",
+            "bm25",
+            "hybrid",
+            "hybrid_bm25",
+        }
+
+    def test_bm25_mode_uses_the_bm25_ranker(self):
+        engine = make_engine()
+        engine._bm25_candidates = MagicMock(return_value=[chunk(7)])
+        engine._keyword_candidates = MagicMock(return_value=[chunk(1)])
+
+        resp = engine.search("q", top_k=5, mode=BM25)
+
+        assert [r.chunk_id for r in resp.results] == [7]
+
+    def test_hybrid_bm25_fuses_dense_with_bm25_not_ts_rank(self):
+        """The two hybrids differ only in their keyword side, and the mode
+        string has to say which - otherwise a reported number cannot be traced
+        back to the rankers that produced it."""
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[chunk(1)])
+        engine._bm25_candidates = MagicMock(return_value=[chunk(2)])
+        engine._keyword_candidates = MagicMock(return_value=[chunk(3)])
+
+        resp = engine.search("q", top_k=5, mode=HYBRID_BM25)
+
+        engine._keyword_candidates.assert_not_called()
+        assert set(r.chunk_id for r in resp.results) == {1, 2}
+
+    def test_each_result_records_which_lexical_ranker_found_it(self):
+        engine = make_engine()
+        engine._vector_candidates = MagicMock(return_value=[])
+        engine._bm25_candidates = MagicMock(return_value=[chunk(2)])
+
+        resp = engine.search("q", top_k=5, mode=HYBRID_BM25)
+
+        assert resp.results[0].sources == ["bm25"]
 
 
 class TestRerankInteraction:
