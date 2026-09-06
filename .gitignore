@@ -21,7 +21,11 @@ data/**
 node_modules/
 dist/
 .npm
+# Run output is scratch - the numbers that matter live in the README, the
+# issue comments and the committed figures. Archived runs under results/v1/
+# are kept on disk for provenance but are just as much scratch.
 **/eval/results/*.json
+**/eval/results/*/*.json
 
 # Ragas judge-call cache (eval/run.py) - a local memo, not a result
 **/eval/.judge-cache/
@@ -33,3 +37,4 @@ services/backend/eval/labelling/*.download
 # Review decisions are working state, not a build input: committing them
 # would make one reviewer's in-progress pass everybody else's starting point.
 services/backend/eval/testset/review.json
+services/backend/eval/testset/*/review.json
