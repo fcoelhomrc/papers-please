@@ -247,3 +247,72 @@ def question_summary(merged: list[dict]) -> dict:
         "kept_by_topic": by_topic,
         "kept_by_synthesizer": by_synth,
     }
+
+
+CURATED_PATH = Path(__file__).parent / "testset" / "curated.jsonl"
+
+
+def curated() -> list[dict]:
+    """The kept questions, with edits applied. What the harness evaluates.
+
+    Resolved from generated.jsonl plus review.json rather than read from a
+    file the reviewer edits, so a review still in progress cannot change what
+    an experiment measured halfway through it.
+    """
+    return [
+        {
+            "id": q["id"],
+            "question": q["question"],
+            "reference": q["reference"],
+            "reference_contexts": q["reference_contexts"],
+            "reference_chunk_ids": q["reference_chunk_ids"],
+            "reference_doc_ids": q["reference_doc_ids"],
+            "topics": q["topics"],
+            "synthesizer": q["synthesizer"],
+            "edited": q["edited"],
+        }
+        for q in questions()
+        if q["decision"] == "keep"
+    ]
+
+
+def write_curated(path: Path | None = None) -> Path:
+    path = path or CURATED_PATH
+    rows = curated()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    return path
+
+
+def load_curated(path: Path | None = None) -> list[dict]:
+    path = path or CURATED_PATH
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path} not found - run `python -m eval.review export` after curating"
+        )
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Curated eval question set")
+    parser.add_argument("command", choices=["export", "status"])
+    args = parser.parse_args()
+
+    merged = questions()
+    summary = question_summary(merged)
+    if args.command == "export":
+        if summary["undecided"]:
+            print(f"WARNING: {summary['undecided']} questions still undecided")
+        path = write_curated()
+        print(f"{summary['kept']} curated questions -> {path}")
+
+    for key in ("total", "kept", "dropped", "undecided"):
+        print(f"  {key:<12} {summary[key]}")
+    print("  by topic     ", dict(sorted(summary["kept_by_topic"].items())))
+    print("  by type      ", dict(sorted(summary["kept_by_synthesizer"].items())))
+
+
+if __name__ == "__main__":
+    main()

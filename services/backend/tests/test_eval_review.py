@@ -218,3 +218,59 @@ class TestQuestionReview:
 
         assert summary["kept_by_topic"] == {"retrieval": 1}
         assert (summary["kept"], summary["dropped"], summary["undecided"]) == (1, 1, 1)
+
+
+class TestCuratedExport:
+    """The harness reads a resolved file, not generated.jsonl plus a review
+    sidecar, so a review still in progress cannot change what an experiment
+    measured halfway through it."""
+
+    @pytest.fixture
+    def paths(self, tmp_path, monkeypatch):
+        import json
+
+        import eval.review as review
+
+        gen = tmp_path / "generated.jsonl"
+        gen.write_text(
+            "\n".join(
+                json.dumps(
+                    {
+                        "id": f"q{i:04d}",
+                        "question": f"q{i}?",
+                        "reference": f"a{i}",
+                        "reference_contexts": ["ctx"],
+                        "reference_chunk_ids": [i],
+                        "reference_doc_ids": [i],
+                        "topics": ["agents"],
+                        "synthesizer": "single_hop_specific_query_synthesizer",
+                    }
+                )
+                for i in range(3)
+            )
+        )
+        monkeypatch.setattr(review, "GENERATED_PATH", gen)
+        monkeypatch.setattr(review, "REVIEW_PATH", tmp_path / "review.json")
+        monkeypatch.setattr(review, "CURATED_PATH", tmp_path / "curated.jsonl")
+        return review
+
+    def test_exports_only_kept_questions(self, paths):
+        paths.review_question("q0000", decision="keep")
+        paths.review_question("q0001", decision="drop")
+
+        assert [q["id"] for q in paths.curated()] == ["q0000"]
+
+    def test_applies_edits(self, paths):
+        paths.review_question("q0002", decision="keep", question="reworded?")
+
+        assert paths.curated()[0]["question"] == "reworded?"
+
+    def test_round_trips_through_disk(self, paths):
+        paths.review_question("q0000", decision="keep")
+        paths.write_curated()
+
+        assert paths.load_curated()[0]["id"] == "q0000"
+
+    def test_missing_file_says_how_to_produce_it(self, paths):
+        with pytest.raises(FileNotFoundError, match="eval.review export"):
+            paths.load_curated()
