@@ -41,8 +41,8 @@ dependencies = [
     # specific questions are drawn from, so missing it silently costs a whole
     # synthesizer.
     "rapidfuzz>=3.14.6",
-    "rank-bm25>=0.2.2",
-    "snowballstemmer>=3.1.1",
+    "bm25s>=0.3.11",
+    "pystemmer>=3.1.0",
 ]
 
 

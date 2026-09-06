@@ -5,43 +5,48 @@ and, in its two-argument form, no length normalisation. These tests pin down
 the two properties that difference is made of, because a BM25 that quietly
 lost either would look like a working comparison and measure nothing.
 """
+import bm25s
 import pytest
-from rank_bm25 import BM25Okapi
 
-from bm25 import B, K1, Bm25Index, cache_path, tokenize
+from bm25 import METHOD, Bm25Index, cache_path, tokenize
+
+
+def terms(text):
+    return tokenize(text, is_query=True)[0]
 
 
 class TestTokenize:
-    """Matching Postgres' `english` configuration - lowercase, stopwords,
-    Snowball - is what leaves the ranking function as the only difference
+    """bm25s' standard English analyzer - lowercase, stopwords, Snowball -
+    which is the same set of steps Postgres' `english` configuration applies.
+    Matching it is what leaves the ranking function as the only difference
     between the keyword and bm25 arms."""
 
     def test_lowercases_and_splits(self):
-        assert tokenize("Dense Retrieval") == tokenize("dense retrieval")
+        assert terms("Dense Retrieval") == terms("dense retrieval")
 
     def test_stems_so_morphology_is_not_the_thing_being_measured(self):
-        """Postgres stems; if this did not, BM25 would lose on "quantized" vs
-        "quantization" and the ablation would be measuring tokenisation."""
-        assert tokenize("quantization") == tokenize("quantized")
+        """Postgres stems; if this did not, BM25 would lose "quantized"
+        against "quantization" and the ablation would be measuring
+        tokenisation rather than ranking."""
+        assert terms("quantization") == terms("quantized")
 
     def test_drops_stopwords(self):
-        assert "the" not in tokenize("the model")
+        assert "the" not in terms("the model")
 
     def test_keeps_digits_attached_to_their_word(self):
         """A papers corpus is full of model names carrying their size, and
         splitting gpt4 into gpt and 4 loses the name."""
-        assert "gpt4" in tokenize("GPT4 results")
+        assert "gpt4" in terms("GPT4 results")
 
     def test_punctuation_never_becomes_a_token(self):
-        assert tokenize("bge-small, v2.") == tokenize("bge small v2")
+        assert terms("bge-small, v2.") == terms("bge small v2")
 
 
-# BM25's IDF is a property of the whole collection, and it degenerates on tiny
-# ones: with N=2 a term in one document scores log(1.5) - log(1.5) = 0, and
-# rank_bm25 floors anything non-positive with `epsilon * average_idf`. That is
-# real BM25 behaviour, not a bug, but it makes a three-document fixture measure
-# the floor rather than the ranker - so these tests pad to a realistic
-# collection where every document is distinct.
+# BM25's IDF is a property of the whole collection and degenerates on tiny
+# ones - with two documents, a term in one of them carries almost no
+# information by definition. That is real BM25 behaviour rather than a bug,
+# but it makes a three-document fixture measure the degenerate case, so these
+# tests pad to a realistic collection where every document is distinct.
 BACKGROUND = [f"unrelated filler document number {i}" for i in range(30)]
 
 
@@ -49,13 +54,14 @@ def _index(texts, start_id=1):
     """A fitted index over `texts` plus background documents.
 
     The background is what gives the query terms a sane document frequency;
-    without it every idf collapses to the epsilon floor and the scores say
-    nothing about ranking.
+    without it every idf is computed over a handful of documents and the
+    scores say nothing about ranking.
     """
     corpus = list(texts) + BACKGROUND
     ids = list(range(start_id, start_id + len(corpus)))
-    model = BM25Okapi([tokenize(t) for t in corpus], k1=K1, b=B)
-    return Bm25Index(ids, model, fingerprint="test")
+    retriever = bm25s.BM25(method=METHOD)
+    retriever.index(tokenize(corpus), show_progress=False)
+    return Bm25Index(ids, retriever, fingerprint="test")
 
 
 class TestBm25Index:
@@ -138,4 +144,19 @@ class TestCachePath:
         assert cache_path("/data", "eval") != cache_path("/data", "main")
 
     def test_an_unscoped_corpus_still_has_a_name(self):
-        assert cache_path("/data", None).name == "all.pkl"
+        assert cache_path("/data", None).name == "all"
+
+
+class TestRoundTrip:
+    def test_a_saved_index_scores_identically_when_reloaded(self, tmp_path):
+        """The cache exists so a process start does not refit. It is only
+        useful if the reloaded index ranks the same - a chunk_ids list that
+        drifted from the matrix would return confident, wrong chunks."""
+        index = _index(["retrieval augmented generation", "protein folding"])
+        index.save(tmp_path / "idx")
+
+        reloaded = Bm25Index.load(tmp_path / "idx")
+
+        assert reloaded.scores_for("retrieval", [1, 2]) == index.scores_for(
+            "retrieval", [1, 2]
+        )

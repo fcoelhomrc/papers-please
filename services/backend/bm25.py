@@ -9,14 +9,19 @@ and "keyword beats dense" was a claim about an unnamed ranker.
 This adds the real thing so the two can be measured against each other rather
 than one standing in for the other.
 
-Tokenisation matches Postgres on purpose
-----------------------------------------
-Postgres' `english` text-search configuration lowercases, drops stopwords and
-stems with Snowball. This module does the same three things, so the only thing
-that differs between the `keyword` and `bm25` arms is **the ranking function**.
-Skipping the stemmer would have handicapped BM25 on morphology - "quantized"
-failing to match "quantization" - and the ablation would have measured
-tokenisation rather than ranking, which is not the question.
+Why bm25s
+---------
+It ships the whole standard pipeline rather than the scoring function alone:
+`bm25s.tokenize` is lowercase -> token split -> English stopwords -> Snowball
+stemming in one call, and `BM25(method="lucene")` is the same variant Lucene
+and Elasticsearch use - which is what BEIR and everyone else benchmarks BM25
+as. Assembling those steps by hand is how you end up with a "BM25" that is
+really an argument about tokenisation.
+
+Stemming matters here specifically because Postgres' `english` configuration
+also stems. Without it the `keyword` and `bm25` arms would differ in two ways
+at once - ranking function *and* morphology - and the ablation could not
+attribute a difference to either.
 
 Where the statistics come from
 ------------------------------
@@ -25,7 +30,7 @@ That is what makes it BM25: term rarity is a property of the collection, and
 fitting it on a slice would make a term's weight depend on which query pulled
 the slice.
 
-Retrieval is two-stage. Postgres FTS finds the chunks that contain any query
+Retrieval is two-stage. Postgres FTS finds the chunks containing any query
 lexeme - it has the GIN index and we are not going to beat it in Python - and
 BM25 then ranks that pool. The pool has to be wide enough that BM25's ordering
 is not capped by `ts_rank`'s; `bm25_pool` defaults to 200 for that reason, and
@@ -36,14 +41,13 @@ corpus of ~11,500 chunks and wrong for one that keeps growing; whether
 production switches off `ts_rank` is a question for the measured numbers, not
 for this docstring.
 """
+import json
 import logging
-import pickle
-import re
+import shutil
 from pathlib import Path
 
-import snowballstemmer
-from rank_bm25 import BM25Okapi
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+import bm25s
+import Stemmer
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -51,29 +55,32 @@ from db.models import Chunk, Document, Object
 
 logger = logging.getLogger(__name__)
 
-# Classic BM25. rank_bm25 defaults k1 to 1.5; 1.2 is the value from the
-# original TREC work and the usual default everywhere else.
-K1 = 1.2
-B = 0.75
+# bm25s' default and Lucene's: the variant every published BM25 baseline means.
+METHOD = "lucene"
+STOPWORDS = "en"
 
-# Letters and digits, so "bge-small" splits but "gpt4" and "8bit" survive
-# whole - a papers corpus is full of model names carrying their size.
-_TOKEN = re.compile(r"[a-z0-9]+")
-_stemmer = snowballstemmer.stemmer("english")
+_stemmer = Stemmer.Stemmer("english")
 
 
-def tokenize(text: str) -> list[str]:
-    """Lowercase, split, drop stopwords, stem - the same three steps Postgres'
-    `english` configuration applies, so the two keyword arms differ only in
-    how they score."""
-    words = [w for w in _TOKEN.findall(text.lower()) if w not in ENGLISH_STOP_WORDS]
-    return _stemmer.stemWords(words)
+def tokenize(texts, is_query: bool = False):
+    """The standard English analyzer, via bm25s.
+
+    Queries come back as token strings and the corpus as bm25s' own id
+    representation, which is what `index()` wants and is smaller to hold.
+    """
+    return bm25s.tokenize(
+        texts,
+        stopwords=STOPWORDS,
+        stemmer=_stemmer,
+        return_ids=not is_query,
+        show_progress=False,
+    )
 
 
 def corpus_rows(session, corpus: str | None) -> list[tuple[int, str]]:
     """Every chunk the corpus contains, in id order.
 
-    Ordered so the index is reproducible: BM25Okapi scores by position, and a
+    Ordered so the index is reproducible: bm25s scores by position, and a
     cached index whose positions no longer line up with its chunk ids would
     return confident, wrong chunks rather than failing.
     """
@@ -110,9 +117,9 @@ def fingerprint(session, corpus: str | None) -> str:
 class Bm25Index:
     """A fitted BM25 over one corpus, plus the chunk ids its positions mean."""
 
-    def __init__(self, chunk_ids: list[int], model: BM25Okapi, fingerprint: str):
+    def __init__(self, chunk_ids: list[int], retriever: bm25s.BM25, fingerprint: str):
         self.chunk_ids = chunk_ids
-        self.model = model
+        self.retriever = retriever
         self.fingerprint = fingerprint
         self._position = {cid: i for i, cid in enumerate(chunk_ids)}
 
@@ -124,17 +131,14 @@ class Bm25Index:
         rows = corpus_rows(session, corpus)
         if not rows:
             raise ValueError(f"no chunks to fit BM25 on for corpus {corpus!r}")
+        retriever = bm25s.BM25(method=METHOD)
+        retriever.index(tokenize([text for _, text in rows]), show_progress=False)
         ids = [cid for cid, _ in rows]
-        model = BM25Okapi([tokenize(text) for _, text in rows], k1=K1, b=B)
         logger.info(f"fitted BM25 over {len(ids)} chunks (corpus={corpus!r})")
-        return cls(ids, model, fingerprint(session, corpus))
+        return cls(ids, retriever, fingerprint(session, corpus))
 
     def scores_for(self, query: str, chunk_ids: list[int]) -> dict[int, float]:
         """BM25 score for each of these chunks, IDF from the whole collection.
-
-        `get_batch_scores` rather than `get_scores`: scoring the candidate pool
-        is a couple of hundred dot products, scoring the collection is 11,500
-        for a result that is then thrown away.
 
         Chunks the index has never seen are skipped rather than scored zero - a
         zero is a real BM25 score meaning "no query term present", and a chunk
@@ -145,15 +149,29 @@ class Bm25Index:
         known = [(cid, self._position[cid]) for cid in chunk_ids if cid in self._position]
         if not known:
             return {}
-        tokens = tokenize(query)
+        tokens = tokenize(query, is_query=True)[0]
         if not tokens:
             return {}
-        scores = self.model.get_batch_scores(tokens, [pos for _, pos in known])
-        return {cid: float(s) for (cid, _), s in zip(known, scores)}
+        scores = self.retriever.get_scores(tokens)
+        return {cid: float(scores[pos]) for cid, pos in known}
+
+    def save(self, path: Path) -> None:
+        if path.exists():
+            shutil.rmtree(path)
+        self.retriever.save(str(path))
+        (path / "chunk_ids.json").write_text(
+            json.dumps({"fingerprint": self.fingerprint, "chunk_ids": self.chunk_ids})
+        )
+
+    @classmethod
+    def load(cls, path: Path) -> "Bm25Index":
+        meta = json.loads((path / "chunk_ids.json").read_text())
+        retriever = bm25s.BM25.load(str(path), load_corpus=False)
+        return cls(meta["chunk_ids"], retriever, meta["fingerprint"])
 
 
 def cache_path(root: str | Path, corpus: str | None) -> Path:
-    return Path(root) / "bm25" / f"{corpus or 'all'}.pkl"
+    return Path(root) / "bm25" / (corpus or "all")
 
 
 def load_or_fit(session, corpus: str | None, root: str | Path) -> Bm25Index:
@@ -167,7 +185,7 @@ def load_or_fit(session, corpus: str | None, root: str | Path) -> Bm25Index:
     current = fingerprint(session, corpus)
     if path.exists():
         try:
-            index = pickle.loads(path.read_bytes())
+            index = Bm25Index.load(path)
             if index.fingerprint == current:
                 logger.info(f"loaded BM25 index from {path} ({len(index)} chunks)")
                 return index
@@ -179,5 +197,5 @@ def load_or_fit(session, corpus: str | None, root: str | Path) -> Bm25Index:
 
     index = Bm25Index.fit(session, corpus)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(pickle.dumps(index))
+    index.save(path)
     return index
