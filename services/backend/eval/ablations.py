@@ -44,14 +44,36 @@ from pathlib import Path
 
 from eval.retrieval import RETRIEVAL_METRICS, score_question
 from eval.run_free import mean_ci, paired_diff_ci, summarise
-from search import HYBRID, KEYWORD, SEMANTIC, rrf_fuse
+from search import BM25, HYBRID, HYBRID_BM25, KEYWORD, SEMANTIC, rrf_fuse
 
 logger = logging.getLogger(__name__)
 
 RESULTS_DIR = Path(__file__).parent / "results"
 
-MODES = (SEMANTIC, KEYWORD, HYBRID)
+MODES = (SEMANTIC, KEYWORD, BM25, HYBRID, HYBRID_BM25)
 TOP_KS = (1, 3, 5, 10, 20, 50)
+
+# Which cached list each hybrid fuses with dense. Mirrors search.py's
+# _HYBRID_KEYWORD_SIDE; the two must agree or the sweep measures a
+# configuration production cannot produce.
+LEXICAL_SIDE = {HYBRID: KEYWORD, HYBRID_BM25: BM25}
+
+# Ablation W - fusion weights. keyword_weight was fitted on the 12-document
+# corpus where dense was the stronger ranker, and never revisited; at 0.1 a
+# rank-1 keyword hit scores 0.00164 against a rank-40 dense hit's 0.0100, so
+# the keyword side cannot outrank the dense side anywhere in the pool. That
+# alone would explain hybrid measuring the same as semantic, which is why this
+# is now an axis rather than a constant.
+KEYWORD_WEIGHTS = (0.1, 0.25, 0.5, 0.75, 1.0)
+RRF_KS = (10, 60)
+# Three depths rather than one, so "weight w is best" cannot turn out to be an
+# artefact of the single k it was measured at.
+WEIGHT_TOP_KS = (5, 10, 20)
+
+# How wide an FTS pool BM25 reranks. Swept to confirm the metric plateaus -
+# BM25 can only reorder what the first stage retrieved, so a narrow pool
+# reports ts_rank's recall wearing BM25's name.
+BM25_POOLS = (100, 200, 500)
 
 # Stops at 40 because A sets the ceiling. Extend to 80 only if A shows
 # recall@40 still climbing - otherwise a wider pool buys nothing and costs
@@ -64,29 +86,47 @@ SCORE_FLOORS = (None, -10.0, -8.0, -6.0)
 
 
 def cache_candidates(engine, questions: list[str], max_k: int) -> dict[str, dict]:
-    """Both sources' ranked candidates per question, unfused. The only I/O."""
+    """Every source's ranked candidates per question, unfused. The only I/O.
+
+    Unfused on purpose: caching the fused list would pin the hybrid pool to
+    max_k and freeze the fusion parameters, and ablation W exists precisely to
+    vary them.
+    """
     cached = {}
     for i, q in enumerate(questions, 1):
         cached[q] = {
-            "vector": engine._vector_candidates(q, max_k),
-            "keyword": engine._keyword_candidates(q, max_k),
+            SEMANTIC: engine._vector_candidates(q, max_k),
+            KEYWORD: engine._keyword_candidates(q, max_k),
+            BM25: engine._bm25_candidates(q, max_k),
         }
         if i % 20 == 0 or i == len(questions):
             logger.info(f"  cached {i}/{len(questions)}")
     return cached
 
 
-def candidates_for(sources: dict, mode: str, top_k: int, cfg) -> list[dict]:
-    """Reproduce SearchEngine.search()'s candidate list from cached sources."""
-    if mode == SEMANTIC:
-        return sources["vector"][:top_k]
-    if mode == KEYWORD:
-        return sources["keyword"][:top_k]
+def candidates_for(
+    sources: dict,
+    mode: str,
+    top_k: int,
+    cfg,
+    keyword_weight: float | None = None,
+    rrf_k: int | None = None,
+) -> list[dict]:
+    """Reproduce SearchEngine.search()'s candidate list from cached sources.
+
+    `keyword_weight` and `rrf_k` default to the configured values, so an
+    unparameterised call reproduces production exactly; ablation W overrides
+    them.
+    """
+    if mode in (SEMANTIC, KEYWORD, BM25):
+        return sources[mode][:top_k]
+
+    lexical = LEXICAL_SIDE[mode]
     pool = max(cfg.hybrid_candidates, top_k)
     return rrf_fuse(
-        [sources["vector"][:pool], sources["keyword"][:pool]],
-        k=cfg.rrf_k,
-        weights=[1.0, cfg.keyword_weight],
+        [sources[SEMANTIC][:pool], sources[lexical][:pool]],
+        k=cfg.rrf_k if rrf_k is None else rrf_k,
+        weights=[1.0, cfg.keyword_weight if keyword_weight is None else keyword_weight],
     )[:top_k]
 
 
@@ -173,6 +213,133 @@ def ablation_b(rows, cached, cfg, reranker) -> list[dict]:
     return results
 
 
+def ablation_w(rows, cached, cfg) -> list[dict]:
+    """Fusion weights: keyword_weight x rrf_k, for both hybrids.
+
+    Free, because `candidates_for` re-fuses from the cached unfused source
+    lists - these are parameters of the fusion, not a reason to re-retrieve.
+
+    The incumbent (keyword_weight 0.1, rrf_k 60) is in the grid, so the
+    comparison against it is a row rather than a separate baseline run.
+    """
+    results = []
+    for mode in (HYBRID, HYBRID_BM25):
+        for weight in KEYWORD_WEIGHTS:
+            for rrf_k in RRF_KS:
+                for top_k in WEIGHT_TOP_KS:
+                    ranked = {
+                        r["id"]: [
+                            c["chunk_id"]
+                            for c in candidates_for(
+                                cached[r["question"]],
+                                mode,
+                                top_k,
+                                cfg,
+                                keyword_weight=weight,
+                                rrf_k=rrf_k,
+                            )
+                        ]
+                        for r in rows
+                    }
+                    per_q = score_rows(rows, ranked, top_k)
+                    results.append(
+                        {
+                            "config": {
+                                "mode": mode,
+                                "top_k": top_k,
+                                "keyword_weight": weight,
+                                "rrf_k": rrf_k,
+                                "rerank": False,
+                            },
+                            "summary": summarise(per_q),
+                            "per_question": {q["id"]: q for q in per_q},
+                        }
+                    )
+        logger.info(f"  swept {mode}")
+    return results
+
+
+def ablation_pool(rows, engine, cfg) -> list[dict]:
+    """How wide an FTS pool BM25 needs before its ranking stops improving.
+
+    The one ablation here that re-retrieves, because the pool is a property of
+    the first stage rather than of anything cached. Cheap - one FTS query per
+    question per pool size, no dense retrieval and no cross-encoder.
+
+    Read it as a plateau check, not a tuning knob: if recall is still climbing
+    at 500 then BM25 is being capped by ts_rank's recall and the mode is
+    measuring the wrong thing.
+    """
+    results = []
+    for pool in BM25_POOLS:
+        for top_k in (10, 20):
+            ranked = {
+                r["id"]: [
+                    c["chunk_id"]
+                    for c in engine._bm25_candidates(r["question"], top_k, pool=pool)
+                ]
+                for r in rows
+            }
+            per_q = score_rows(rows, ranked, top_k)
+            results.append(
+                {
+                    "config": {"mode": BM25, "top_k": top_k, "bm25_pool": pool},
+                    "summary": summarise(per_q),
+                    "per_question": {q["id"]: q for q in per_q},
+                }
+            )
+        logger.info(f"  bm25 pool={pool}")
+    return results
+
+
+def timed_pass(engine, rows, cfg, sample: int = 20) -> list[dict]:
+    """Per-stage latency, measured through the real search path.
+
+    Separate from the quality sweep and not derived from it. The sweep caches
+    every question's candidates once and rebuilds sixty configurations in
+    memory, which is what makes it free - and which means timing it would
+    report the cache's latency rather than retrieval's.
+
+    A sample rather than the full set: latency does not vary with the question
+    the way relevance does, and this is the only part of the ablation that
+    pays real I/O per configuration.
+    """
+    questions = [r["question"] for r in rows][:sample]
+    results = []
+
+    configs = [{"mode": m, "top_k": k, "rerank": False} for m in MODES for k in TOP_KS]
+    configs += [
+        {"mode": HYBRID, "top_k": k, "rerank": True, "rerank_candidates": pool}
+        for pool in RERANK_POOLS
+        for k in RERANK_TOP_KS
+    ]
+
+    for i, config in enumerate(configs, 1):
+        stages: dict[str, list[float]] = {}
+        for q in questions:
+            response = engine.search(
+                q,
+                top_k=config["top_k"],
+                rerank=config["rerank"],
+                rerank_top_k=config["top_k"],
+                mode=config["mode"],
+                candidates=config.get("rerank_candidates"),
+                neighbour_window=0,
+            )
+            for stage, ms in (response.timings or {}).items():
+                stages.setdefault(stage, []).append(ms)
+
+        summary = {}
+        for stage, values in stages.items():
+            mean, half = mean_ci(values)
+            summary[stage] = round(mean, 2)
+            summary[f"{stage}_ci"] = round(half, 2)
+        results.append({"config": config, "n": len(questions), "latency_ms": summary})
+        if i % 10 == 0 or i == len(configs):
+            logger.info(f"  timed {i}/{len(configs)} configs")
+    return results
+
+
 def compare(a: dict, b: dict, metric: str = "recall") -> dict:
     """Paired difference between two configurations on the same questions.
 
@@ -200,7 +367,7 @@ def best(results: list[dict], metric: str = "ndcg") -> dict:
     return max(results, key=lambda r: r["summary"][metric])
 
 
-def run(which: str) -> dict:
+def run(which: str, timed: bool = False, sample: int = 20) -> dict:
     from config import load
     from eval.review import load_curated
     from process.embedder import Reranker
@@ -230,11 +397,26 @@ def run(which: str) -> dict:
     if which in ("b", "all"):
         logger.info("ablation B: reranking pool x returned x floor")
         out["b"] = ablation_b(rows, cached, app.search, Reranker(device=app.devices.reranker))
+    if which in ("w", "all"):
+        logger.info("ablation W: fusion weight x rrf_k")
+        out["w"] = ablation_w(rows, cached, app.search)
+    if which in ("pool", "all"):
+        logger.info("ablation POOL: how wide an FTS pool BM25 needs")
+        out["pool"] = ablation_pool(rows, engine, app.search)
+    if timed:
+        logger.info(f"timed pass: real search path, {sample} questions per config")
+        out["timings"] = timed_pass(engine, rows, app.search, sample=sample)
     return out
 
 
 def report(out: dict) -> None:
-    for key, title in (("a", "A - no reranking"), ("b", "B - reranking")):
+    titles = (
+        ("a", "A - no reranking"),
+        ("b", "B - reranking"),
+        ("w", "W - fusion weights"),
+        ("pool", "POOL - bm25 first-stage width"),
+    )
+    for key, title in titles:
         if key not in out:
             continue
         print(f"\n=== ablation {title} ===")
@@ -245,11 +427,80 @@ def report(out: dict) -> None:
             print(
                 f"  ndcg={s['ndcg']:.3f}+/-{s['ndcg_ci']:.3f}  "
                 f"recall={s['recall']:.3f}+/-{s['recall_ci']:.3f}  "
-                f"mrr={s['mrr']:.3f}  {label}"
+                f"map={s['map']:.3f}  mrr={s['mrr']:.3f}  {label}"
             )
 
+    if "w" in out:
+        weight_report(out["w"])
+    if "pool" in out:
+        pool_report(out["pool"])
+    if "timings" in out:
+        latency_report(out["timings"])
     if "a" in out and "b" in out:
         matched_report(out)
+
+
+def weight_report(rows: list[dict]) -> None:
+    """nDCG against keyword_weight, at the configured rrf_k.
+
+    Printed as a grid rather than a top-10 because the question is the shape
+    of the curve - is 0.1 the peak or the edge of the range - and a leaderboard
+    hides that.
+    """
+    print("\n=== fusion weight sweep (rrf_k=60, ndcg) ===")
+    modes = sorted({r["config"]["mode"] for r in rows})
+    print(f"{'weight':>7} " + "".join(f"{m + ' k=' + str(k):>20}" for m in modes for k in WEIGHT_TOP_KS))
+    for weight in KEYWORD_WEIGHTS:
+        cells = []
+        for mode in modes:
+            for top_k in WEIGHT_TOP_KS:
+                match = [
+                    r
+                    for r in rows
+                    if r["config"]["mode"] == mode
+                    and r["config"]["keyword_weight"] == weight
+                    and r["config"]["rrf_k"] == 60
+                    and r["config"]["top_k"] == top_k
+                ]
+                cells.append(f"{match[0]['summary']['ndcg']:.3f}" if match else "-")
+        marker = "  <- shipped" if weight == 0.1 else ""
+        print(f"{weight:>7} " + "".join(f"{c:>20}" for c in cells) + marker)
+
+
+def pool_report(rows: list[dict]) -> None:
+    """Whether BM25's ranking has stopped improving with a wider first stage.
+
+    If recall is still climbing at the widest pool, BM25 is capped by ts_rank's
+    recall and the bm25 arm is not measuring what it claims to.
+    """
+    print("\n=== bm25 first-stage pool ===")
+    print(f"{'pool':>6} {'k':>4} {'recall':>9} {'ndcg':>9}")
+    for r in sorted(rows, key=lambda r: (r["config"]["top_k"], r["config"]["bm25_pool"])):
+        c, s = r["config"], r["summary"]
+        print(f"{c['bm25_pool']:>6} {c['top_k']:>4} {s['recall']:>9.3f} {s['ndcg']:>9.3f}")
+
+
+def latency_report(rows: list[dict]) -> None:
+    """Mean per-stage milliseconds, and what the stages fail to account for.
+
+    The unattributed column is the check: a large gap means a stage is not
+    being timed, and the accuracy-latency figures would then be drawn against
+    a number that is not the cost of retrieval.
+    """
+    print("\n=== latency, real search path (mean ms) ===")
+    stages = ("embed", "pinecone", "hydrate", "keyword_sql", "bm25", "fuse", "rerank")
+    header = f"{'mode':>12} {'k':>4} {'pool':>5} {'total':>8}"
+    print(header + "".join(f"{s:>11}" for s in stages) + f"{'other':>8}")
+    for r in rows:
+        c, t = r["config"], r["latency_ms"]
+        named = sum(t.get(s, 0.0) for s in stages)
+        cells = "".join(f"{t.get(s, 0.0):>11.1f}" for s in stages)
+        print(
+            f"{c['mode']:>12} {c['top_k']:>4} "
+            f"{c.get('rerank_candidates', '-'):>5} {t.get('total', 0.0):>8.1f}"
+            + cells
+            + f"{t.get('total', 0.0) - named:>8.1f}"
+        )
 
 
 def matched_report(out: dict) -> None:
@@ -284,12 +535,18 @@ def matched_report(out: dict) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Retrieval ablations, no LLM calls")
-    parser.add_argument("which", choices=["a", "b", "all"])
+    parser.add_argument("which", choices=["a", "b", "w", "pool", "all"])
+    parser.add_argument(
+        "--timed",
+        action="store_true",
+        help="also measure per-stage latency through the real search path",
+    )
+    parser.add_argument("--sample", type=int, default=20, help="questions per timed config")
     parser.add_argument("--no-save", action="store_true")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    out = run(args.which)
+    out = run(args.which, timed=args.timed, sample=args.sample)
     report(out)
 
     if not args.no_save:

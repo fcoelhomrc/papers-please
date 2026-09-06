@@ -401,6 +401,7 @@ class SearchEngine(PostgresInterface):
         top_k: int,
         min_score: float | None = None,
         timings: dict | None = None,
+        pool: int | None = None,
     ) -> list[dict]:
         """FTS finds the chunks containing a query lexeme; BM25 ranks them.
 
@@ -414,7 +415,11 @@ class SearchEngine(PostgresInterface):
         """
         from config import load
 
-        pool = load().search.bm25_pool
+        # Overridable so eval/ablations.py can sweep it and check the metric
+        # has plateaued - a pool too narrow measures ts_rank's recall under
+        # BM25's name.
+        if pool is None:
+            pool = load().search.bm25_pool
         with record(timings, "keyword_sql"):
             with Session(self.engine) as session:
                 # No min_score here: the floor is in BM25's units, and
