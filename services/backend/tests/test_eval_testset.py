@@ -315,9 +315,7 @@ class TestPersonas:
         """The graph stage writes them; generate must still run before it."""
         import eval.testset as ts
 
-        monkeypatch.setattr(ts, "PERSONAS_PATH", tmp_path / "absent.json")
-
-        assert ts.load_personas() is None
+        assert ts.load_personas(tmp_path / "absent.json") is None
 
     def test_round_trips_through_disk(self, tmp_path, monkeypatch):
         """Persisted so a regenerated test set is the same test set - new
@@ -328,9 +326,8 @@ class TestPersonas:
 
         path = tmp_path / "personas.json"
         path.write_text(json.dumps([{"name": "n", "role_description": "r"}]))
-        monkeypatch.setattr(ts, "PERSONAS_PATH", path)
 
-        assert ts.load_personas()[0].name == "n"
+        assert ts.load_personas(path)[0].name == "n"
 
 
 class TestPermissiveTokenizer:
@@ -493,3 +490,116 @@ class TestHopMarkers:
         from eval.testset import map_chunk_ids
 
         assert map_chunk_ids(["<1-hop>\n\nmangled"], {"alpha": 7}) == []
+
+
+class TestThresholdMeasurement:
+    """COSINE_THRESHOLD was measured on the pooled 400-node graph. Within one
+    topic every summary resembles every other more closely, so the same number
+    can produce a near-complete graph - and clustering a near-complete graph is
+    what hung a run for 13 minutes at 0% CPU."""
+
+    def _kg(self, vectors):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            nodes=[SimpleNamespace(properties={"summary_embedding": v}) for v in vectors]
+        )
+
+    def test_a_stricter_threshold_never_admits_more_edges(self):
+        from eval.testset import measure_thresholds
+
+        counts = measure_thresholds(
+            self._kg([[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.7, 0.7]])
+        )
+
+        assert all(
+            counts[a] <= counts[b]
+            for a, b in zip(sorted(counts, reverse=True), sorted(counts, reverse=True)[1:])
+        )
+
+    def test_counts_each_pair_once(self):
+        """The builder makes one edge per unordered pair. Counting the full
+        matrix would double it and pick a threshold twice as strict as needed."""
+        from eval.testset import measure_thresholds
+
+        counts = measure_thresholds(self._kg([[1.0, 0.0], [1.0, 0.0]]), candidates=(0.5,))
+
+        assert counts[0.5] == 1
+
+    def test_a_graph_too_small_to_have_pairs_reports_nothing(self):
+        from eval.testset import measure_thresholds
+
+        assert measure_thresholds(self._kg([[1.0, 0.0]]), candidates=(0.5,)) == {0.5: 0}
+
+    def test_nodes_without_an_embedding_are_skipped(self):
+        """prune_incomplete should have removed them, but a survivor must not
+        crash the measurement or be counted as a zero vector."""
+        from types import SimpleNamespace
+
+        from eval.testset import measure_thresholds
+
+        kg = SimpleNamespace(
+            nodes=[
+                SimpleNamespace(properties={"summary_embedding": [1.0, 0.0]}),
+                SimpleNamespace(properties={"summary_embedding": [1.0, 0.0]}),
+                SimpleNamespace(properties={"summary_embedding": None}),
+            ]
+        )
+
+        assert measure_thresholds(kg, candidates=(0.5,))[0.5] == 1
+
+
+class TestChooseThreshold:
+    def test_prefers_the_most_generous_affordable_threshold(self):
+        """Lower threshold means more clusters to draw multi-hop questions
+        from, right up to where clustering stops returning."""
+        from eval.testset import choose_threshold
+
+        assert choose_threshold({0.90: 10, 0.85: 100, 0.80: 900}, cap=1500) == 0.80
+
+    def test_skips_thresholds_that_would_not_cluster(self):
+        from eval.testset import choose_threshold
+
+        assert choose_threshold({0.90: 10, 0.85: 100, 0.80: 9000}, cap=1500) == 0.85
+
+    def test_falls_back_to_the_strictest_when_all_overflow(self):
+        """A complete graph at every candidate is a corpus problem, not a
+        reason to hang - take the strictest and let assert_clusters complain
+        if it left nothing to generate from."""
+        from eval.testset import choose_threshold
+
+        assert choose_threshold({0.90: 9000, 0.85: 20000}, cap=1500) == 0.90
+
+
+class TestMergeGenerated:
+    def test_ids_are_reassigned_across_topics(self, tmp_path, monkeypatch):
+        """Per-topic files each start at q0000. Two topics owning q0000 would
+        merge two questions' review state into one."""
+        import json
+
+        import eval.testset as ts
+
+        monkeypatch.setattr(ts, "TESTSET_DIR", tmp_path)
+        monkeypatch.setattr(ts, "GENERATED_PATH", tmp_path / "generated.jsonl")
+        for topic in ("agents", "alignment"):
+            (tmp_path / f"generated-{topic}.jsonl").write_text(
+                json.dumps({"id": "q0000", "topics": [topic], "synthesizer": "s"}) + "\n"
+            )
+
+        rows = ts.merge_generated(["agents", "alignment"])
+
+        assert [r["id"] for r in rows] == ["q0000", "q0001"]
+
+    def test_a_missing_topic_file_does_not_abort_the_merge(self, tmp_path, monkeypatch):
+        """One topic failing generation should not cost the other four."""
+        import json
+
+        import eval.testset as ts
+
+        monkeypatch.setattr(ts, "TESTSET_DIR", tmp_path)
+        monkeypatch.setattr(ts, "GENERATED_PATH", tmp_path / "generated.jsonl")
+        (tmp_path / "generated-agents.jsonl").write_text(
+            json.dumps({"id": "q0000", "topics": ["agents"], "synthesizer": "s"}) + "\n"
+        )
+
+        assert len(ts.merge_generated(["agents", "missing"])) == 1

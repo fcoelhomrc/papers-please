@@ -255,7 +255,12 @@ class RagasConfig(BaseModel):
     #
     # The cost is bounded by what the model actually emits, not by this
     # ceiling, so headroom is close to free while truncation is fatal.
-    generator_max_tokens: int = 8192
+    #
+    # 8192 -> 16384 alongside raising reasoning_effort to medium. The two move
+    # together: more effort means more reasoning tokens against the same
+    # ceiling, and hitting the ceiling is not a degraded answer but an
+    # LLMDidNotFinishException that kills the run.
+    generator_max_tokens: int = 16384
 
     # OpenRouter reasoning effort for the generator.
     #
@@ -274,7 +279,13 @@ class RagasConfig(BaseModel):
     #
     # Empty string leaves the provider default alone, for a model that does
     # not accept the parameter.
-    reasoning_effort: str = "low"
+    #
+    # low -> medium for the v2 test set. Low was a workaround for the failure
+    # above, not a judgement that low effort writes good questions, and the v1
+    # set generated under it was not trusted on inspection. Medium is bounded
+    # (unlike the default, which loops) so it cannot reproduce the runaway,
+    # and generator_max_tokens doubled with it for headroom.
+    reasoning_effort: str = "medium"
 
 
 class Config(BaseModel):
