@@ -182,3 +182,21 @@ class TestBuildAgent:
         messages = result["messages"]
         assert messages[1].tool_calls[0]["name"] == "search_chunks"
         assert "doc_id" in messages[-1].content and "9" in messages[-1].content
+
+
+class TestOpenRouterTemperature:
+    """Temperature was unset, so everything through openrouter_chat - agent,
+    generator and judge alike - ran at ChatOpenAI's default 0.7. A judge that
+    samples scores differently on identical input, which makes an A/B
+    comparison a measurement of the sampler."""
+
+    def test_defaults_to_zero(self, monkeypatch):
+        from orchestrator.llm import openrouter_chat
+
+        monkeypatch.setenv("OPENROUTER_API_KEY", "k")
+        cfg = MagicMock()
+        cfg.llm.openrouter_url = "http://openrouter"
+        with patch("orchestrator.llm.ChatOpenAI") as chat:
+            openrouter_chat("m", 100, cfg)
+
+        assert chat.call_args.kwargs["temperature"] == 0.0

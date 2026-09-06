@@ -36,17 +36,27 @@ OPENROUTER_HEADERS = {
 }
 
 
-def openrouter_chat(model: str, max_tokens: int, cfg) -> ChatOpenAI:
+def openrouter_chat(
+    model: str, max_tokens: int, cfg, temperature: float = 0.0
+) -> ChatOpenAI:
     """A ChatOpenAI pointed at OpenRouter.
 
     The key is read here rather than at import time so the rest of the app
     (tests, replay mode, the search-only endpoints) still works without one.
+
+    Temperature defaults to 0, which it did not before: it was simply unset,
+    so everything through this function - the agent, the test-set generator
+    and the *judge* - ran at ChatOpenAI's default of 0.7. A judge that samples
+    is a judge whose score moves between runs on identical input, which turns
+    every A/B comparison into a measurement of the sampler. Filed at
+    docs/judge-selection-experiment.md:229 and unfixed until now.
     """
     return ChatOpenAI(
         base_url=cfg.llm.openrouter_url,
         api_key=os.environ["OPENROUTER_API_KEY"],
         model=model,
         max_tokens=max_tokens,
+        temperature=temperature,
         default_headers=OPENROUTER_HEADERS,
     )
 
