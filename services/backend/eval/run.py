@@ -212,7 +212,7 @@ def score_retrieval(rows: list[dict], retrieved: list[list[int]]) -> dict:
     return out
 
 
-def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[list[int]]]:
+def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[list[int]], int]:
     """Run the pipeline over every question, surviving individual failures.
 
     One question's failure must never take the other N-1 down: a real incident
@@ -221,12 +221,13 @@ def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[l
     Catch, record the failure as the answer, keep going.
     """
     records, retrieved = [], []
-    empty = 0
+    empty = failed = 0
     for i, row in enumerate(rows, 1):
         try:
             result = pipeline.answer(row["question"])
         except Exception as e:
             print(f"[{i}/{len(rows)}] FAILED: {row['question'][:60]!r} - {e}")
+            failed += 1
             result = {"answer": f"error: pipeline failed ({e})", "contexts": [], "chunk_ids": []}
         else:
             # An empty answer is a silent failure, and it looks exactly like a
@@ -256,6 +257,18 @@ def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[l
             }
         )
 
+    # A run that lost its network partway through still *completes*: every
+    # question after the drop records its exception as the answer, the judge
+    # scores those strings, and the result file looks structurally valid. It
+    # would then win judged_by_arm()'s newest-run-per-arm and silently replace
+    # a good run in the figures. One or two failures are the per-question
+    # resilience working as intended; a tenth of the set is a broken run.
+    if failed > max(2, len(rows) // 10):
+        raise RuntimeError(
+            f"{failed}/{len(rows)} questions failed - refusing to write a result "
+            f"file that would look valid. Usually a dropped connection partway "
+            f"through; re-run this arm."
+        )
     if empty:
         # Refuse rather than spend on judging blanks. Every generation metric
         # is undefined against an empty response, so the run would cost full
@@ -266,7 +279,7 @@ def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[l
             f"that llm.model is not a reasoning model whose max_tokens is too "
             f"small to leave room for an answer."
         )
-    return records, retrieved
+    return records, retrieved, failed
 
 
 def run_eval(
@@ -280,7 +293,7 @@ def run_eval(
     retrieval: dict | None = None,
     usage_parser=get_token_usage_for_openai,
 ) -> dict:
-    records, retrieved = answer_all(pipeline, rows)
+    records, retrieved, failed = answer_all(pipeline, rows)
 
     # Memoised by a hash of the prompt, so re-running an unchanged set (a
     # report tweak, a crash after answers were generated) re-reads instead of
@@ -302,6 +315,13 @@ def run_eval(
     per_question = df.to_dict(orient="records")
     names = [m.name for m in METRICS if m.name in df.columns]
 
+    # How many questions each metric actually scored. A judge call that ran out
+    # of output budget is recorded by ragas as NaN, and pandas' .mean() skips
+    # NaN - so a metric scored on half the set reads as a clean number with
+    # nothing to say it was halved. Coverage rides beside every mean, because
+    # two metrics scored over different subsets are not comparable.
+    coverage = {n: int(df[n].notna().sum()) for n in names}
+
     abstained = [is_abstention(r["response"]) for r in records]
     means = {n: float(df[n].mean()) for n in names}
     # Relevancy scores a noncommittal answer 0, so a correct abstention drags
@@ -314,8 +334,10 @@ def run_eval(
         "kind": "judged",
         "run_at": datetime.now(timezone.utc).isoformat(),
         "means": means,
+        "coverage": coverage,
         "means_excluding_abstentions": means_answered,
         "n_abstentions": sum(abstained),
+        "n_failed": failed,
         "n_questions": len(rows),
         "answerer_model": model_name,
         "judge_model": judge_model_name,
@@ -386,14 +408,18 @@ def build_pipeline(versions: dict[str, str], arm: str | None = None,
     return pipeline, cfg.llm.model
 
 
-# 2048 -> 8192. Faithfulness emits one verdict with a reason per statement,
+# 2048 -> 8192 -> 32768. Faithfulness emits a verdict with a reason per statement,
 # against every retrieved context at once, so its output grows with both the
 # answer's length and top_k. At 2048 it raised LLMDidNotFinishException, which
 # ragas records as nan rather than as an error - the metric simply comes back
 # empty while every other metric scores normally, which reads as a broken
 # judge instead of a truncated one. Cost is bounded by what is emitted, not by
-# this ceiling.
-JUDGE_MAX_TOKENS = 8192
+# this ceiling. 8192 was still not enough: an audit found faithfulness nan on
+# 51/100 of the first full run and 18-21/100 of two arms. Because pandas skips
+# NaN in .mean(), the metric read as a clean number computed over half the set,
+# and the arms producing the longest answers truncated most often - so the
+# means were not comparable across arms either.
+JUDGE_MAX_TOKENS = 32768
 
 
 def judge_llm(cfg):
@@ -429,12 +455,15 @@ def fmt(output: dict) -> None:
           f"| judge={output['judge_model']}")
     print(f"retrieval: {output['retrieval_config']}\n")
 
+    n = output["n_questions"]
     print("judged (generation):")
     for name, value in sorted(output["means"].items()):
-        excl = output["means_excluding_abstentions"].get(name)
-        tail = f"   (excluding abstentions: {excl:.3f})" if excl is not None else ""
-        print(f"  {name:<34} {value:.3f}{tail}")
+        scored = output.get("coverage", {}).get(name, n)
+        mark = "" if scored == n else f"   <- scored {scored}/{n}, NOT comparable"
+        print(f"  {name:<34} {value:.3f}   n={scored}{mark}")
     print(f"  {'abstentions':<34} {output['n_abstentions']}")
+    if output.get("n_failed"):
+        print(f"  {'pipeline failures':<34} {output['n_failed']}")
 
     if output["retrieval_metrics"]:
         print("\nretrieval (chunk-id labels, no judge):")

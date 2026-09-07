@@ -39,7 +39,7 @@ class TestAnswerAll:
             "answer": "the answer", "contexts": ["c1", "c2"], "chunk_ids": [7, 8]
         }
 
-        records, retrieved = answer_all(pipeline, [row("q0001", "why?")])
+        records, retrieved, _ = answer_all(pipeline, [row("q0001", "why?")])
 
         assert records == [
             {
@@ -56,7 +56,7 @@ class TestAnswerAll:
         pipeline = MagicMock()
         pipeline.answer.return_value = {"answer": "nothing found", "contexts": [], "chunk_ids": []}
 
-        records, _ = answer_all(pipeline, [row("q0001")])
+        records, *_ = answer_all(pipeline, [row("q0001")])
 
         assert records[0]["retrieved_contexts"] == ["(no context retrieved)"]
 
@@ -71,7 +71,7 @@ class TestAnswerAll:
             {"answer": "a3", "contexts": ["c3"], "chunk_ids": [3]},
         ]
 
-        records, retrieved = answer_all(
+        records, retrieved, _ = answer_all(
             pipeline, [row("q1"), row("q2"), row("q3")]
         )
 
@@ -201,6 +201,62 @@ class TestEmptyAnswerGuard:
         pipeline = MagicMock()
         pipeline.answer.side_effect = RuntimeError("boom")
 
-        records, _ = answer_all(pipeline, [row("q1")])
+        records, *_ = answer_all(pipeline, [row("q1")])
 
         assert "boom" in records[0]["response"]
+
+
+class TestNetworkLossGuard:
+    """A run that loses its connection partway through still completes: every
+    question after the drop records its exception as the answer, the judge
+    scores those strings, and the result file looks structurally valid. It
+    would then win judged_by_arm()'s newest-run-per-arm and silently replace a
+    good run in the figures."""
+
+    def test_refuses_when_most_questions_failed(self):
+        pipeline = MagicMock()
+        pipeline.answer.side_effect = RuntimeError("connection reset")
+
+        with pytest.raises(RuntimeError, match="refusing to write"):
+            answer_all(pipeline, [row(f"q{i}") for i in range(20)])
+
+    def test_a_couple_of_failures_still_completes(self):
+        """Per-question resilience is the point - one bad question must not
+        discard the other 99 already paid for."""
+        pipeline = MagicMock()
+        pipeline.answer.side_effect = (
+            [RuntimeError("blip")]
+            + [{"answer": "a", "contexts": ["c"], "chunk_ids": [1]}] * 19
+        )
+
+        records, _, failed = answer_all(pipeline, [row(f"q{i}") for i in range(20)])
+
+        assert len(records) == 20 and failed == 1
+
+
+class TestCoverage:
+    """A judge call that runs out of output budget is recorded by ragas as
+    NaN, and pandas' .mean() skips NaN - so a metric scored over half the set
+    reads as a clean number with nothing to say it was halved. An audit found
+    faithfulness nan on 51 of 100 questions in a run whose headline figure had
+    already been reported."""
+
+    def test_reports_how_many_questions_each_metric_scored(self, tmp_path):
+        import math
+
+        pipeline = MagicMock()
+        pipeline.answer.return_value = {"answer": "a", "contexts": ["c"], "chunk_ids": [1]}
+        result = MagicMock()
+        result.to_pandas.return_value = pd.DataFrame([
+            {"faithfulness": 0.9, "answer_relevancy": 0.8},
+            {"faithfulness": math.nan, "answer_relevancy": 0.7},
+        ])
+
+        with (
+            patch("eval.run.RESULTS_DIR", tmp_path / "results"),
+            patch("eval.run.EvaluationDataset"),
+            patch("eval.run.evaluate", return_value=result),
+        ):
+            out = run_eval(pipeline, [row("q1"), row("q2")], MagicMock(), MagicMock())
+
+        assert out["coverage"] == {"faithfulness": 1, "answer_relevancy": 2}
