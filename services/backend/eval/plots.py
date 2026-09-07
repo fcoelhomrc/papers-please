@@ -453,7 +453,7 @@ def fig_query_arms(data):
         ax.set_xticks(x)
         ax.set_xticklabels([str(k) for k in ks])
         ax.set_xlabel(label("top_k"))
-        facet(ax, label(mode))
+        facet(ax, f"Mode = {label(mode)}")
         ax.grid(axis="y", zorder=0)
         ax.set_axisbelow(True)
     np.atleast_1d(axes)[0].set_ylabel(label("ndcg"))

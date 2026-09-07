@@ -91,6 +91,52 @@ class FixedPipeline:
         )
 
 
+class ArmPipeline:
+    """FixedPipeline, but retrieval goes through a query arm.
+
+    Exists so the judged branch can score the arms on answer quality, not only
+    on chunk-id retrieval. The free branch already showed every arm losing
+    ground on retrieval; whether that costs anything a reader would notice in
+    the *answer* is a different question, and only a judge can answer it.
+
+    The transform itself is read from the arm's disk cache - the same queries
+    the free branch swept - so a judged arm and a free arm are the same arm,
+    not two independent LLM rewrites of the same question.
+    """
+
+    def __init__(self, llm, search_engine, system_prompt, arm, queries,
+                 mode, top_k=10):
+        self._llm = llm
+        self._engine = search_engine
+        self._system_prompt = system_prompt
+        self._arm = arm
+        self._queries = queries
+        self._mode = mode
+        self._top_k = top_k
+
+    def answer(self, question: str) -> AnswerResult:
+        from config import load
+        from eval.query_arms import retrieve_for
+
+        qs = self._queries.get(question) or [question]
+        chunks = retrieve_for(
+            self._engine, self._arm, qs, self._top_k, load().search, self._mode
+        )
+        contexts = [c["chunk_text"] for c in chunks]
+        context_block = "\n\n".join(f"[{i + 1}] {c}" for i, c in enumerate(contexts))
+
+        result = self._llm.invoke([
+            {"role": "system", "content": self._system_prompt},
+            {"role": "user", "content": f"Context:\n{context_block}\n\nQuestion: {question}"},
+        ])
+        return AnswerResult(
+            answer=result.content,
+            contexts=contexts,
+            doc_ids=[c["doc_id"] for c in chunks],
+            chunk_ids=[c["chunk_id"] for c in chunks],
+        )
+
+
 class AgenticPipeline:
     def __init__(self, agent):
         self._agent = agent

@@ -331,13 +331,15 @@ def run_eval(
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    path = RESULTS_DIR / f"judged-{stamp}.json"
+    arm = (retrieval or {}).get("arm", "none")
+    path = RESULTS_DIR / f"judged-{arm}-{stamp}.json"
     path.write_text(json.dumps(output, indent=2, default=str))
     output["results_path"] = str(path)
     return output
 
 
-def build_pipeline(versions: dict[str, str]) -> tuple[Pipeline, str]:
+def build_pipeline(versions: dict[str, str], arm: str | None = None,
+                   mode: str | None = None) -> tuple[Pipeline, str]:
     """The fixed baseline only.
 
     The agentic arm is deliberately not evaluated: what it added over this was
@@ -353,6 +355,25 @@ def build_pipeline(versions: dict[str, str]) -> tuple[Pipeline, str]:
     cfg = load()
     llm = make_llm(cfg)
     prompt = load_prompt("fixed_rag", versions["fixed_rag"])
+
+    if arm and arm != "none":
+        import json
+
+        from eval.pipeline import ArmPipeline
+        from eval.query_arms import cache_path
+        from eval.review import load_curated
+
+        blob = json.loads(cache_path(arm).read_text())
+        by_id = blob["queries"]
+        # Keyed by question text, because the pipeline is handed a question and
+        # not a row id.
+        queries = {r["question"]: by_id[r["id"]]
+                   for r in load_curated() if r["id"] in by_id}
+        return ArmPipeline(
+            llm, get_search_engine(), prompt, arm, queries,
+            mode or cfg.search.mode, top_k=cfg.search.top_k,
+        ), cfg.llm.model
+
     pipeline = FixedPipeline(
         llm,
         get_search_engine(),
@@ -420,6 +441,9 @@ def fmt(output: dict) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Judged eval run (costs money)")
     parser.add_argument("--sample", type=int, default=None, help="stratified subset")
+    parser.add_argument("--arm", default=None,
+                        help="query arm to retrieve through (default: none)")
+    parser.add_argument("--mode", default=None, help="retrieval mode override")
     parser.add_argument("--prompt-version", action="append", default=None,
                         help="name=version, e.g. fixed_rag=v1")
     args = parser.parse_args()
@@ -440,7 +464,7 @@ def main():
     if args.sample:
         rows = stratified_sample(rows, args.sample)
 
-    pipeline, answerer = build_pipeline(versions)
+    pipeline, answerer = build_pipeline(versions, arm=args.arm, mode=args.mode)
     judge, judge_model = judge_llm(cfg)
 
     print(f"answering {len(rows)} questions with {answerer}, judging with {judge_model}")
@@ -452,7 +476,8 @@ def main():
         model_name=answerer,
         judge_model_name=judge_model,
         prompt_versions=versions,
-        retrieval={"mode": cfg.search.mode, "top_k": cfg.search.top_k, "rerank": False},
+        retrieval={"mode": args.mode or cfg.search.mode, "top_k": cfg.search.top_k,
+                   "rerank": False, "arm": args.arm or "none"},
         usage_parser=token_usage_parser(cfg),
     )
     fmt(output)
