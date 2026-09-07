@@ -145,6 +145,35 @@ def save_cached(arm: str, queries: dict, model: str, version: str) -> Path:
     return path
 
 
+ORIGINAL_SUFFIX = "+orig"
+
+
+def queries_for(arm: str, rows: list[dict]) -> dict[str, list[str]]:
+    """Every question's queries under one arm, keyed by question id.
+
+    Owns the `+orig` convention so callers cannot disagree about it. Those
+    variants are not separate LLM runs and have no cache file of their own -
+    they are the base arm's transforms with the original question put back at
+    the front, which is how standard multi-query fuses and what the first
+    implementation here left out.
+    """
+    import json
+
+    originals = {r["id"]: r["question"] for r in rows}
+    if arm in ("none", "", None):
+        return {qid: [q] for qid, q in originals.items()}
+
+    base = arm.removesuffix(ORIGINAL_SUFFIX)
+    cached = json.loads(cache_path(base).read_text())["queries"]
+    if base == arm:
+        return {qid: qs for qid, qs in cached.items() if qid in originals}
+    return {
+        qid: [originals[qid]] + [q for q in qs if q != originals[qid]]
+        for qid, qs in cached.items()
+        if qid in originals
+    }
+
+
 def retrieve_for(engine, arm: str, queries: list[str], top_k: int, cfg, mode: str) -> list[dict]:
     """Ranked chunks for one question under one arm.
 

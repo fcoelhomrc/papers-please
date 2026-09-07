@@ -369,38 +369,20 @@ ARM_TOP_KS = (5, 10, 20)
 
 
 def arm_queries(rows) -> dict[str, dict[str, list[str]]]:
-    """The cached transform for each arm, keyed by question id.
+    """The transform for each arm, keyed by question id.
 
-    Read straight off disk rather than regenerated: the whole reason these
-    arms are free to sweep is that a transformed query is a pure function of
-    the question, so the LLM ran once and everything after it re-reads.
+    Delegates to eval.query_arms so the `+orig` convention has one definition;
+    it was duplicated here, and the judged branch could not resolve those arms
+    at all because they have no cache file of their own.
     """
-    import json
+    from eval.query_arms import queries_for
 
-    from eval.query_arms import cache_path
-
-    originals = {r["id"]: r["question"] for r in rows}
-    out = {"none": {qid: [q] for qid, q in originals.items()}}
+    out = {}
     for arm in ARMS:
-        if arm == "none" or arm in WITH_ORIGINAL:
-            continue
-        path = cache_path(arm)
-        if not path.is_file():
-            logger.warning(f"{arm}: no cached queries at {path}, skipping")
-            continue
-        out[arm] = json.loads(path.read_text())["queries"]
-
-    # The +orig variants reuse the same transforms with the question put back
-    # at the front, so they cost no extra LLM calls and no extra retrieval -
-    # the original is already in the cache as the `none` arm.
-    for arm in WITH_ORIGINAL:
-        base = arm.removesuffix("+orig")
-        if base in out:
-            out[arm] = {
-                qid: [originals[qid]] + [q for q in qs if q != originals[qid]]
-                for qid, qs in out[base].items()
-                if qid in originals
-            }
+        try:
+            out[arm] = queries_for(arm, rows)
+        except FileNotFoundError:
+            logger.warning(f"{arm}: no cached queries, skipping")
     return out
 
 

@@ -357,25 +357,19 @@ def build_pipeline(versions: dict[str, str], arm: str | None = None,
     prompt = load_prompt("fixed_rag", versions["fixed_rag"])
 
     if arm or mode:
-        import json
-
         from eval.pipeline import ArmPipeline
-        from eval.query_arms import cache_path
+        from eval.query_arms import queries_for
         from eval.review import load_curated
 
         arm = arm or "none"
         rows = load_curated()
-        if arm == "none":
-            # The untransformed question, routed through the same retrieval
-            # path as every arm. Not FixedPipeline: that reads the configured
-            # mode and would quietly make the baseline a different retriever
-            # from the arms it is the baseline for.
-            queries = {r["question"]: [r["question"]] for r in rows}
-        else:
-            by_id = json.loads(cache_path(arm).read_text())["queries"]
-            # Keyed by question text, because the pipeline is handed a question
-            # and not a row id.
-            queries = {r["question"]: by_id[r["id"]] for r in rows if r["id"] in by_id}
+        # `none` routes through the same path as every arm rather than through
+        # FixedPipeline, which reads the configured mode and would make the
+        # baseline a different retriever from the arms it is the baseline for.
+        by_id = queries_for(arm, rows)
+        # Keyed by question text, because the pipeline is handed a question and
+        # not a row id.
+        queries = {r["question"]: by_id[r["id"]] for r in rows if r["id"] in by_id}
         return ArmPipeline(
             llm, get_search_engine(), prompt, arm, queries,
             mode or cfg.search.mode, top_k=cfg.search.top_k,
