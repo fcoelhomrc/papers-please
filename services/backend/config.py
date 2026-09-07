@@ -202,7 +202,10 @@ class LLMConfig(BaseModel):
     # "same as model".
     generator_model: str = "z-ai/glm-5.3-flash"
 
-    max_tokens: int = 512  # keep replies (and cost) bounded - this agent's replies are short
+    # 512 -> 1024. Short replies are still the goal, but 512 left no room for
+    # a grounded answer over ten retrieved chunks, and a truncated answer is
+    # scored as an unfaithful one rather than as a truncated one.
+    max_tokens: int = 1024
 
     openrouter_url: str = "https://openrouter.ai/api/v1"
     vllm_url: str = "http://localhost:8001/v1"

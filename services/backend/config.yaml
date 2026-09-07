@@ -68,7 +68,13 @@ llm:
   # `vendor/model`, with `:free` selecting the free tier. Free models are
   # rate limited hard - fine for the app, not enough for a 50-question
   # judged eval on a free-tier account. See the README.
-  model: minimax/minimax-m2.7:free
+  # Was minimax/minimax-m2.7:free, which is a *reasoning* model: on a real
+  # RAG question it spends the whole completion budget thinking and returns
+  # an empty answer, which reads as a successful run until faithfulness comes
+  # back nan. 3 of 10 questions came back blank that way. qwen3-30b-a3b is an
+  # instruct model at $0.048/M in - a genuine budget tier rather than a free
+  # tier with a reasoning tax.
+  model: qwen/qwen3-30b-a3b-instruct-2507
   # The judge, pinned separately from `model`. Must NOT be the pipeline
   # model - a model grading its own output is self-preference bias. Scores
   # identically to the old claude-haiku-4.5 judge at 1/15th the cost; see

@@ -174,3 +174,33 @@ class TestRunEval:
             out = run_eval(pipeline, [row("q1"), row("q2")], MagicMock(), MagicMock())
 
         assert out["n_abstentions"] == 1 and out["means_excluding_abstentions"]
+
+
+class TestEmptyAnswerGuard:
+    """An empty answer looks like a successful run right up until the metrics
+    come back nan. It cost a full judged run to find out once; the guard makes
+    it fail at the point it happens, before any judge call is paid for."""
+
+    def test_refuses_to_judge_blank_answers(self):
+        pipeline = MagicMock()
+        pipeline.answer.return_value = {"answer": "", "contexts": ["c"], "chunk_ids": [1]}
+
+        with pytest.raises(RuntimeError, match="came back empty"):
+            answer_all(pipeline, [row("q1")])
+
+    def test_whitespace_only_counts_as_empty(self):
+        pipeline = MagicMock()
+        pipeline.answer.return_value = {"answer": "   \n", "contexts": ["c"], "chunk_ids": [1]}
+
+        with pytest.raises(RuntimeError, match="came back empty"):
+            answer_all(pipeline, [row("q1")])
+
+    def test_a_recorded_pipeline_failure_is_not_treated_as_empty(self):
+        """The error text is a real response for judging purposes - it is the
+        run telling you what happened, not a blank."""
+        pipeline = MagicMock()
+        pipeline.answer.side_effect = RuntimeError("boom")
+
+        records, _ = answer_all(pipeline, [row("q1")])
+
+        assert "boom" in records[0]["response"]

@@ -221,6 +221,7 @@ def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[l
     Catch, record the failure as the answer, keep going.
     """
     records, retrieved = [], []
+    empty = 0
     for i, row in enumerate(rows, 1):
         try:
             result = pipeline.answer(row["question"])
@@ -228,7 +229,19 @@ def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[l
             print(f"[{i}/{len(rows)}] FAILED: {row['question'][:60]!r} - {e}")
             result = {"answer": f"error: pipeline failed ({e})", "contexts": [], "chunk_ids": []}
         else:
-            print(f"[{i}/{len(rows)}] ok: {row['question'][:60]!r}")
+            # An empty answer is a silent failure, and it looks exactly like a
+            # successful run until the metrics come back: faithfulness has no
+            # statements to decompose (nan) and relevancy has no answer to
+            # reverse-question (0.0). The cause is usually the answerer, not
+            # the judge - a reasoning model spending its whole budget on
+            # reasoning, or PAPERS_PLEASE_REPLAY leaving make_llm on the
+            # recorded-cassette model, which returns "" for anything it has no
+            # recording of. Say so at the point it happens.
+            if not (result.get("answer") or "").strip():
+                empty += 1
+                print(f"[{i}/{len(rows)}] EMPTY ANSWER: {row['question'][:50]!r}")
+            else:
+                print(f"[{i}/{len(rows)}] ok: {row['question'][:60]!r}")
 
         retrieved.append(result.get("chunk_ids") or [])
         records.append(
@@ -241,6 +254,17 @@ def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[l
                 "retrieved_contexts": result["contexts"] or ["(no context retrieved)"],
                 "reference": row["reference"],
             }
+        )
+
+    if empty:
+        # Refuse rather than spend on judging blanks. Every generation metric
+        # is undefined against an empty response, so the run would cost full
+        # price and report nan.
+        raise RuntimeError(
+            f"{empty}/{len(rows)} answers came back empty - judging these would "
+            f"cost full price for nan. Check PAPERS_PLEASE_REPLAY is unset and "
+            f"that llm.model is not a reasoning model whose max_tokens is too "
+            f"small to leave room for an answer."
         )
     return records, retrieved
 
@@ -267,7 +291,7 @@ def run_eval(
         EvaluationDataset.from_list(records),
         metrics=METRICS,
         llm=LangchainLLMWrapper(judge_llm, cache=cache),
-        embeddings=LangchainEmbeddingsWrapper(judge_embeddings),
+        embeddings=judge_embeddings,
         # Without this ragas records no usage at all and total_tokens()
         # raises. A run that cannot say what it cost is how you end up
         # guessing at the bill instead of reading it.
