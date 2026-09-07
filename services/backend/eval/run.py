@@ -356,19 +356,26 @@ def build_pipeline(versions: dict[str, str], arm: str | None = None,
     llm = make_llm(cfg)
     prompt = load_prompt("fixed_rag", versions["fixed_rag"])
 
-    if arm and arm != "none":
+    if arm or mode:
         import json
 
         from eval.pipeline import ArmPipeline
         from eval.query_arms import cache_path
         from eval.review import load_curated
 
-        blob = json.loads(cache_path(arm).read_text())
-        by_id = blob["queries"]
-        # Keyed by question text, because the pipeline is handed a question and
-        # not a row id.
-        queries = {r["question"]: by_id[r["id"]]
-                   for r in load_curated() if r["id"] in by_id}
+        arm = arm or "none"
+        rows = load_curated()
+        if arm == "none":
+            # The untransformed question, routed through the same retrieval
+            # path as every arm. Not FixedPipeline: that reads the configured
+            # mode and would quietly make the baseline a different retriever
+            # from the arms it is the baseline for.
+            queries = {r["question"]: [r["question"]] for r in rows}
+        else:
+            by_id = json.loads(cache_path(arm).read_text())["queries"]
+            # Keyed by question text, because the pipeline is handed a question
+            # and not a row id.
+            queries = {r["question"]: by_id[r["id"]] for r in rows if r["id"] in by_id}
         return ArmPipeline(
             llm, get_search_engine(), prompt, arm, queries,
             mode or cfg.search.mode, top_k=cfg.search.top_k,
@@ -385,6 +392,16 @@ def build_pipeline(versions: dict[str, str], arm: str | None = None,
     return pipeline, cfg.llm.model
 
 
+# 2048 -> 8192. Faithfulness emits one verdict with a reason per statement,
+# against every retrieved context at once, so its output grows with both the
+# answer's length and top_k. At 2048 it raised LLMDidNotFinishException, which
+# ragas records as nan rather than as an error - the metric simply comes back
+# empty while every other metric scores normally, which reads as a broken
+# judge instead of a truncated one. Cost is bounded by what is emitted, not by
+# this ceiling.
+JUDGE_MAX_TOKENS = 8192
+
+
 def judge_llm(cfg):
     from orchestrator.llm import openrouter_chat
 
@@ -392,8 +409,8 @@ def judge_llm(cfg):
     if cfg.llm.provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
-        return ChatAnthropic(model=model, max_tokens=2048), model
-    return openrouter_chat(model, max_tokens=2048, cfg=cfg), model
+        return ChatAnthropic(model=model, max_tokens=JUDGE_MAX_TOKENS), model
+    return openrouter_chat(model, max_tokens=JUDGE_MAX_TOKENS, cfg=cfg), model
 
 
 def judge_embeddings():

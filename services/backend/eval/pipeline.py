@@ -122,7 +122,11 @@ class ArmPipeline:
         chunks = retrieve_for(
             self._engine, self._arm, qs, self._top_k, load().search, self._mode
         )
-        contexts = [c["chunk_text"] for c in chunks]
+        # `text`, not `chunk_text`: _row_to_chunk names it `text`, and the
+        # KeyError from getting this wrong is swallowed by answer_all's
+        # per-question guard, so it surfaces as every metric scoring 0 rather
+        # than as a crash.
+        contexts = [c["text"] for c in chunks]
         context_block = "\n\n".join(f"[{i + 1}] {c}" for i, c in enumerate(contexts))
 
         result = self._llm.invoke([

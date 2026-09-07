@@ -110,3 +110,26 @@ def test_fixed_pipeline_forwards_its_candidate_pool():
     FixedPipeline(llm, engine, system_prompt="sys", top_k=5, candidates=40).answer("q")
 
     assert engine.search.call_args.kwargs["candidates"] == 40
+
+
+class TestArmPipelineContract:
+    """ArmPipeline reads raw chunk dicts from the engine's private candidate
+    methods, not ChunkResult objects. Getting a key name wrong there does not
+    crash - answer_all catches it per question - it comes back as every metric
+    scoring 0, which reads like a retrieval failure."""
+
+    def test_reads_the_key_the_engine_actually_returns(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        from eval.pipeline import ArmPipeline
+
+        chunk = {"chunk_id": 1, "doc_id": 2, "text": "the passage", "score": 1.0}
+        llm = MagicMock()
+        llm.invoke.return_value = SimpleNamespace(content="an answer")
+
+        with patch("eval.query_arms.retrieve_for", return_value=[chunk]):
+            out = ArmPipeline(llm, MagicMock(), "sys", "none",
+                              {"q": ["q"]}, "semantic").answer("q")
+
+        assert out["contexts"] == ["the passage"] and out["chunk_ids"] == [1]
