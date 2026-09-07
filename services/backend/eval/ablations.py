@@ -340,6 +340,135 @@ def timed_pass(engine, rows, cfg, sample: int = 20) -> list[dict]:
     return results
 
 
+# Ablation C - LLM query arms. `none` is the untransformed question, present
+# as a row so the comparison is paired against the same retrieval path rather
+# than against a number from a different run.
+ARMS = ("none", "multi_query", "decompose", "hyde")
+# HyDE embeds a passage, so it only means anything to the dense retriever.
+# The rest produce ordinary queries and run on either single-source mode.
+ARM_MODES = {
+    "none": (SEMANTIC, BM25),
+    "multi_query": (SEMANTIC, BM25),
+    "decompose": (SEMANTIC, BM25),
+    "hyde": (SEMANTIC,),
+}
+ARM_TOP_KS = (5, 10, 20)
+
+
+def arm_queries(rows) -> dict[str, dict[str, list[str]]]:
+    """The cached transform for each arm, keyed by question id.
+
+    Read straight off disk rather than regenerated: the whole reason these
+    arms are free to sweep is that a transformed query is a pure function of
+    the question, so the LLM ran once and everything after it re-reads.
+    """
+    import json
+
+    from eval.query_arms import cache_path
+
+    out = {"none": {r["id"]: [r["question"]] for r in rows}}
+    for arm in ARMS:
+        if arm == "none":
+            continue
+        path = cache_path(arm)
+        if not path.is_file():
+            logger.warning(f"{arm}: no cached queries at {path}, skipping")
+            continue
+        out[arm] = json.loads(path.read_text())["queries"]
+    return out
+
+
+def cache_arm_candidates(engine, queries: dict, max_k: int) -> dict:
+    """One retrieval per unique (mode, query string), reused across every k.
+
+    Sub-queries repeat across arms and depths, and the same trick that makes
+    ablation A free applies here: retrieve once at max_k, slice afterwards.
+    Without it multi-query alone would issue three retrievals per question per
+    depth per mode.
+    """
+    wanted: dict[str, set[str]] = {SEMANTIC: set(), BM25: set()}
+    for arm, per_question in queries.items():
+        for mode in ARM_MODES.get(arm, ()):
+            for qs in per_question.values():
+                wanted[mode].update(qs)
+
+    cached: dict[tuple[str, str], list[dict]] = {}
+    total = sum(len(v) for v in wanted.values())
+    done = 0
+    for mode, strings in wanted.items():
+        for q in sorted(strings):
+            cached[(mode, q)] = (
+                engine._vector_candidates(q, max_k)
+                if mode == SEMANTIC
+                else engine._bm25_candidates(q, max_k)
+            )
+            done += 1
+            if done % 100 == 0 or done == total:
+                logger.info(f"  retrieved {done}/{total} unique queries")
+    return cached
+
+
+def ablation_c(rows, engine, cfg) -> list[dict]:
+    """Query arms x base mode x top_k, scored on the same questions."""
+    queries = arm_queries(rows)
+    max_k = max(ARM_TOP_KS)
+    cached = cache_arm_candidates(engine, queries, max(max_k, cfg.hybrid_candidates))
+
+    results = []
+    for arm in ARMS:
+        if arm not in queries:
+            continue
+        for mode in ARM_MODES[arm]:
+            for top_k in ARM_TOP_KS:
+                ranked = {}
+                for row in rows:
+                    qs = queries[arm].get(row["id"]) or [row["question"]]
+                    lists = [cached.get((mode, q), []) for q in qs]
+                    if len(lists) == 1:
+                        chunks = lists[0][:top_k]
+                    else:
+                        # Each sub-query contributes its full list, so a chunk
+                        # ranked mid-table by every sub-query survives to
+                        # fusion instead of being cut before agreement shows.
+                        chunks = rrf_fuse(lists, k=cfg.rrf_k)[:top_k]
+                    ranked[row["id"]] = [c["chunk_id"] for c in chunks]
+                per_q = score_rows(rows, ranked, top_k)
+                results.append(
+                    {
+                        "config": {"arm": arm, "mode": mode, "top_k": top_k, "rerank": False},
+                        "summary": summarise(per_q),
+                        "per_question": {q["id"]: q for q in per_q},
+                    }
+                )
+            logger.info(f"  {arm} x {mode}")
+    return results
+
+
+def arm_report(rows: list[dict]) -> None:
+    """Each arm against the untransformed question, same mode and depth.
+
+    Paired, because both answered the same 100 questions - comparing an arm's
+    mean against a baseline from a different row would fold question
+    difficulty into the difference.
+    """
+    base = {(r["config"]["mode"], r["config"]["top_k"]): r
+            for r in rows if r["config"]["arm"] == "none"}
+    print("\n=== query arms vs the untransformed question (ndcg) ===")
+    print(f"{'arm':<13} {'mode':<9} {'k':>3} {'arm':>8} {'plain':>8}   difference")
+    for r in rows:
+        c = r["config"]
+        if c["arm"] == "none":
+            continue
+        plain = base.get((c["mode"], c["top_k"]))
+        if not plain:
+            continue
+        d = compare(r, plain, "ndcg")
+        print(f"{c['arm']:<13} {c['mode']:<9} {c['top_k']:>3} "
+              f"{r['summary']['ndcg']:>8.3f} {plain['summary']['ndcg']:>8.3f}   "
+              f"{d['diff']:+.4f} +/- {d['ci']:.4f}  "
+              f"[{'significant' if d['significant'] else 'tie'}]")
+
+
 def compare(a: dict, b: dict, metric: str = "recall") -> dict:
     """Paired difference between two configurations on the same questions.
 
@@ -403,6 +532,9 @@ def run(which: str, timed: bool = False, sample: int = 20) -> dict:
     if which in ("pool", "all"):
         logger.info("ablation POOL: how wide an FTS pool BM25 needs")
         out["pool"] = ablation_pool(rows, engine, app.search)
+    if which in ("c", "all"):
+        logger.info("ablation C: LLM query arms")
+        out["c"] = ablation_c(rows, engine, app.search)
     if timed:
         logger.info(f"timed pass: real search path, {sample} questions per config")
         out["timings"] = timed_pass(engine, rows, app.search, sample=sample)
@@ -415,6 +547,7 @@ def report(out: dict) -> None:
         ("b", "B - reranking"),
         ("w", "W - fusion weights"),
         ("pool", "POOL - bm25 first-stage width"),
+        ("c", "C - LLM query arms"),
     )
     for key, title in titles:
         if key not in out:
@@ -434,6 +567,8 @@ def report(out: dict) -> None:
         weight_report(out["w"])
     if "pool" in out:
         pool_report(out["pool"])
+    if "c" in out:
+        arm_report(out["c"])
     if "timings" in out:
         latency_report(out["timings"])
     if "a" in out and "b" in out:
@@ -535,7 +670,7 @@ def matched_report(out: dict) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Retrieval ablations, no LLM calls")
-    parser.add_argument("which", choices=["a", "b", "w", "pool", "all"])
+    parser.add_argument("which", choices=["a", "b", "c", "w", "pool", "all"])
     parser.add_argument(
         "--timed",
         action="store_true",

@@ -28,6 +28,11 @@ class AnswerResult(TypedDict):
     # the answer - the judge metrics can't tell "retrieval missed it" apart
     # from "retrieval found it and the model ignored it".
     doc_ids: list[int]
+    # The same list at chunk granularity. Document-level labels cannot say
+    # whether the right *passage* was found, and the curated test set labels
+    # chunks - so scoring the judged branch against the free branch's own
+    # ground truth needs these, not doc_ids.
+    chunk_ids: list[int]
 
 
 class Pipeline(Protocol):
@@ -67,6 +72,7 @@ class FixedPipeline:
         )
         contexts = [r.text for r in response.results]
         doc_ids = [r.doc_id for r in response.results]
+        chunk_ids = [r.chunk_id for r in response.results]
 
         context_block = "\n\n".join(f"[{i + 1}] {c}" for i, c in enumerate(contexts))
         prompt = f"Context:\n{context_block}\n\nQuestion: {question}"
@@ -77,7 +83,12 @@ class FixedPipeline:
                 {"role": "user", "content": prompt},
             ]
         )
-        return AnswerResult(answer=result.content, contexts=contexts, doc_ids=doc_ids)
+        return AnswerResult(
+            answer=result.content,
+            contexts=contexts,
+            doc_ids=doc_ids,
+            chunk_ids=chunk_ids,
+        )
 
 
 class AgenticPipeline:
@@ -95,4 +106,13 @@ class AgenticPipeline:
         # a reported score describes the same retrieval the user is shown.
         contexts, doc_ids = extract_contexts(messages)
 
-        return AnswerResult(answer=messages[-1].content, contexts=contexts, doc_ids=doc_ids)
+        # No chunk_ids: extract_contexts reports document granularity, and the
+        # agentic arm is out of the evaluation anyway. An empty list scores as
+        # "retrieved nothing" rather than silently as a miss, which is the
+        # honest reading if this path is ever measured again.
+        return AnswerResult(
+            answer=messages[-1].content,
+            contexts=contexts,
+            doc_ids=doc_ids,
+            chunk_ids=[],
+        )

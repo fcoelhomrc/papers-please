@@ -1,36 +1,51 @@
-"""Runs a Pipeline against eval/dataset.jsonl and scores it with Ragas.
+"""The judged branch: generate answers, then score them with an LLM judge.
 
-MANUAL ONLY. Costs real Anthropic API calls (your ANTHROPIC_API_KEY - Ragas
-has no key of its own, it just calls whatever LLM object you hand it): one
-call per question for the pipeline's own answer, plus several judge calls
-per metric per question. This is never invoked automatically - not from
-compose.yaml, not from any CI workflow (there isn't one), not from any
-stage worker. It only runs when a human types the command below.
+MANUAL ONLY, and it spends real money.
 
-    uv run python -m eval.run --variant fixed --sample 15   # iterate
-    uv run python -m eval.run --variant agentic             # full, for the ledger
+    uv run python -m eval.run --sample 10        # iterate cheaply
+    uv run python -m eval.run                    # full 100-question run
 
-This is the *expensive* tier. The judge-free retrieval scores (eval.sweep,
-eval.thresholds) measure ranking quality for zero tokens and are the loop to
-run on every retrieval change; reach for this one only when you need to know
-what the generated answer looks like, which is the one thing a judge adds.
+Roughly $0.12 for the full set. Never invoked from compose.yaml, from a stage
+worker, or from anything automatic - it runs when a person types the command.
 
-Three things keep the bill down (#26): only two judged metrics rather than
-four (see METRICS), --sample N for a stratified subset, and judge calls
-memoised on disk so re-running an unchanged dataset re-reads instead of
-re-paying.
+What a judge is for, and what it is not for
+-------------------------------------------
+The free branch (eval/run_free.py) already scores retrieval exactly, against
+chunk-id labels, for zero tokens. It is strictly better than a judge at that
+job: it compares against ground truth rather than against a judge's opinion of
+ground truth. So nothing here exists to re-measure ranking.
 
-Judge LLM is Claude (via ragas' LangchainLLMWrapper) - no OpenAI key
-needed, consistent with the rest of the stack. Judge embeddings reuse the
-same bge-small model already used for search (wrapped for ragas via
-langchain_community's HuggingFaceEmbeddings) - local, no extra API cost.
+What only a judge can do is read generated prose:
 
-Every run writes two artifacts:
-  - eval/results/{variant}-{timestamp}.json - full raw output (gitignored,
-    scratch/debugging use)
-  - eval/reports/{variant}-{timestamp}.md - human-readable markdown report
-    with summary + per-question tables (NOT gitignored - meant to be
-    committed and reviewed)
+  faithfulness       is every claim in the answer supported by the retrieved
+                     context - the hallucination detector
+  response_relevancy does the answer address the question that was asked
+  llm_context_precision  were the useful chunks ranked first, judged by
+                     usefulness rather than by matching a label
+  llm_context_recall did retrieval get everything the gold answer needed
+
+The last two overlap with the free branch on purpose. They ask the *same*
+question against different ground truth: the free branch asks "did you find
+the chunk this question was written from", the judge asks "did you find
+something that answers it". Where they disagree, the free branch is usually
+the pessimistic one - the seed chunk is a sample of the relevant chunks, not
+the complete set, so a correct retrieval of a different chunk scores as a miss.
+Reading the two together is the point; reading either alone is not.
+
+Why this matters for the headline result
+----------------------------------------
+The free branch's strongest finding is that BM25 beats dense retrieval. That
+finding carries a known bias: the questions were generated *from* the chunks,
+so they inherit chunk vocabulary in a way a real user's phrasing would not,
+and lexical matching is exactly what benefits. A judge scoring answer quality
+does not care which chunk the words came from. This branch is the check on
+that result, not a formality.
+
+Abstention is reported separately
+---------------------------------
+`ResponseRelevancy` scores a noncommittal answer 0. A pipeline that correctly
+says "the library has nothing on this" is therefore punished by it, and
+letting that sit inside the mean would make honesty look like failure.
 """
 import argparse
 import json
@@ -38,7 +53,6 @@ import random
 from datetime import datetime, timezone
 from pathlib import Path
 
-from langchain_anthropic import ChatAnthropic
 from ragas import EvaluationDataset, evaluate
 from ragas.cache import DiskCacheBackend
 from ragas.cost import (
@@ -48,43 +62,62 @@ from ragas.cost import (
 )
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
-from ragas.metrics import AnswerRelevancy, faithfulness
+from ragas.metrics import (
+    Faithfulness,
+    LLMContextPrecisionWithReference,
+    LLMContextRecall,
+    ResponseRelevancy,
+)
 
-from eval.pipeline import AgenticPipeline, FixedPipeline, Pipeline
-from eval.report import write_markdown_report
-from eval.retrieval import aggregate, score_question
+from eval.pipeline import FixedPipeline, Pipeline
+from eval.retrieval import RETRIEVAL_METRICS, score_question
 
 RESULTS_DIR = Path(__file__).parent / "results"
-DATASET_PATH = Path(__file__).parent / "dataset.jsonl"
 JUDGE_CACHE_DIR = Path(__file__).parent / ".judge-cache"
 
-# Two judged metrics, not four. context_precision and context_recall were
-# dropped in #26: eval/sweep.py already scores precision/recall/nDCG/MRR
-# against the dataset's `relevant_source_ids` labels for zero tokens, and
-# does it against ground truth rather than against a judge's opinion of
-# ground truth. Paying for a weaker measurement of something already
-# measured exactly was ~55% of the judge bill - context_precision alone
-# issues one call *per retrieved context*, so its cost scaled with k.
+# All four, unlike the two this file used to run. The pair that was dropped -
+# context precision and recall - was dropped because eval/sweep.py measured
+# ranking for free against document-level labels. That reasoning no longer
+# holds: the labels are chunk-level now and the free branch measures them
+# exactly, so these two are no longer a weaker copy of something already
+# measured. They are the judge's *different* answer to the same question, and
+# the disagreement between the two is the finding.
 #
-# What's left is the pair a judge is genuinely required for, because both
-# are properties of generated prose that no label can capture:
-#   faithfulness      - is the answer supported by the retrieved context
-#   answer_relevancy  - does the answer address the question that was asked
-#
-# strictness=1 (ragas' default is 3) generates one reverse-question per
-# answer instead of three. Averaging over three buys stability in the third
-# decimal, which is well below the noise floor of a 50-question set.
-METRICS = [faithfulness, AnswerRelevancy(strictness=1)]
+# strictness=1 on relevancy (ragas' default is 3) generates one reverse
+# question per answer instead of three. Averaging three buys stability in the
+# third decimal, below the noise floor of a 100-question set.
+METRICS = [
+    Faithfulness(),
+    ResponseRelevancy(strictness=1),
+    LLMContextPrecisionWithReference(),
+    LLMContextRecall(),
+]
 
-# USD per (input, output) token - Anthropic list prices, for turning the
-# judge's token count into a number that means something. Only the models
-# this project would plausibly judge with; an unlisted model records tokens
-# and omits the cost rather than inventing a price.
 # Single source of truth in eval/pricing.py, aliased here so the two
 # long-standing names keep working. Both the judged run and test-set
 # generation report spend and must not disagree about the rates.
 from eval.pricing import PRICING as JUDGE_PRICING  # noqa: E402
 from eval.pricing import model_price as judge_price  # noqa: E402
+
+# An answer this short and this hedged is an abstention, not a response.
+# Deliberately crude: the point is to *separate* these rows, and a judge call
+# to classify them would cost more than the metric they are being kept out of.
+ABSTENTION_MARKERS = (
+    "does not contain",
+    "doesn't contain",
+    "no information",
+    "not enough information",
+    "cannot answer",
+    "can't answer",
+    "no relevant",
+    "not mentioned",
+    "unable to answer",
+)
+
+
+def is_abstention(answer: str) -> bool:
+    lowered = (answer or "").lower()
+    return any(m in lowered for m in ABSTENTION_MARKERS)
 
 
 def token_usage_parser(cfg):
@@ -92,81 +125,51 @@ def token_usage_parser(cfg):
 
     Ragas reads token counts out of the raw provider response, and the two
     shapes differ: Anthropic reports `usage.input_tokens`, OpenAI-compatible
-    endpoints (OpenRouter included) report `token_usage.prompt_tokens`.
-    Using the wrong one doesn't fail - it silently returns zeros, which
-    would quietly gut the cost reporting this harness exists to provide.
+    endpoints (OpenRouter included) report `token_usage.prompt_tokens`. Using
+    the wrong one doesn't fail - it silently returns zeros, which would gut
+    the cost reporting this harness exists to provide.
     """
     if cfg.llm.provider == "anthropic":
         return get_token_usage_for_anthropic
     return get_token_usage_for_openai
 
 
-def load_dataset(path: Path) -> list[dict]:
-    rows = []
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
-
-
 def stratified_sample(rows: list[dict], n: int, seed: int = 0) -> list[dict]:
-    """`n` questions that keep the dataset's category x domain mix.
+    """`n` questions spread across synthesizers, not the first `n`.
 
-    A judged run is the expensive tier, so iterating on it means running a
-    subset - but a subset drawn uniformly at random is a worse instrument
-    than a smaller one drawn carefully. The dataset is deliberately built out
-    of strata (grounded/edge_case x domain), and the edge cases are the rows
-    that catch abstention regressions, so a sample that loses them measures
-    the easy half of the problem and reports it as the whole.
-
-    Round-robin across strata rather than a proportional allotment: with 50
-    questions over ~8 strata, proportional rounding drives the small strata
-    to zero, which is exactly the coverage a subset must not lose.
-
-    Seeded, so `--sample 15` names the same 15 questions on every run and two
-    scores taken a week apart stay comparable.
+    The set is 46/33/21 single-hop / multi-hop-abstract / multi-hop-specific
+    and those three score very differently, so an unstratified sample of 10
+    reports whichever type it happened to draw.
     """
     if n >= len(rows):
         return rows
-
-    strata: dict[tuple, list[dict]] = {}
-    for row in rows:
-        key = (row.get("category", ""), row.get("domain") or row.get("subtype") or "")
-        strata.setdefault(key, []).append(row)
+    buckets: dict[str, list[int]] = {}
+    for i, row in enumerate(rows):
+        buckets.setdefault(row["synthesizer"], []).append(i)
 
     rng = random.Random(seed)
-    for group in strata.values():
-        rng.shuffle(group)
+    picked: set[int] = set()
+    for name in sorted(buckets):
+        share = round(n * len(buckets[name]) / len(rows))
+        picked.update(rng.sample(buckets[name], min(share, len(buckets[name]))))
+    # Per-bucket rounding can land a row or two short of n; top up
+    # deterministically from whatever is left.
+    if len(picked) < n:
+        rest = [i for i in range(len(rows)) if i not in picked]
+        picked.update(rng.sample(rest, min(n - len(picked), len(rest))))
 
-    picked: list[dict] = []
-    order = sorted(strata)
-    while len(picked) < n:
-        drew = False
-        for key in order:
-            if not strata[key]:
-                continue
-            picked.append(strata[key].pop())
-            drew = True
-            if len(picked) == n:
-                break
-        if not drew:  # every stratum exhausted (n > len(rows) can't happen, but be safe)
-            break
-
-    # Restore dataset order so the report's per-question table reads in the
-    # same sequence as the file it came from.
-    position = {id(r): i for i, r in enumerate(rows)}
-    return sorted(picked, key=lambda r: position[id(r)])
+    # Indices, then sorted back into dataset order: a sample that reorders the
+    # set makes two runs harder to diff line by line for no benefit, and the
+    # rows are returned as the original objects, not copies.
+    return [rows[i] for i in sorted(picked)[:n]]
 
 
 def judge_spend(eval_result, judge_model_name: str) -> dict:
     """What the judge cost, in tokens and (where the price is known) dollars.
 
-    Ragas only tracks this when evaluate() was handed a token_usage_parser,
-    and raises otherwise - so an older or differently-configured run reports
-    nothing rather than failing. Never let accounting break a run whose API
-    calls are already paid for.
+    Ragas only tracks this when evaluate() was handed a token_usage_parser and
+    raises otherwise, so a differently-configured run reports nothing rather
+    than failing. Accounting must never break a run whose calls are paid for.
     """
     try:
         usage = eval_result.total_tokens()
@@ -174,7 +177,6 @@ def judge_spend(eval_result, judge_model_name: str) -> dict:
         print(f"warning: no judge token usage recorded ({e})")
         return {}
 
-    # total_tokens() returns a list when more than one model was involved.
     if isinstance(usage, list):
         usage = sum(usage, TokenUsage(input_tokens=0, output_tokens=0))
 
@@ -185,289 +187,251 @@ def judge_spend(eval_result, judge_model_name: str) -> dict:
     return spend
 
 
-def score_retrieval(rows: list[dict], retrieved_docs: list[list[int]]) -> dict:
-    """Rank metrics over what each pipeline actually retrieved.
+def score_retrieval(rows: list[dict], retrieved: list[list[int]]) -> dict:
+    """The free branch's exact chunk-id metrics, over what this run retrieved.
 
-    Skipped silently when the dataset has no labels - an older dataset should
-    still be scorable on the judged metrics rather than failing the run.
+    Reported beside the judged scores because the judge cannot separate
+    "retrieval never found it" from "retrieval found it and the model ignored
+    it" - faithfulness drops either way, and the fix is different.
     """
-    if not all("relevant_source_ids" in r for r in rows):
+    from eval.run_free import mean_ci
+
+    per_question = [
+        score_question(chunks, set(row["reference_chunk_ids"]), k=max(len(chunks), 1))
+        for row, chunks in zip(rows, retrieved)
+        if row["reference_chunk_ids"]
+    ]
+    answerable = [q for q in per_question if not q["abstention"]]
+    if not answerable:
         return {}
+    out = {"n": len(answerable)}
+    for metric in RETRIEVAL_METRICS:
+        mean, half = mean_ci([q[metric] for q in answerable])
+        out[metric] = round(mean, 4)
+        out[f"{metric}_ci"] = round(half, 4)
+    return out
 
-    from db.connection import PostgresInterface
-    from eval.sweep import _to_source_ids, doc_id_to_source_id
 
-    id_map = doc_id_to_source_id(PostgresInterface.connect())
-    per_question = []
-    for row, doc_ids in zip(rows, retrieved_docs):
-        retrieved = _to_source_ids([{"doc_id": d} for d in doc_ids], id_map)
-        # k is however many the pipeline chose to retrieve - unlike the sweep,
-        # this isn't a fixed budget, so precision is over what it actually used.
-        per_question.append(
-            score_question(retrieved, set(row["relevant_source_ids"]), k=max(len(retrieved), 1))
+def answer_all(pipeline: Pipeline, rows: list[dict]) -> tuple[list[dict], list[list[int]]]:
+    """Run the pipeline over every question, surviving individual failures.
+
+    One question's failure must never take the other N-1 down: a real incident
+    had a single question hit LangGraph's recursion limit and crash the loop
+    before anything reached disk, discarding ~40 already-paid-for answers.
+    Catch, record the failure as the answer, keep going.
+    """
+    records, retrieved = [], []
+    for i, row in enumerate(rows, 1):
+        try:
+            result = pipeline.answer(row["question"])
+        except Exception as e:
+            print(f"[{i}/{len(rows)}] FAILED: {row['question'][:60]!r} - {e}")
+            result = {"answer": f"error: pipeline failed ({e})", "contexts": [], "chunk_ids": []}
+        else:
+            print(f"[{i}/{len(rows)}] ok: {row['question'][:60]!r}")
+
+        retrieved.append(result.get("chunk_ids") or [])
+        records.append(
+            {
+                "user_input": row["question"],
+                "response": result["answer"],
+                # ragas requires non-empty retrieved_contexts even when
+                # retrieval genuinely found nothing; an explicit placeholder
+                # beats crashing the run.
+                "retrieved_contexts": result["contexts"] or ["(no context retrieved)"],
+                "reference": row["reference"],
+            }
         )
-    return aggregate(per_question)
+    return records, retrieved
 
 
 def run_eval(
     pipeline: Pipeline,
-    dataset_path: Path,
-    variant_name: str,
+    rows: list[dict],
     judge_llm,
     judge_embeddings,
     model_name: str = "",
     judge_model_name: str = "",
     prompt_versions: dict[str, str] | None = None,
     retrieval: dict | None = None,
-    sample: int | None = None,
-    judge_cache_dir: Path | None = None,
-    usage_parser=get_token_usage_for_anthropic,
+    usage_parser=get_token_usage_for_openai,
 ) -> dict:
-    all_rows = load_dataset(dataset_path)
-    rows = stratified_sample(all_rows, sample) if sample else all_rows
-    records = []
-    retrieved_docs: list[list[int]] = []
-    for i, row in enumerate(rows, 1):
-        # A single question's pipeline.answer() must never take the other
-        # N-1 down with it - a real incident showed why: one question hit
-        # LangGraph's recursion limit (an uncaught GraphRecursionError),
-        # which crashed this whole loop before anything reached disk,
-        # discarding ~40 other questions' worth of real, already-paid-for
-        # answers. Catch, record the failure as the answer, keep going.
-        try:
-            result = pipeline.answer(row["question"])
-        except Exception as e:
-            print(f"[{i}/{len(rows)}] FAILED: {row['question'][:60]!r} - {e}")
-            result = {"answer": f"error: pipeline failed ({e})", "contexts": [], "doc_ids": []}
-        else:
-            print(f"[{i}/{len(rows)}] ok: {row['question'][:60]!r}")
+    records, retrieved = answer_all(pipeline, rows)
 
-        retrieved_docs.append(result.get("doc_ids") or [])
-        records.append(
-            {
-                "user_input": row["question"],
-                "response": result["answer"],
-                # ragas requires non-empty retrieved_contexts even when a
-                # pipeline genuinely found nothing (e.g. the off-topic
-                # question in the eval set) - an explicit "no context" beats
-                # crashing the eval run.
-                "retrieved_contexts": result["contexts"] or ["(no context retrieved)"],
-                "reference": row["ground_truth"],
-            }
-        )
-
-    dataset = EvaluationDataset.from_list(records)
-    # Memoised by a hash of the prompt, so re-running an unchanged dataset
-    # (a report tweak, a crash after the answers were generated, comparing a
-    # report format) re-reads instead of re-paying. Only the *judge* calls -
-    # the pipeline's own answers above are not cached, since the whole point
-    # of a run is usually that the pipeline changed.
-    cache = DiskCacheBackend(cache_dir=str(judge_cache_dir)) if judge_cache_dir else None
+    # Memoised by a hash of the prompt, so re-running an unchanged set (a
+    # report tweak, a crash after answers were generated) re-reads instead of
+    # re-paying. Judge calls only - the pipeline's own answers are not cached,
+    # since the point of a run is usually that the pipeline changed.
+    cache = DiskCacheBackend(cache_dir=str(JUDGE_CACHE_DIR))
     eval_result = evaluate(
-        dataset,
+        EvaluationDataset.from_list(records),
         metrics=METRICS,
         llm=LangchainLLMWrapper(judge_llm, cache=cache),
         embeddings=LangchainEmbeddingsWrapper(judge_embeddings),
         # Without this ragas records no usage at all and total_tokens()
-        # raises. A run that can't say what it cost is how you end up
-        # guessing at a 1M-token bill instead of reading it - and the parser
-        # has to match the provider's wire format or it reports zeros.
+        # raises. A run that cannot say what it cost is how you end up
+        # guessing at the bill instead of reading it.
         token_usage_parser=usage_parser,
     )
 
     df = eval_result.to_pandas()
     per_question = df.to_dict(orient="records")
-    means = {m.name: float(df[m.name].mean()) for m in METRICS if m.name in df.columns}
+    names = [m.name for m in METRICS if m.name in df.columns]
+
+    abstained = [is_abstention(r["response"]) for r in records]
+    means = {n: float(df[n].mean()) for n in names}
+    # Relevancy scores a noncommittal answer 0, so a correct abstention drags
+    # the mean down for behaving well. The answering subset is reported beside
+    # the full mean rather than instead of it.
+    answered = df[[not a for a in abstained]]
+    means_answered = {n: float(answered[n].mean()) for n in names} if len(answered) else {}
 
     output = {
-        "variant": variant_name,
+        "kind": "judged",
+        "run_at": datetime.now(timezone.utc).isoformat(),
         "means": means,
+        "means_excluding_abstentions": means_answered,
+        "n_abstentions": sum(abstained),
         "n_questions": len(rows),
-        "n_dataset": len(all_rows),
+        "answerer_model": model_name,
+        "judge_model": judge_model_name,
         "judge_spend": judge_spend(eval_result, judge_model_name),
-        "per_question": per_question,
         "prompt_versions": prompt_versions or {},
-        "retrieval": retrieval or {},
+        "retrieval_config": retrieval or {},
         # Judge-free retrieval scores alongside the judged generation scores:
-        # they separate "retrieval never found it" from "retrieval found it
-        # and the model didn't use it", which the Ragas metrics conflate.
-        "retrieval_metrics": score_retrieval(rows, retrieved_docs),
+        # they separate "retrieval never found it" from "retrieval found it and
+        # the model didn't use it", which the judged metrics conflate.
+        "retrieval_metrics": score_retrieval(rows, retrieved),
+        "per_question": per_question,
     }
 
-    RESULTS_DIR.mkdir(exist_ok=True)
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out_path = RESULTS_DIR / f"{variant_name}-{timestamp}.json"
-    out_path.write_text(json.dumps(output, indent=2, default=str))
-
-    report_path = write_markdown_report(output, rows, model_name, judge_model_name)
-    output["report_path"] = str(report_path)
-
-    # Bookkeeping must never fail a run that has already been paid for: by
-    # this point every judge call is spent and the report is on disk, so a
-    # ledger problem is a note to stderr, not an exception.
-    try:
-        from eval.ingest import parse_judged_report
-        from eval.ledger import append
-
-        record = parse_judged_report(report_path)
-        if record and append(record):
-            print("recorded in eval/ledger.jsonl")
-    except Exception as e:
-        print(f"warning: could not record run in the ledger ({e})")
-
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    path = RESULTS_DIR / f"judged-{stamp}.json"
+    path.write_text(json.dumps(output, indent=2, default=str))
+    output["results_path"] = str(path)
     return output
 
 
-def _build_pipeline(variant: str, versions: dict[str, str]) -> Pipeline:
+def build_pipeline(versions: dict[str, str]) -> tuple[Pipeline, str]:
+    """The fixed baseline only.
+
+    The agentic arm is deliberately not evaluated: what it added over this was
+    a query string and a stop decision, and the query-side techniques that
+    actually matter now live in eval/query_arms.py as measurable retrieval
+    arms rather than inside an opaque loop.
+    """
     from config import load
-    from orchestrator.graph import build_agent
     from orchestrator.llm import make_llm
     from prompts.registry import load_prompt
     from search import get_search_engine
 
-    llm = make_llm(load())
-    if variant == "fixed":
-        prompt = load_prompt("fixed_rag", versions["fixed_rag"])
-        return FixedPipeline(
-            llm,
-            get_search_engine(),
-            system_prompt=prompt,
-            candidates=load().search.rerank_candidates,
-        )
-    if variant == "agentic":
-        return AgenticPipeline(build_agent(llm, version=versions["orchestrator"]))
-    raise ValueError(f"unknown variant: {variant!r}")
+    cfg = load()
+    llm = make_llm(cfg)
+    prompt = load_prompt("fixed_rag", versions["fixed_rag"])
+    pipeline = FixedPipeline(
+        llm,
+        get_search_engine(),
+        system_prompt=prompt,
+        top_k=cfg.search.top_k,
+        rerank=False,
+        candidates=None,
+    )
+    return pipeline, cfg.llm.model
 
 
-def _resolve_prompt_versions(overrides: list[str] | None) -> dict[str, str]:
-    """Config defaults, with `--prompt-version name=version` on top. Fails
-    loudly on an unknown name: silently ignoring a typo'd override would
-    produce a report that names a prompt version it did not actually run."""
-    from config import load
+def judge_llm(cfg):
+    from orchestrator.llm import openrouter_chat
 
-    versions = load().prompts.model_dump()
-    for item in overrides or []:
-        name, _, version = item.partition("=")
-        if not version:
-            raise ValueError(f"--prompt-version expects name=version, got {item!r}")
-        if name not in versions:
-            raise ValueError(
-                f"unknown prompt {name!r} (known: {', '.join(sorted(versions))})"
-            )
-        versions[name] = version
-    return versions
+    model = cfg.llm.judge_model
+    if cfg.llm.provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(model=model, max_tokens=2048), model
+    return openrouter_chat(model, max_tokens=2048, cfg=cfg), model
 
 
-def judge_model_name(cfg) -> str:
-    """`llm.judge_model` if set, else the pipeline model.
+def judge_embeddings():
+    """bge-small locally - the same model search uses, and free.
 
-    Separate from the pipeline model on purpose: changing the model that
-    *answers* is an experiment, while changing the model that *scores*
-    silently re-baselines every historical number in eval/ledger.jsonl.
-    Comparing a run judged by one model against a run judged by another is
-    not a comparison at all, so the two have to be movable independently.
+    ResponseRelevancy needs embeddings to compare its reverse-generated
+    questions against the original; paying an API for that would be the
+    largest line on the bill for the least interesting part of it.
     """
-    return cfg.llm.judge_model or cfg.llm.model
-
-
-def _judge_llm(cfg):
-    # Ragas' judge needs more room than the chat agent's UX-tuned 512 - its
-    # metrics prompt for reasoning before a verdict, and briefer completions
-    # were hitting LLMDidNotFinishException (truncated before it could
-    # finish). Hence a judge-specific construction rather than make_llm().
-    model = judge_model_name(cfg)
-    if cfg.llm.provider == "openrouter":
-        from orchestrator.llm import openrouter_chat
-
-        return openrouter_chat(model, max_tokens=2048, cfg=cfg)
-    return ChatAnthropic(model=model, max_tokens=2048)
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--variant", choices=["fixed", "agentic"], required=True)
-    parser.add_argument("--dataset", default=str(DATASET_PATH))
-    parser.add_argument(
-        "--prompt-version",
-        action="append",
-        metavar="NAME=VERSION",
-        help="override a configured prompt version, e.g. orchestrator=v2 "
-        "(repeatable). Recorded in the report so the score names its prompt.",
-    )
-    parser.add_argument(
-        "--sample",
-        type=int,
-        metavar="N",
-        help="score a stratified N-question subset instead of the whole "
-        "dataset. Seeded, so the same N is the same N every time. Use it "
-        "while iterating; run the full set for a ledger entry.",
-    )
-    parser.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="bypass the on-disk judge cache and re-pay for every judge call. "
-        "Only needed if you suspect a stale cached verdict.",
-    )
-    args = parser.parse_args()
-
-    from observability import setup_observability
-
-    setup_observability(f"papers-please-eval-{args.variant}")
-
-    from config import load
     from langchain_community.embeddings import HuggingFaceEmbeddings
     from process.embedder import MODELS
 
-    cfg = load()
-    judge_llm = _judge_llm(cfg)
-    judge_name = judge_model_name(cfg)
-    judge_embeddings = HuggingFaceEmbeddings(model_name=MODELS[cfg.embedder.model]["hf_name"])
+    from config import load
 
-    # Makes eval reproducible regardless of the dev DB's current state (a
-    # wipe, a fresh clone, whatever's been manually fetched) - the dataset's
-    # questions are grounded in eval/fixtures.py, not in whatever happens
-    # to already be ingested.
-    from eval.seed import ensure_fixtures_seeded
-
-    ensure_fixtures_seeded()
-
-    # Resolved before any spend: a bad --prompt-version should fail here, not
-    # after 50 questions' worth of paid API calls.
-    versions = _resolve_prompt_versions(args.prompt_version)
-
-    pipeline = _build_pipeline(args.variant, versions)
-    output = run_eval(
-        pipeline,
-        Path(args.dataset),
-        args.variant,
-        judge_llm,
-        judge_embeddings,
-        model_name=cfg.llm.model,
-        judge_model_name=judge_name,
-        prompt_versions=versions,
-        # Not a versioned prompt (see prompts/registry.py) but it does shape
-        # every retrieval score, so a report should still name it.
-        retrieval={
-            "embed_model": MODELS[cfg.embedder.model]["hf_name"],
-            "query_prompt": MODELS[cfg.embedder.model]["query_prompt"],
-        },
-        sample=args.sample,
-        judge_cache_dir=None if args.no_cache else JUDGE_CACHE_DIR,
-        usage_parser=token_usage_parser(cfg),
+    return LangchainEmbeddingsWrapper(
+        HuggingFaceEmbeddings(model_name=MODELS[load().embedder.model]["hf_name"])
     )
 
-    print(f"variant: {output['variant']}")
-    for name, score in output["means"].items():
-        print(f"  {name}: {score:.3f}")
-    print(f"prompts: {', '.join(f'{k}={v}' for k, v in versions.items())}")
-    spend = output.get("judge_spend") or {}
+
+def fmt(output: dict) -> None:
+    print(f"\n{output['n_questions']} questions | answerer={output['answerer_model']} "
+          f"| judge={output['judge_model']}")
+    print(f"retrieval: {output['retrieval_config']}\n")
+
+    print("judged (generation):")
+    for name, value in sorted(output["means"].items()):
+        excl = output["means_excluding_abstentions"].get(name)
+        tail = f"   (excluding abstentions: {excl:.3f})" if excl is not None else ""
+        print(f"  {name:<34} {value:.3f}{tail}")
+    print(f"  {'abstentions':<34} {output['n_abstentions']}")
+
+    if output["retrieval_metrics"]:
+        print("\nretrieval (chunk-id labels, no judge):")
+        r = output["retrieval_metrics"]
+        print("  " + "  ".join(f"{m}={r[m]:.3f}" for m in RETRIEVAL_METRICS if m in r))
+
+    spend = output["judge_spend"]
     if spend:
-        cost = f" — ${spend['usd']:.4f}" if "usd" in spend else ""
-        print(
-            f"judge spend: {spend['input_tokens']:,} in / "
-            f"{spend['output_tokens']:,} out{cost}"
-        )
-    print(f"report: {output['report_path']}")
+        usd = f" = ${spend['usd']}" if "usd" in spend else ""
+        print(f"\njudge spend: {spend['input_tokens']:,} in + "
+              f"{spend['output_tokens']:,} out{usd}")
+    print(f"\n-> {output['results_path']}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Judged eval run (costs money)")
+    parser.add_argument("--sample", type=int, default=None, help="stratified subset")
+    parser.add_argument("--prompt-version", action="append", default=None,
+                        help="name=version, e.g. fixed_rag=v1")
+    args = parser.parse_args()
+
+    from config import load
+    from eval.review import load_curated
+    from observability import setup_observability
+
+    setup_observability("eval-judged")
+
+    cfg = load()
+    versions = {"fixed_rag": cfg.prompts.fixed_rag}
+    for override in args.prompt_version or []:
+        name, _, version = override.partition("=")
+        versions[name] = version
+
+    rows = load_curated()
+    if args.sample:
+        rows = stratified_sample(rows, args.sample)
+
+    pipeline, answerer = build_pipeline(versions)
+    judge, judge_model = judge_llm(cfg)
+
+    print(f"answering {len(rows)} questions with {answerer}, judging with {judge_model}")
+    output = run_eval(
+        pipeline,
+        rows,
+        judge,
+        judge_embeddings(),
+        model_name=answerer,
+        judge_model_name=judge_model,
+        prompt_versions=versions,
+        retrieval={"mode": cfg.search.mode, "top_k": cfg.search.top_k, "rerank": False},
+        usage_parser=token_usage_parser(cfg),
+    )
+    fmt(output)
 
 
 if __name__ == "__main__":
