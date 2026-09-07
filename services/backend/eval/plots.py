@@ -56,7 +56,7 @@ THEME = "light"
 LABEL = {
     # retrieval modes
     "semantic": "Dense",
-    "keyword": "Keyword (TS-Rank)",
+    "keyword": "TS-Rank",
     "bm25": "BM25",
     "hybrid": "Hybrid (Dense + TS-Rank)",
     "hybrid_bm25": "Hybrid (Dense + BM25)",
@@ -76,7 +76,7 @@ LABEL = {
     "hyde": "HyDE",
     # latency stages
     "embed": "Embed", "pinecone": "Pinecone", "hydrate": "SQL Hydrate",
-    "keyword_sql": "Keyword SQL", "fuse": "Fuse", "rerank": "Rerank",
+    "keyword_sql": "TS-Rank SQL", "fuse": "Fuse", "rerank": "Rerank",
     # axes
     "top_k": "Top-K", "keyword_weight": "Keyword Weight",
     "latency_ms": "Latency (ms)", "metric": "Metric",
