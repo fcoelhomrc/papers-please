@@ -72,7 +72,7 @@ from ragas.metrics import (
 from eval.pipeline import FixedPipeline, Pipeline
 from eval.retrieval import RETRIEVAL_METRICS, score_question
 
-RESULTS_DIR = Path(__file__).parent / "results"
+from eval.results_store import results_dir
 JUDGE_CACHE_DIR = Path(__file__).parent / ".judge-cache"
 
 # All four, unlike the two this file used to run. The pair that was dropped -
@@ -339,6 +339,7 @@ def run_eval(
         "n_abstentions": sum(abstained),
         "n_failed": failed,
         "n_questions": len(rows),
+        "embed_model": __import__("config").load().embedder.model,
         "answerer_model": model_name,
         "judge_model": judge_model_name,
         "judge_spend": judge_spend(eval_result, judge_model_name),
@@ -351,10 +352,9 @@ def run_eval(
         "per_question": per_question,
     }
 
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     arm = (retrieval or {}).get("arm", "none")
-    path = RESULTS_DIR / f"judged-{arm}-{stamp}.json"
+    path = results_dir() / f"judged-{arm}-{stamp}.json"
     path.write_text(json.dumps(output, indent=2, default=str))
     output["results_path"] = str(path)
     return output

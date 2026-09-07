@@ -43,7 +43,7 @@ from eval.retrieval import RETRIEVAL_METRICS, score_question
 
 logger = logging.getLogger(__name__)
 
-RESULTS_DIR = Path(__file__).parent / "results"
+from eval.results_store import results_dir
 
 # Reported alongside the chunk-id metrics, not instead of them.
 RAGAS_METRICS = ("ragas_precision", "ragas_recall")
@@ -282,9 +282,8 @@ def main():
         print(fmt(name.replace("_query_synthesizer", ""), summary))
 
     if not args.no_save:
-        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         stamp = result["run_at"].replace(":", "").replace("-", "")[:15]
-        path = RESULTS_DIR / f"free-{stamp}Z.json"
+        path = results_dir() / f"free-{stamp}Z.json"
         path.write_text(json.dumps(result, indent=2))
         print(f"\n-> {path}")
 

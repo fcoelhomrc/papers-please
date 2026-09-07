@@ -48,7 +48,7 @@ from search import BM25, HYBRID, HYBRID_BM25, KEYWORD, SEMANTIC, rrf_fuse
 
 logger = logging.getLogger(__name__)
 
-RESULTS_DIR = Path(__file__).parent / "results"
+from eval.results_store import results_dir
 
 MODES = (SEMANTIC, KEYWORD, BM25, HYBRID, HYBRID_BM25)
 TOP_KS = (1, 3, 5, 10, 20, 50)
@@ -693,9 +693,8 @@ def main():
     report(out)
 
     if not args.no_save:
-        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         stamp = out["run_at"].replace(":", "").replace("-", "")[:15]
-        path = RESULTS_DIR / f"ablation-{args.which}-{stamp}Z.json"
+        path = results_dir() / f"ablation-{args.which}-{stamp}Z.json"
         path.write_text(json.dumps(out, indent=2))
         print(f"\n-> {path}")
 

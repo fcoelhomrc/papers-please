@@ -19,7 +19,18 @@ import json
 from pathlib import Path
 
 ASSETS = Path(__file__).resolve().parents[3] / "assets" / "eval"
-RESULTS = Path(__file__).parent / "results"
+
+# Figures are written per embedding model for the same reason results are
+# stored that way: a number measured on one embedder is not comparable to one
+# measured on another, and a shared output directory would let the second
+# sweep silently overwrite the first's evidence.
+EMBED_MODEL = "bge-small"
+
+
+def results() -> Path:
+    from eval.results_store import RESULTS_ROOT
+
+    return RESULTS_ROOT / EMBED_MODEL
 
 # Fixed slot order from the reference palette. Never cycled, never re-ordered:
 # a sixth series takes slot 6, it does not wrap back to slot 1. Wrapping put
@@ -175,7 +186,7 @@ def save(fig, name: str):
     """One directory per format, so a README can glob `assets/eval/png/*` and
     a print or edit workflow can take the vector copies without filtering."""
     for ext in FORMATS:
-        out = ASSETS / ext / THEME
+        out = ASSETS / ext / THEME / EMBED_MODEL
         out.mkdir(parents=True, exist_ok=True)
         fig.savefig(out / f"{name}.{ext}", bbox_inches="tight", pad_inches=0.15)
     import matplotlib.pyplot as plt
@@ -476,10 +487,10 @@ def load_results(explicit: Path | None = None) -> dict:
     if explicit:
         return json.loads(explicit.read_text())
 
-    full = max(RESULTS.glob("ablation-all-*.json"), key=lambda p: p.stat().st_mtime)
+    full = max(results().glob("ablation-all-*.json"), key=lambda p: p.stat().st_mtime)
     data = json.loads(full.read_text())
     print(f"base: {full.name}")
-    for part in RESULTS.glob("ablation-*.json"):
+    for part in results().glob("ablation-*.json"):
         if part == full or part.stat().st_mtime <= full.stat().st_mtime:
             continue
         blob = json.loads(part.read_text())
@@ -491,7 +502,7 @@ def load_results(explicit: Path | None = None) -> dict:
 
 
 def judged_results() -> dict | None:
-    newest = sorted(RESULTS.glob("judged-*.json"), key=lambda p: p.stat().st_mtime)
+    newest = sorted(results().glob("judged-*.json"), key=lambda p: p.stat().st_mtime)
     return json.loads(newest[-1].read_text()) if newest else None
 
 
@@ -504,7 +515,7 @@ def judged_by_arm() -> dict[str, dict]:
     the same figure as though it were comparable.
     """
     out: dict[str, tuple[float, dict]] = {}
-    for path in RESULTS.glob("judged-*.json"):
+    for path in results().glob("judged-*.json"):
         blob = json.loads(path.read_text())
         arm = blob.get("retrieval_config", {}).get("arm")
         if not arm or blob.get("n_questions", 0) < 100:
@@ -651,7 +662,18 @@ def fig_judge_vs_labels(judged):
 def main():
     parser = argparse.ArgumentParser(description="Retrieval ablation figures")
     parser.add_argument("--results", type=Path, default=None)
+    parser.add_argument("--embed-model", default=None,
+                        help="which embedder's results to plot (default: configured)")
     args = parser.parse_args()
+
+    global EMBED_MODEL
+    if args.embed_model:
+        EMBED_MODEL = args.embed_model
+    else:
+        from config import load
+
+        EMBED_MODEL = load().embedder.model
+    print(f"embedder: {EMBED_MODEL}")
 
     data = load_results(args.results)
 
