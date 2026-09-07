@@ -223,7 +223,7 @@ Two limits worth knowing before planning around free models:
   calls. Use `--sample` and the disk cache, or point `judge_model` at a paid
   model for the runs that go in the ledger.
 
-The judge-free retrieval sweeps (`eval.sweep`, `eval.thresholds`) are
+The judge-free retrieval runs (`eval.run_free`, `eval.ablations`) are
 unaffected by any of this — they use no LLM at all.
 
 ## Feedback
@@ -307,72 +307,122 @@ attention sorted to the top.
 
 ## Evaluation
 
-> **Being rebuilt.** This section describes the evaluation as it stood against
-> a 12-document, abstract-only corpus that has since been removed, and the
-> commands below refer to modules that no longer exist. The figures and numbers
-> are kept as a record, not as current results. The design of the replacement —
-> a 100-paper corpus, a Ragas-generated question set mapped to exact chunk ids,
-> and a free/paid two-branch harness — is in
-> [`docs/rag-evaluation.md`](docs/rag-evaluation.md). This section is rewritten
-> when the new numbers exist.
+Retrieval is measured against a **100-question curated set** generated with
+Ragas from the project's own chunks and mapped back to exact chunk ids, over a
+corpus of **5 topics × 20 arXiv papers** chosen to interfere with each other.
+The design — why few topics deep, why the chunk-id mapping matters, and what
+each metric can and cannot tell you — is in
+[`docs/rag-evaluation.md`](docs/rag-evaluation.md).
 
-Retrieval was measured against hand-labelled relevance judgements in
-`eval/dataset.jsonl` — 50 questions, 42 with at least one relevant paper and 8
-where the library genuinely had nothing.
+Two branches. The **free** branch scores retrieval by set arithmetic on integer
+chunk ids: no LLM, no cost, run it on every change. The **paid** branch scores
+the generated answer with a judge, and costs about 23¢ per run.
 
-### The operating curve
+Every figure below is regenerated from cached results by one command
+(`python -m eval.figures`), in light and dark, and carries the run it came from
+in its footer.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/precision-recall-dark.svg">
-  <img alt="Precision-recall curves for semantic, keyword and hybrid retrieval" src="assets/eval/precision-recall-light.svg">
-</picture>
-
-Asking for more results can only raise recall while diluting precision, so a
-retriever is a curve rather than a point, and one dominates another by sitting
-above and to the right of it. Reading the measured curves against that
-expectation is what separates a retriever that returns **more** from one that
-returns **better**.
-
-The right-hand panel is its own finding: once the cross-encoder reranks a
-50-candidate pool, all three curves collapse onto each other — the retrieval
-mode stops mattering.
-
-### Recall and ranking against k
+### How deep to read, and what precision can even mean
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/recall-vs-k-dark.svg">
-  <img alt="Recall@k and nDCG@k for each retrieval mode" src="assets/eval/recall-vs-k-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/png/retrieval-depth-dark.png">
+  <img alt="Recall@k and precision@k against k for each retrieval mode, with precision's arithmetic ceiling" src="assets/eval/png/retrieval-depth-light.png">
 </picture>
 
-Recall keeps climbing with k, but nDCG flattens after k≈10: the extra results
-are real but no longer well-ranked, which is the argument for retrieving wide
-and reranking down rather than simply returning more.
+Recall keeps climbing with k. Precision falls — and the dashed line is why:
+most questions in this set have one or two relevant chunks, so precision@10
+**cannot exceed ~0.16** however good the retriever is. Precision@k here is
+mostly arithmetic, which is the argument for reading nDCG and MAP instead and
+demoting precision to a footnote.
 
-### Two defects the labels exposed
-
-<p align="left">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/keyword-fix-dark.svg">
-  <img alt="Keyword recall before and after switching to OR matching" src="assets/eval/keyword-fix-light.svg" width="49%">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/png/ranking-quality-dark.png">
+  <img alt="nDCG, MAP, MRR and R-precision at k=10 for each retrieval mode, with confidence intervals" src="assets/eval/png/ranking-quality-light.png">
 </picture>
+
+Every reported number carries a 95% interval, and at n=100 those intervals are
+wide: a five-point gap is not a result. BM25 over the Postgres FTS candidates
+leads, dense trails, and the two hybrids sit between — but most of those gaps
+are inside the intervals and should be read as ties.
+
+### Where the difficulty actually lives
+
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/abstention-dark.svg">
-  <img alt="Recall against abstention as the rerank score floor moves" src="assets/eval/abstention-light.svg" width="49%">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/png/question-difficulty-dark.png">
+  <img alt="Retrieval quality split by Ragas synthesizer and by corpus topic" src="assets/eval/png/question-difficulty-light.png">
 </picture>
-</p>
 
-**Left.** Keyword search used `plainto_tsquery`, which ANDs every lexeme — a
-question sentence only matched a chunk containing all of its words. It returned
-anything for 9 of 50 questions, and recall sat flat at 0.167 no matter how large
-k grew. Flat-with-k is the signature of a *matching* failure rather than a
-ranking one, which is exactly what the curve shows. OR-ing the lexemes took
-recall@5 from 0.167 to 0.738.
+Not in the topic — in the question. Single-hop questions score 0.94 recall;
+multi-hop abstract ones score 0.50. The five topics are within a few points of
+each other. A headline retrieval number is really a statement about the mix of
+question types underneath it.
 
-**Right.** Retrieval could not abstain: it returned top-k regardless, so on the
-8 questions with no relevant paper it always handed the model something
-irrelevant. The cross-encoder separates those cleanly (relevant questions score
-a median +4.8, unanswerable ones −8.7), so a score floor buys abstention — free
-up to −8.0, and paid for in recall after that.
+### Three things that did not work
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/png/query-arms-dark.png">
+  <img alt="HyDE, multi-query and decomposition against the untransformed question" src="assets/eval/png/query-arms-light.png">
+</picture>
+
+**Query transformation.** HyDE, multi-query and decomposition all cost nDCG
+against simply using the question as asked — in both retrievers and at every
+depth measured. Keeping the original question alongside the rewrite recovers
+part of the loss but never clears the baseline.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/png/rerank-matched-dark.png">
+  <img alt="Reranked against plain retrieval at matched output size" src="assets/eval/png/rerank-matched-light.png">
+</picture>
+
+**The cross-encoder.** Compared at *matched output size* — reranking a
+40-candidate pool down to k against plainly returning k — the best rerank
+configuration loses at every depth. The intervals overlap, so the honest
+reading is "no measurable gain", not "it hurts".
+
+The score floor is the third: `min_rerank_score` moves mean results returned
+from 10.00 to 9.93 at its most aggressive setting. Every question in this set
+has a relevant chunk, so there is nothing to abstain from and the abstention
+axis has no purchase here.
+
+### What it costs to run
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/png/latency-breakdown-dark.png">
+  <img alt="Latency per query broken down by pipeline stage, for each retrieval mode" src="assets/eval/png/latency-breakdown-light.png">
+</picture>
+
+Postgres full-text search dominates every mode that touches it, and fusion pays
+for both sides. The ranking functions themselves — BM25, RRF — are free by
+comparison. `assets/eval/png/latency-quality-*.png` plots the same numbers
+against nDCG as a trade-off curve.
+
+### The judged branch, and whether the judge can be trusted
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/png/judged-metrics-dark.png">
+  <img alt="Faithfulness, response relevancy and LLM context precision/recall, with and without abstentions" src="assets/eval/png/judged-metrics-light.png">
+</picture>
+
+Reported twice, with and without the three correct abstentions: response
+relevancy scores a correct abstention **0** by construction, so letting them sit
+in the mean punishes the pipeline for behaving well.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/eval/png/judge-agreement-dark.png">
+  <img alt="Judge agreement with human labels: Cohen's kappa, agreement by statement type, and error direction" src="assets/eval/png/judge-agreement-light.png">
+</picture>
+
+Every judged number above rests on the judge being right, so it was checked
+against 81 human labels: **Cohen's κ 0.83**, 91% agreement. The error direction
+matters more than the rate — all seven mistakes are unsupported statements the
+judge waved through, none are supported statements it rejected. The judge's bias
+is toward *missing* hallucinations, so faithfulness above should be read as an
+upper bound.
+
+Finally, `assets/eval/png/exact-vs-ragas-*.png` puts the exact chunk-id scoring
+beside Ragas' own non-LLM string matching. Both treat the seed chunks as the
+complete relevant set, so both are lower bounds; they agree on recall and part
+ways on ordering.
 
 ### Running it
 
@@ -384,23 +434,30 @@ the one thing labels can't score.
 ```bash
 cd services/backend
 
-# Tier 1 - free. No LLM anywhere, so sweep as often as you like. Scores
-# recall/nDCG/MRR/precision/hit-rate against the relevance labels in
-# eval/dataset.jsonl. Run this on every retrieval change.
-uv run python -m eval.sweep                      # every mode x top_k x rerank_top_k
-uv run python -m eval.sweep --modes hybrid --top-k 5,10
-uv run python -m eval.thresholds --rerank-floors -10,-8,-6
-uv run python -m eval.figures                    # -> assets/eval/*.svg (the plots above)
-uv run python -m eval.summary                    # -> eval/reports/summary.html
+# Tier 1 - free. No LLM anywhere, so run it as often as you like: retrieval is
+# scored by exact set arithmetic on chunk ids against the curated question set.
+uv run python -m eval.run_free                   # one config, the shipped one
+uv run python -m eval.run_free --mode bm25 --top-k 20
+uv run python -m eval.ablations all              # every axis -> eval/results/ablation-all-*.json
+uv run python -m eval.ablations c                # just the query-transformation arms
 
 # Tier 2 - costs real API tokens: one call per question for the answer, plus
-# several judge calls per metric per question. Two judged metrics only
-# (faithfulness, answer_relevancy); context precision/recall are measured
-# free and against labels by eval.sweep above.
-uv run python -m eval.run --variant fixed --sample 15    # iterating
-uv run python -m eval.run --variant agentic              # full run, for the ledger
-uv run python -m eval.run --variant agentic --prompt-version orchestrator=v2
+# several judge calls per metric per question.
+uv run python -m eval.run --sample 15            # iterating
+uv run python -m eval.run                        # full run, for the ledger
+uv run python -m eval.judge_kappa                # judge vs the human labels (cached)
+
+# Figures. Reads only the cached JSON above - no search, no embedding, no LLM.
+# matplotlib is a --with extra rather than a project dependency.
+uv run --with matplotlib python -m eval.figures
+uv run --with matplotlib python -m eval.figures --only query-arms judged-metrics
 ```
+
+Figures land in `assets/eval/png/` and `assets/eval/svg/`, two files per
+figure (`-light` and `-dark`), wired into this README with `<picture>` +
+`prefers-color-scheme`. A figure whose ablation is missing from the cache is
+skipped with a reason rather than failing the run, so a partial re-run still
+regenerates everything it can.
 
 `--sample N` scores a stratified subset (category x domain, seeded - the same
 N is the same N every time), so iterating doesn't cost a full run. Judge calls
@@ -426,12 +483,19 @@ Questions where nothing in the library is relevant ("does this cover X?" - it
 doesn't) are scored separately as abstention, not as recall failures: averaging a
 zero into recall for correct behaviour would misreport it.
 
-Defaults that came out of those sweeps rather than out of taste: `search.mode:
-hybrid`, `keyword_weight: 0.1` (keyword is a weaker ranker than dense - weighting
-the two equally measured *worse* than dense alone), and `min_rerank_score: -8.0`
-(abstention 0.000 -> 0.500 at identical recall). The rerank floor is in the
-cross-encoder's logit units and is specific to `ms-marco-MiniLM-L-6-v2` - swapping
-`search.reranker_model` invalidates it, so re-sweep with `eval.thresholds`.
+Defaults that came out of the ablations rather than out of taste: `search.mode:
+hybrid` and `keyword_weight: 1.0`. That weight was `0.1` until the current
+corpus was measured — fitted on the old 12-document one, where dense was the
+stronger ranker. On this corpus the fusion curve is monotonic the other way
+(nDCG 0.608 at 0.1 against 0.671 at 1.0), because at 0.1 a rank-1 keyword hit
+scored below a rank-40 dense hit and so could not outrank dense anywhere in the
+pool. The figure above is that curve.
+
+`min_rerank_score: -8.0` is retained but currently inert: on the curated set it
+moves mean results returned from 10.00 to 9.93, because every question there has
+a relevant chunk. It is in the cross-encoder's logit units and specific to
+`ms-marco-MiniLM-L-6-v2` — swapping `search.reranker_model` invalidates it, so
+re-run `eval.ablations b`.
 
 ## Testing
 
