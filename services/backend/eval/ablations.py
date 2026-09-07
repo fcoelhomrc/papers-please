@@ -343,7 +343,18 @@ def timed_pass(engine, rows, cfg, sample: int = 20) -> list[dict]:
 # Ablation C - LLM query arms. `none` is the untransformed question, present
 # as a row so the comparison is paired against the same retrieval path rather
 # than against a number from a different run.
-ARMS = ("none", "multi_query", "decompose", "hyde")
+ARMS = ("none", "multi_query", "decompose", "hyde",
+        "multi_query+orig", "decompose+orig")
+
+# Standard multi-query fuses the original query *together with* its variants;
+# LangChain's MultiQueryRetriever does, and so does most of the literature.
+# The first implementation here replaced the question with its rewrites
+# instead, which throws away the one query known to be well matched to the
+# corpus - these questions were generated from the chunks, so the original
+# carries the chunk's own vocabulary. Both are measured rather than assumed,
+# because the difference between them is the difference between "the
+# technique does not help here" and "my version of it dropped the original".
+WITH_ORIGINAL = ("multi_query+orig", "decompose+orig")
 # HyDE embeds a passage, so it only means anything to the dense retriever.
 # The rest produce ordinary queries and run on either single-source mode.
 ARM_MODES = {
@@ -351,6 +362,8 @@ ARM_MODES = {
     "multi_query": (SEMANTIC, BM25),
     "decompose": (SEMANTIC, BM25),
     "hyde": (SEMANTIC,),
+    "multi_query+orig": (SEMANTIC, BM25),
+    "decompose+orig": (SEMANTIC, BM25),
 }
 ARM_TOP_KS = (5, 10, 20)
 
@@ -366,15 +379,28 @@ def arm_queries(rows) -> dict[str, dict[str, list[str]]]:
 
     from eval.query_arms import cache_path
 
-    out = {"none": {r["id"]: [r["question"]] for r in rows}}
+    originals = {r["id"]: r["question"] for r in rows}
+    out = {"none": {qid: [q] for qid, q in originals.items()}}
     for arm in ARMS:
-        if arm == "none":
+        if arm == "none" or arm in WITH_ORIGINAL:
             continue
         path = cache_path(arm)
         if not path.is_file():
             logger.warning(f"{arm}: no cached queries at {path}, skipping")
             continue
         out[arm] = json.loads(path.read_text())["queries"]
+
+    # The +orig variants reuse the same transforms with the question put back
+    # at the front, so they cost no extra LLM calls and no extra retrieval -
+    # the original is already in the cache as the `none` arm.
+    for arm in WITH_ORIGINAL:
+        base = arm.removesuffix("+orig")
+        if base in out:
+            out[arm] = {
+                qid: [originals[qid]] + [q for q in qs if q != originals[qid]]
+                for qid, qs in out[base].items()
+                if qid in originals
+            }
     return out
 
 

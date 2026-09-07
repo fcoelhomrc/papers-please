@@ -269,7 +269,7 @@ def fig_rerank(data):
     import numpy as np
 
     plain = {r["config"]["top_k"]: r["summary"]
-             for r in data["a"] if r["config"]["mode"] == "hybrid"}
+             for r in data.get("a", []) if r["config"]["mode"] == "hybrid"}
     ks = sorted({r["config"]["top_k"] for r in data["b"]})
     best, err = [], []
     for k in ks:
@@ -300,22 +300,91 @@ def fig_rerank(data):
     save(fig, "rerank-matched")
 
 
+def load_results(explicit: Path | None = None) -> dict:
+    """The newest full run, with any newer single-ablation re-run merged over it.
+
+    Re-running one ablation writes a file carrying only that key, so globbing
+    for the newest file alone hands the figures a result with no `a` in it.
+    Merging keeps a targeted re-run from invalidating every other figure.
+    """
+    if explicit:
+        return json.loads(explicit.read_text())
+
+    full = max(RESULTS.glob("ablation-all-*.json"), key=lambda p: p.stat().st_mtime)
+    data = json.loads(full.read_text())
+    print(f"base: {full.name}")
+    for part in RESULTS.glob("ablation-*.json"):
+        if part == full or part.stat().st_mtime <= full.stat().st_mtime:
+            continue
+        blob = json.loads(part.read_text())
+        for key in ("a", "b", "c", "w", "pool", "timings"):
+            if key in blob:
+                data[key] = blob[key]
+                print(f"  merged {key!r} from {part.name}")
+    return data
+
+
+def fig_query_arms(data, mode="bm25"):
+    """Each query arm against the untransformed question, at one mode."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    rows = [r for r in data["c"] if r["config"]["mode"] == mode]
+    ks = sorted({r["config"]["top_k"] for r in rows})
+    arms = [a for a in ("none", "decompose+orig", "decompose",
+                        "multi_query+orig", "multi_query")
+            if any(r["config"]["arm"] == a for r in rows)]
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.4))
+    x = np.arange(len(ks))
+    width, pitch = 0.115, 0.145
+    for i, arm in enumerate(arms):
+        vals, errs = [], []
+        for k in ks:
+            match = [r for r in rows
+                     if r["config"]["arm"] == arm and r["config"]["top_k"] == k]
+            vals.append(match[0]["summary"]["ndcg"] if match else 0)
+            errs.append(match[0]["summary"]["ndcg_ci"] if match else 0)
+        off = (i - (len(arms) - 1) / 2) * pitch
+        ax.bar(x + off, vals, width, yerr=errs, color=SERIES[i % len(SERIES)],
+               label=arm, zorder=3,
+               error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"k={k}" for k in ks])
+    ax.set_ylabel("nDCG")
+    ax.grid(axis="y", zorder=0)
+    ax.set_axisbelow(True)
+    ax.legend(ncol=len(arms), loc="upper center", bbox_to_anchor=(0.5, 1.14),
+              columnspacing=1.0)
+    fig.tight_layout()
+    save(fig, "query-arms")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Retrieval ablation figures")
     parser.add_argument("--results", type=Path, default=None)
     args = parser.parse_args()
 
-    path = args.results or max(RESULTS.glob("ablation-*.json"), key=lambda p: p.stat().st_mtime)
-    data = json.loads(path.read_text())
-    print(f"{path.name} -> {ASSETS}")
+    data = load_results(args.results)
+    print(f"-> {ASSETS}")
 
     style()
-    fig_recall_precision(data)
-    fig_ranking_quality(data)
-    fig_fusion_weight(data)
-    fig_rerank(data)
-    fig_latency_quality(data)
-    fig_latency_breakdown(data)
+    # Each figure is skipped rather than fatal when its ablation is absent, so
+    # a partial result still renders whatever it does contain.
+    figures = [
+        ("a", fig_recall_precision),
+        ("a", fig_ranking_quality),
+        ("w", fig_fusion_weight),
+        ("b", fig_rerank),
+        ("timings", fig_latency_quality),
+        ("timings", fig_latency_breakdown),
+        ("c", fig_query_arms),
+    ]
+    for key, fn in figures:
+        if key not in data:
+            print(f"  (skipped {fn.__name__}: no {key!r} in results)")
+            continue
+        fn(data)
 
 
 if __name__ == "__main__":
