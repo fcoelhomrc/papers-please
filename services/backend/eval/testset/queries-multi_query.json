@@ -1,0 +1,506 @@
+{
+  "arm": "multi_query",
+  "key": "z-ai/glm-5.3-flash@v1",
+  "queries": {
+    "q0000": [
+      "VectorRAG vs GraphRAG vs HybridRAG comparative evaluation retrieval-augmented generation faithfulness answer relevancy context precision",
+      "Benchmarking retrieval-augmented generation architectures VectorRAG GraphRAG HybridRAG on faithfulness and context precision metrics",
+      "RAGAS evaluation metrics faithfulness answer relevancy context precision applied to VectorRAG GraphRAG and HybridRAG comparison"
+    ],
+    "q0001": [
+      "subgraph serialization methods for encoding graph structure into LLM prompts in GRAG",
+      "how to feed retrieved subgraphs as textual context to large language models in graph retrieval-augmented generation",
+      "linearizing knowledge graph subgraphs into text input for LLM generation in GraphRAG systems"
+    ],
+    "q0004": [
+      "RAGCache performance evaluation against vLLM with Faiss vector search",
+      "RAGCache versus vLLM Faiss retrieval-augmented generation serving latency comparison",
+      "RAGCache caching system benchmark compared to state-of-the-art RAG inference baselines Faiss index"
+    ],
+    "q0005": [
+      "KV cache memory constraints transmission overhead retrieval-augmented generation inference",
+      "KV cache offloading HBM bottleneck prefill latency retrieval augmented generation",
+      "cache hit latency versus full prefill KV cache retrieval augmented generation benchmark comparison"
+    ],
+    "q0006": [
+      "GPU memory caching strategies for retrieval-augmented summarization BigPatent XSum performance difference",
+      "memory optimization impact on abstractive summarization benchmarks comparing BigPatent and XSum datasets",
+      "quantitative evaluation of memory-augmented self-memory methods on BRIO and BART summarization models"
+    ],
+    "q0009": [
+      "RAG fine-tuned StarCoderBase-7B vs CodeLlama-7B and Mistral-7Bv0.1 comparison experimental results",
+      "optimal model size for retrieval-augmented generation fine-tuning performance trade-off evaluation",
+      "why RAG fine-tuning improves StarCoderBase more than CodeLlama and Mistral small model benchmarks"
+    ],
+    "q0012": [
+      "retrieval process in RAG pipeline handling LLM query input",
+      "sparse vs dense retriever methods for retrieval-augmented generation",
+      "retrieval-augmented generation retriever architectures dense retrieval sparse retrieval comparison"
+    ],
+    "q0013": [
+      "chunk size and stride impact retrieval augmented generation performance",
+      "evaluation of chunking strategies for RAG systems",
+      "effect of document chunking granularity and overlap on RAG retrieval quality"
+    ],
+    "q0014": [
+      "sparse retrieval methods for retrieval-augmented generation passage ranking BM25",
+      "limitations of BM25 lexical matching in LLM RAG pipelines vocabulary mismatch diversity",
+      "comparison of sparse vs dense retrieval techniques for document passage retrieval in question answering"
+    ],
+    "q0016": [
+      "ITER-RETGEN evaluation results HotPotQA exact match F1 accuracy",
+      "ITER-RETGEN vs Self-Ask baseline comparison multi-hop question answering benchmark performance",
+      "retrieval-augmented generation ITER-RETGEN Self-Ask HotPotQA experimental results metrics"
+    ],
+    "q0019": [
+      "In-Context RALM retrieval-augmented language modeling framework comparison with kNN-LM REALM RAG design",
+      "retrieval augmentation strategies for large language models: In-Context RALM versus kNN-LM REALM RAG architectures",
+      "In-Context RALM paper relation to kNN-LM non-parametric neural language model and REALM RAG retrieval-augmented approaches"
+    ],
+    "q0020": [
+      "limitations of large language models as parametric knowledge bases hallucination outdated knowledge survey",
+      "Retrieval Augmented Generation RAG retrieving external documents to mitigate LLM hallucination and stale parametric knowledge",
+      "evaluation of retrieval-augmented generation grounding language model outputs in up-to-date external knowledge sources"
+    ],
+    "q0022": [
+      "CLIP retriever multimodal retrieval pipeline with Qwen2-VL-7B Top-K 3 evaluation results",
+      "CLIP-based multimodal document retrieval performance when combined with Qwen2-VL-7B vision language model at top-3 retrieval",
+      "using CLIP as retriever for multimodal retrieval augmented generation Qwen2-VL-7B Top-K=3 accuracy benchmark"
+    ],
+    "q0023": [
+      "supporting fact coverage multi-hop question answering knowledge graph construction sparsity",
+      "effect of knowledge graph sparsification on evidence retrieval in multi-hop QA benchmarks",
+      "case-dependent performance of graph construction methods for multi-hop QA supporting fact identification"
+    ],
+    "q0024": [
+      "RA-CM3 retrieval-augmented multimodal generation knowledge-intensive image generation",
+      "RA-CM3 retrieval relevance during training and inference impact on performance",
+      "retrieval-augmented autoregressive image generation RA-CM3 method explanation"
+    ],
+    "q0025": [
+      "confidence-based token masking implicit query formulation for retrieval-augmented language models",
+      "RA-CM3 retrieval-augmented multimodal model explicit question generation for uncertain spans retrieval accuracy",
+      "RA-CM3 analysis training and inference time retrieval relevance impact on retrieval-augmented model performance"
+    ],
+    "q0026": [
+      "knowledge graph construction density trade-off for multi-document question answering with large language models, effect on supporting fact coverage and answer evaluation",
+      "TF-IDF based knowledge graph construction precision impact on supporting facts exact match score in LLM-based multi-document QA",
+      "graph density versus precision in KG-prompted retrieval: how sparser knowledge graphs bound supporting fact exact match performance"
+    ],
+    "q0027": [
+      "FLARE active retrieval method for reducing irrelevant context in retrieval-augmented generation",
+      "Forward-looking active retrieval FLARE contextual relevance improvements in RAG pipelines",
+      "FLARE low-confidence triggered query generation for retrieving relevant documents in question answering"
+    ],
+    "q0028": [
+      "in-context retrieval-augmented language models RALM relationship to retrieval-augmented generation LLMs",
+      "impact of off-the-shelf retrievers BM25 on in-context retrieval augmented generation for large language models",
+      "effect of non-fine-tuned sparse retrievers like BM25 on RAG performance in large language models"
+    ],
+    "q0030": [
+      "retrieval augmented generation reducing hallucinations in large language models",
+      "retrieve-and-generate architecture for factoid question answering evaluation",
+      "nonparametric memory augmentation language models knowledge-intensive NLP tasks"
+    ],
+    "q0033": [
+      "ChemCrow WebSearch tool autonomous chemical synthesis planning insect repellent",
+      "ChemCrow RoboRXN platform thiourea organocatalyst discovery synthesis tool use",
+      "ChemCrow LLM agent web search tool integration chemical synthesis tasks evaluation"
+    ],
+    "q0035": [
+      "ToolAlpaca-13B evaluation results simulated tools benchmark",
+      "ToolAlpaca-13B performance score tool use simulation",
+      "ToolAlpaca 13B overall accuracy simulated tool environment"
+    ],
+    "q0037": [
+      "AgentSims architecture for LLM agent simulation with memory and tool use",
+      "AgentSims framework design supporting memory systems and tool-use capabilities in autonomous agents",
+      "AgentSims: infrastructure for building and evaluating language learning agents with memory and tool integration"
+    ],
+    "q0039": [
+      "GPT-4 ChemCrow synthesis comparison IUPAC name validity issues",
+      "problems with molecules GPT-4 proposes as IUPAC names chemistry",
+      "GPT-4 IUPAC nomenclature errors compared with ChemCrow molecular synthesis"
+    ],
+    "q0040": [
+      "Self-Debugging Chen et al. 2024 baseline agent capabilities comparison checkmarks",
+      "Self-Debugging agent benchmark evaluation results Chen 2024",
+      "agent capability comparison table Self-Debugging baseline Chen et al. which capabilities satisfied"
+    ],
+    "q0042": [
+      "GSM8K 0-shot benchmark scores for Qwen-chat models with HumanEval BBH MMLU C-Eval results",
+      "Qwen chat model evaluation table GSM8K HumanEval BBH MMLU C-Eval accuracy by parameter size",
+      "RLHF DPO aligned Qwen model benchmark performance GSM8K 0-shot and parameter counts"
+    ],
+    "q0043": [
+      "ACE framework defense evaluation against the three attacks described in section III of isolation-related LLM attack taxonomy",
+      "does ACE mitigate adversarial attacks on LLM agent isolation across abstract planner and concrete planner components",
+      "impact of planner LLM choice on ACE robustness to agent isolation attacks"
+    ],
+    "q0044": [
+      "WebArena environment deployment and installation",
+      "WebArena benchmark setup and state reset procedure",
+      "WebArena self-hosted web environment configuration and reset mechanism"
+    ],
+    "q0045": [
+      "ChatGPT GPT-3.5 Turbo evaluation on cybersecurity knowledge benchmarks",
+      "comparing large language model performance to certified IT security professionals on technical assessments",
+      "GPT-3.5 Turbo benchmark results cybersecurity certification exam questions"
+    ],
+    "q0047": [
+      "WebArena benchmark environment construction methodology for web tasks",
+      "WebArena intent curation and website emulation for agent evaluation",
+      "how WebArena benchmark builds environments and collects task intents on replicated websites"
+    ],
+    "q0048": [
+      "GPT4Tools benchmark success rates tool selection action argument prediction",
+      "GPT4Tools reliability testing multi-tool invocation evaluation autonomous synthesis planning",
+      "LLM agents tool use benchmark GPT4Tools evaluation metrics computational chemistry synthesis planning"
+    ],
+    "q0049": [
+      "Hendrycks MATH dataset benchmark evaluation of Qwen chat models",
+      "ToRA failure cases on MATH dataset problems with diagrams",
+      "Hendrycks MATH benchmark performance comparison Qwen chat vs ToRA"
+    ],
+    "q0053": [
+      "ToolAlpaca-13B success rate evaluation results act args scores",
+      "ToolAlpaca model Chinese Academy of Sciences benchmark performance act accuracy args accuracy",
+      "ToolAlpaca-13B reported success rates missing SR evaluation ToolAlpaca paper results"
+    ],
+    "q0055": [
+      "chain-of-thought prompting improves mathematical reasoning in large language models",
+      "effect of chain-of-thought prompting on LLM arithmetic and word problem solving performance",
+      "step-by-step reasoning prompting techniques for improving LLM math problem accuracy"
+    ],
+    "q0056": [
+      "AutoTools framework ToolBench dataset training large language models for tool learning",
+      "LLM-based standardization of API tool documentation into a unified concise format ToolBench",
+      "tool instruction generation ToolBench unified tool documentation LLM agents"
+    ],
+    "q0057": [
+      "AutoTools-Learning synthetic training data construction for function learning task callable functions tool programming",
+      "AutoTools-Learning ablation study removing function learning task effect on tool-use function generation",
+      "AutoTools-Learning data generation pipeline function synthesis task impact evaluation callable tool programming functions"
+    ],
+    "q0058": [
+      "synthetic training data AutoTools-Learning tool-use LLMs AutoTools-Eval benchmark",
+      "AutoTools-Learning synthetic data generation long-term planning connected reasoning evaluation tool-using language models",
+      "training data pipeline AutoTools-Learning benchmark AutoTools-Eval multi-step reasoning challenges for tool-use LLMs"
+    ],
+    "q0059": [
+      "AutoTools-Learning multi-task framework learning tasks and tool selection",
+      "AutoTools-Learning framework tool list construction embeddings similar tool choices evaluation",
+      "AutoTools-Learning multi-task training objectives embeddings tool retrieval candidate tool selection benchmark"
+    ],
+    "q0060": [
+      "LLM agentic reasoning with external tools like web search and mind-map for problem solving",
+      "large language models augmented with external agents WebSearch Mind-Map tool use",
+      "agentic frameworks combining LLMs with search and mind-map agents for reasoning tasks"
+    ],
+    "q0061": [
+      "LLM agent framework with planner executor and controller modules for task decomposition, decompose-on-demand strategy",
+      "Tool-Integrated Reasoning GPT-4 tool-use trajectory generation for question answering",
+      "task decomposition and tool calling pipeline for language model agents, multi-step planning and trajectory inference"
+    ],
+    "q0062": [
+      "PROMETHEUS human annotator preference evaluation feedback comparison reasons",
+      "why evaluators rejected PROMETHEUS in human feedback study limitations",
+      "PROMETHEUS user study annotator choices less preferred compared to baselines"
+    ],
+    "q0063": [
+      "REALTOXICITYPROMPTS benchmark toxicity evaluation large language models",
+      "REALTOXICITYPROMPTS dataset measuring toxic text generation in language models",
+      "using REALTOXICITYPROMPTS prompts to assess toxicity in LLM outputs"
+    ],
+    "q0064": [
+      "comprehensive behavioral assessment frameworks for AGI evaluation beyond standard benchmarks",
+      "integrating behavioral testing with benchmark evaluation for artificial general intelligence",
+      "evaluation methodologies for AGI: combining task benchmarks with behavioral analysis"
+    ],
+    "q0066": [
+      "best-performing large language models on stereotype bias benchmark evaluation",
+      "comparative evaluation of LLMs for stereotypical bias measurement",
+      "state-of-the-art model results on stereotype bias detection datasets"
+    ],
+    "q0067": [
+      "stereotype templates for STEM category in bias evaluation benchmark",
+      "STEM domain stereotypes in social bias evaluation datasets",
+      "bias evaluation framework STEM category stereotype template definitions"
+    ],
+    "q0069": [
+      "AgentBench benchmark results for CodeGeeX2-6B",
+      "CodeGeeX2-6B evaluation performance on AgentBench",
+      "AgentBench scores comparison for CodeGeeX2-6B model"
+    ],
+    "q0070": [
+      "AdvGLUE benchmark adversarial robustness evaluation large language models GLUE tasks",
+      "AdvGLUE dataset construction textual adversarial attack methods human validation annotation reliability",
+      "who introduced AdvGLUE benchmark adversarial NLP GLUE human evaluation study"
+    ],
+    "q0072": [
+      "Bard vs MM-ReAct-GPT-4 performance comparison across capabilities and capability integrations",
+      "Benchmark evaluation of MM-ReAct-GPT-4 versus Bard on multimodal capability integration tasks",
+      "Comparative evaluation results of Bard and MM-ReAct-GPT-4 on capability benchmarks"
+    ],
+    "q0073": [
+      "knowledge graph augmented large language models for knowledge-intensive NLP tasks",
+      "integrating structured knowledge bases with LLMs to reduce hallucination and improve factual reasoning",
+      "graph-based retrieval enhanced generation for question answering with large language models"
+    ],
+    "q0077": [
+      "Google BigQuery code pre-training dataset release",
+      "Bard Google performance MM-Vet benchmark evaluation large multimodal models",
+      "comparison of Google Bard with other LMM systems on MM-Vet evaluation results"
+    ],
+    "q0079": [
+      "Pythia 7B vs Vicuna 7B vs Vicuna 13B XSum summarization benchmark results",
+      "XSum ROUGE scores comparison Pythia-7B Vicuna models evaluation table",
+      "Performance of Pythia 7B language model on XSum abstractive summarization task compared to Vicuna 7B and 13B"
+    ],
+    "q0080": [
+      "MMBench GPT-4 choice matching evaluation of vision-language models",
+      "MMBench CircularEval robustness multiple-choice benchmark evaluation",
+      "MMBench number of questions and ability dimensions taxonomy"
+    ],
+    "q0084": [
+      "ALFWorld out-of-distribution benchmark evaluation protocol for large language models instruction design and scoring methodology",
+      "MME multimodal LLM benchmark evaluation instruction format and per-category subtask accuracy metrics",
+      "comparison of LLM and MLLM evaluation frameworks ALFWorld OOD split versus MME task-level output quantification"
+    ],
+    "q0085": [
+      "robustness of GPT models to adversarial demonstrations in in-context learning",
+      "impact of adversarial prompts on in-context learning robustness of large language models",
+      "adversarial prompt attacks and demonstration perturbations in GPT few-shot learning"
+    ],
+    "q0087": [
+      "Llama 2 trustworthiness evaluation benchmarks and alignment with human preferences",
+      "relationship between model trustworthiness metrics and helpfulness in RLHF alignment for Llama 2",
+      "assessing safety and helpfulness trade-offs in Llama 2 large language model alignment research"
+    ],
+    "q0088": [
+      "Prometheus open-source LLM evaluator correlation with human judgment analysis",
+      "Prometheus fine-grained evaluation rubric-based feedback rejected cases error analysis",
+      "Prometheus LLM judge alignment with human evaluation effectiveness of fine-grained scoring"
+    ],
+    "q0089": [
+      "CircularEval robustness evaluation MMBench multiple-choice benchmark",
+      "CircularEval protocol large vision-language model benchmarking GPT-4V LLaVA-1.5",
+      "evaluation robustness multi-choice circular testing vision-language models MMBench GPT-4V LLaVA-1.5"
+    ],
+    "q0090": [
+      "GSM-IC benchmark LLM performance irrelevant distractor sentences arithmetic reasoning",
+      "impact of irrelevant context on large language model reasoning robustness GSM-IC evaluation",
+      "low-quality reference summaries in summarization evaluation datasets distorting LLM benchmark comparisons"
+    ],
+    "q0091": [
+      "large language model alignment evaluation adversarial prompt vulnerability jailbreak attacks",
+      "trustworthiness benchmarks for LLMs robustness to adversarial inputs",
+      "relationship between human alignment metrics and safety vulnerabilities of large language models"
+    ],
+    "q0092": [
+      "MMBench GPT-4 evaluation object localization multimodal benchmark",
+      "GPT-4 based evaluation of object localization performance MMBench robustness adversarial examples",
+      "robustness of LLM evaluators GPT-4 object grounding localization adversarial demonstrations robustness analysis"
+    ],
+    "q0095": [
+      "\"Standard Balanced configuration latency and peak memory benchmarks 7B 13B 30B 65B parameters\"",
+      "\"Standard Balanced inference latency memory footprint scaling across model sizes 7B 13B 30B 65B evaluation results\"",
+      "\"Standard Balanced configuration throughput latency memory consumption per model scale 7B to 65B\""
+    ],
+    "q0096": [
+      "PiQA benchmark scores OPT-6.7b QuIP-RG method incoherence processing W4 W3 W2 quantization",
+      "QuIP-RG 2-bit 3-bit 4-bit weight quantization results OPT-6.7B PiQA accuracy",
+      "incoherence processing QuIP evaluation OPT-6.7b model PiQA zero-bit-width comparison W2 W3 W4"
+    ],
+    "q0097": [
+      "PQCache performance evaluation varying number of tokens and communication overhead",
+      "PQCache scalability analysis with respect to token count and extra communication cost",
+      "PQCache benchmark results across different token numbers and communication overhead measurements"
+    ],
+    "q0098": [
+      "PQCache long-context LLM inference application",
+      "PQCache KV cache compression for long context inference",
+      "product quantization cache efficient LLM inference long sequences"
+    ],
+    "q0099": [
+      "LC-Rec large language model recommender system",
+      "LC-Rec aligning language semantics with collaborative semantics LLM recommendation",
+      "LC-Rec semantic alignment item indexing LLM-based recommendation"
+    ],
+    "q0100": [
+      "SmoothQuant WinoGrande benchmark accuracy 4-bit 8-bit 16-bit quantization results",
+      "LLM-QAT WinoGrande evaluation scores post-training quantization bit-width comparison",
+      "quantization results table WinoGrande accuracy SmoothQuant versus LLM-QAT across 4 8 16 bit precisions"
+    ],
+    "q0101": [
+      "QA-LoRA LLaMA2-7B MMLU 5-shot average accuracy evaluation",
+      "QA-LoRA quantized low-rank adaptation LLaMA2-7B benchmark results comparison with baseline",
+      "MMLU performance of LLaMA2-7B fine-tuned with quantization-aware LoRA versus unquantized baseline"
+    ],
+    "q0105": [
+      "LDLQ-RG vs OPTQ vs Greedy 2-bit quantization proxy loss OPT models comparison",
+      "proxy loss evaluation of LDLQ-RG OPTQ and Greedy quantization methods at 2-bit weight quantization on OPT language models",
+      "2-bit post-training quantization benchmark results comparing LDLQ-RG OPTQ and Greedy on OPT model family"
+    ],
+    "q0107": [
+      "OmniQuant W2A16g64 quantization perplexity results LLaMA1 LLaMA2",
+      "OmniQuant weight-only quantization 2-bit group size 64 evaluation LLaMA 7B 13B 30B 65B 70B",
+      "W2A16 g64 perplexity benchmark OmniQuant LLaMA model family"
+    ],
+    "q0108": [
+      "KV cache memory footprint of LLaMA-30B at 32K context length with 4-bit quantization",
+      "memory requirement for key-value cache of LLaMA 30B at 32768 tokens under low-bit compression",
+      "predictor overhead of Llama2-7B KV cache management inference latency cost"
+    ],
+    "q0109": [
+      "LLaMA-1 7B quantization perplexity comparison OmniQuant SpQR SqueezeLLM average bits",
+      "quantization methods evaluated on LLaMA-1-7B models perplexity and bit-width results OmniQuant vs SpQR vs SqueezeLLM",
+      "post-training quantization benchmark results LLaMA 1 7B perplexity average bits OmniQuant SqueezeLLM SpQR"
+    ],
+    "q0112": [
+      "QuIP-RG OPT-350M 4-bit 3-bit WikiText2 perplexity comparison Greedy+IncoP Near+IncoP baselines",
+      "SpQR 4-bit WikiText perplexity reported results",
+      "OPT-350M quantization WikiText2 perplexity QuIP incoherence processing 4-bit 3-bit evaluation"
+    ],
+    "q0113": [
+      "LLM quantization calibration data selection following GPTQ Frantar et al. 2023 baseline calibration corpus",
+      "Frantar et al. 2023 GPTQ calibration set used as baseline in later LLM quantization calibration data research",
+      "OBS Optimal Brain Surgeon update Frantar fast approximate row-wise weight reconstruction GPTQ quantization algorithm relation"
+    ],
+    "q0115": [
+      "uniform quantization versus NF4 NF4/NormalFloat quantization methods in QLoRA comparison",
+      "QA-LoRA MMLU scores LLaMA2-7B 16-bit to 4-bit weight quantization evaluation",
+      "compression ratio reported for 2-bit and 4-bit quantization large language models"
+    ],
+    "q0116": [
+      "GPTQ AWQ quantization methods comparison table few-shot MMLU Humanities STEM evaluation",
+      "W3A16 quantization perplexity results GPTQ across model sizes",
+      "AWQ weight quantization 3-bit W3A16 perplexity benchmark LLM model scale"
+    ],
+    "q0117": [
+      "SpQR quantization method for near-lossless compression of large language models",
+      "SpQR vs SqueezeLLM comparison of LLM quantization and outlier handling",
+      "evaluation of SpQR 3-4 bit quantization quality compared to clipping-based quantization approaches"
+    ],
+    "q0118": [
+      "OmniQuant performance LLM quantization W2A16g64 evaluation",
+      "calibration data importance for post-training quantization of large language models",
+      "effectiveness of OmniQuant at 2-bit weight quantization group size 64 and role of calibration datasets in model compression"
+    ],
+    "q0119": [
+      "SparseGPT pruning effect on perplexity degradation",
+      "3-bit quantization perplexity increase comparison",
+      "evaluation of pruned vs quantized language models perplexity benchmark results"
+    ],
+    "q0122": [
+      "SmoothQuant evaluation bit-width model compression settings",
+      "GPTQ vs SmoothQuant perplexity comparison WikiText-2 C4 PTB",
+      "SmoothQuant quantization bit precision model size results GPTQ perplexity Wiki2 C4 PTB"
+    ],
+    "q0123": [
+      "QA-LoRA LLaMA2-7B MMLU zero-shot average score evaluation",
+      "QA-LoRA quantization benchmark results MMLU 5-shot performance LLaMA2-7B",
+      "comparing 0-shot versus 5-shot MMLU accuracy of QA-LoRA on LLaMA 2 7B"
+    ],
+    "q0126": [
+      "Bradley-Terry model reward function reparameterization invariance proof reward model loss equivalence",
+      "proof that reward transformations leave Bradley-Terry pairwise preference loss unchanged",
+      "invariance of preference optimization loss under reward function equivalence classes Bradley-Terry"
+    ],
+    "q0127": [
+      "behavior function B distinguishable language model distributions",
+      "behavior function B identifiability language model distributions",
+      "role of behavior function in distinguishing language model distributions"
+    ],
+    "q0128": [
+      "SELF-ALIGN method vs supervised fine-tuning and reinforcement learning from human feedback alignment pipeline",
+      "SELF-ALIGN approach comparison with conventional SFT + RLHF model alignment techniques",
+      "SELF-ALIGN framework contrasted with standard instruction tuning and RLHF-based alignment paradigm"
+    ],
+    "q0129": [
+      "online sampling GPU memory bandwidth bottleneck inference decoding",
+      "GPU underutilization autoregressive token sampling latency overhead",
+      "memory-bound bottleneck large language model online sampling throughput GPU"
+    ],
+    "q0130": [
+      "DPOK comparison experiment reward function used for training",
+      "DPOK evaluation metrics for trained diffusion policy model",
+      "reward function design and evaluation metrics in DPOK baseline comparison"
+    ],
+    "q0133": [
+      "LAION aesthetics predictor architecture implementation details",
+      "neural network model used to estimate aesthetic scores of images in LAION dataset",
+      "aesthetic quality estimation model training method LAION-5B predictor"
+    ],
+    "q0134": [
+      "multi-objective reinforcement learning from human feedback training stability computational cost analysis",
+      "optimizing multiple reward objectives in RLHF efficiency and stability of policy training",
+      "computational overhead and training convergence of multi-objective RLHF methods"
+    ],
+    "q0135": [
+      "effect of entropy bonus regularization on PPO training performance",
+      "entropy coefficient tuning in proximal policy optimization reinforcement learning",
+      "role of entropy reward in improving exploration and stability of PPO"
+    ],
+    "q0136": [
+      "Bradley-Terry model for training reward models in RLHF",
+      "Bradley-Terry pairwise preference loss for reward and cost models",
+      "learning safety reward and cost models from human preference comparisons"
+    ],
+    "q0138": [
+      "limitations of RLHF frameworks dataflow pipeline design",
+      "reinforcement learning from human feedback system architecture inflexibility algorithm customization challenges",
+      "survey of RLHF training systems drawbacks data processing workflow support and algorithm extensibility"
+    ],
+    "q0141": [
+      "SteerLM 43B vs SteerLM 13B Elo rating win rate comparison ChatGPT 3.5 benchmark",
+      "SteerLM 43B SteerLM 13B evaluation results GPT-3.5 head-to-head performance",
+      "controllable humor attribute SteerLM conversational engagement dialogue quality"
+    ],
+    "q0143": [
+      "PPO algorithm Schulman et al. InstructGPT training pipeline reinforcement learning",
+      "memory challenges implementing PPO large language models experiments",
+      "RAFT reward augmented fine-tuning alternative to PPO RLHF"
+    ],
+    "q0144": [
+      "LAION aesthetics predictor Schuhmann reward model reinforcement learning from human feedback",
+      "Schulman PPO proximal policy optimization InstructGPT fine-tuning pipeline",
+      "InstructGPT training stages reward model PPO reinforcement learning LAION aesthetic score prediction RLHF"
+    ],
+    "q0145": [
+      "3D-HybridEngine actor model parallel groups training generation RLHF",
+      "3D-HybridEngine data resharding between training and generation phases multi-controller single-controller",
+      "3D-HybridEngine compatibility with other LLM engines hybrid engine design RLHF rollout"
+    ],
+    "q0147": [
+      "reinforcement learning from human feedback alignment of large language models ChatGPT Alpaca Vicuna",
+      "training large language models from scratch without RLHF human preference alignment Dromedary",
+      "comparison of instruction-tuned LLMs Alpaca Vicuna Dromedary human preference optimization methods"
+    ],
+    "q0150": [
+      "AI alignment paradigm versus supervised fine-tuning and RLHF pipeline",
+      "human preference alignment techniques for safety and value alignment in language models",
+      "safety alignment and human values beyond standard SFT RLHF training approaches"
+    ],
+    "q0151": [
+      "RRHF vs PPO RLHF computational cost and training resource requirements comparison",
+      "Role of KL penalty coefficient in RRHF and PPO-based RLHF alignment methods",
+      "Efficiency analysis of RRHF ranking-based alignment versus PPO reinforcement learning from human feedback with KL divergence regularization"
+    ],
+    "q0152": [
+      "PPO training instability with TRL library memory requirements GPU scalability",
+      "PPO hyperparameter sensitivity comparison RRHF reinforcement learning from human feedback",
+      "TRL PPO implementation memory overhead KL penalty tuning challenges large language models"
+    ],
+    "q0153": [
+      "synthetic instruction data for reward modeling LLM safety alignment",
+      "automatic instruction generation harmful behavior mitigation reinforcement learning from human feedback",
+      "LLM alignment safety training synthetic data reward model red teaming"
+    ],
+    "q0154": [
+      "synthetic instruction data self-instruct reward modeling LLM alignment",
+      "role of self-generated instructions in training reward models for human preference alignment",
+      "instruction tuning with self-instruct data for aligning large language models with human values RLHF"
+    ]
+  }
+}

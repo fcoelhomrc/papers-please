@@ -1,0 +1,419 @@
+{
+  "arm": "decompose",
+  "key": "z-ai/glm-5.3-flash@v1",
+  "queries": {
+    "q0000": [
+      "What faithfulness, answer relevancy, and context precision scores did VectorRAG achieve in retrieval-augmented generation evaluation?",
+      "What faithfulness, answer relevancy, and context precision scores did GraphRAG achieve in retrieval-augmented generation evaluation?",
+      "What faithfulness, answer relevancy, and context precision scores did HybridRAG achieve in retrieval-augmented generation evaluation?"
+    ],
+    "q0001": [
+      "How does GRAG retrieve subgraph information to use in LLM generation?"
+    ],
+    "q0004": [
+      "How does RAGCache perform compared to vLLM?",
+      "How does RAGCache perform compared to vLLM integrated with Faiss?",
+      "What is the state-of-the-art solution for vLLM integration with Faiss?"
+    ],
+    "q0005": [
+      "Why does limited GPU memory force KV cache transmission overhead in RAG systems?",
+      "What is the latency of a KV cache hit compared to full prefill latency in RAG serving systems?"
+    ],
+    "q0006": [
+      "Why does memory provide larger improvement on BigPatent than on XSum for summarization?",
+      "How much does self-memory improve BRIO's performance?",
+      "How much does self-memory improve BART's performance?"
+    ],
+    "q0009": [
+      "What model size gives the best trade-off for RAG fine-tuned models?",
+      "Why does RAG fine-tuned StarCoderBase-7B outperform RAG fine-tuned CodeLlama-7B and Mistral-7Bv0.1?",
+      "What are the findings for the smaller RAG fine-tuned models compared to StarCoderBase-7B?"
+    ],
+    "q0012": [
+      "What does the retrieval process do in a RAG system when given a user query?",
+      "What are the two main types of retriever methods used in RAG (e.g., sparse vs dense retrieval)?"
+    ],
+    "q0013": [
+      "What impact do different chunk sizes have on RAG system performance according to the corpus chunking study?",
+      "What impact do different stride variations have on RAG system performance according to the corpus chunking study?"
+    ],
+    "q0014": [
+      "What is sparse retrieval in Retrieval-Augmented Generation (RAG)?",
+      "How is BM25 used for passage-level retrieval in RAG pipelines?",
+      "What are the limitations of sparse retrieval (e.g., lack of semantic diversity) for LLM applications?"
+    ],
+    "q0016": [
+      "What EM, F1, and accuracy scores does ITER-RETGEN achieve on HotPotQA?",
+      "How does ITER-RETGEN compare to the Self-Ask baseline on multi-hop QA benchmarks?"
+    ],
+    "q0019": [
+      "How does the In-Context RALM framework incorporate retrieval augmentation?",
+      "How does kNN-LM incorporate retrieval augmentation into language modeling?",
+      "How do REALM and RAG incorporate retrieval augmentation into language modeling?"
+    ],
+    "q0020": [
+      "What are the fundamental limitations of using LLMs as knowledge bases?",
+      "How does the retrieval component of RAG address LLM knowledge limitations?",
+      "How does the generation component of RAG address LLM knowledge limitations?"
+    ],
+    "q0022": [
+      "What method does the paper use for CLIP-based retrieval in multimodal retrieval?",
+      "What result does the CLIP retriever achieve with Qwen2-VL-7B when Top-K is 3?"
+    ],
+    "q0023": [
+      "How does graph sparsity in knowledge graph construction affect supporting fact coverage in multi-hop QA?",
+      "Why is the best knowledge graph construction method use case dependent for multi-hop QA?"
+    ],
+    "q0024": [
+      "How does RA-CM3 achieve knowledge-intensive image generation?",
+      "Why is retrieval relevance at training time crucial for RA-CM3's performance?",
+      "Why is retrieval relevance at inference time crucial for RA-CM3's performance?"
+    ],
+    "q0025": [
+      "How does masking low-confidence tokens as implicit queries improve retrieval accuracy in generative search systems?",
+      "How does generating explicit questions for uncertain spans as queries improve retrieval accuracy?",
+      "What does the analysis of RA-CM3 designs reveal about why retrieval relevance must be maintained at both training and inference times?"
+    ],
+    "q0026": [
+      "How does graph density vs precision trade-off in knowledge-graph prompting for multi-document QA affect coverage of supporting facts?",
+      "Why does the TF-IDF-based KG construction method show a lower upper-bound on SF-EM compared to denser graphs?"
+    ],
+    "q0027": [
+      "How does FLARE address contextual relevance failure points in RAG retrieval?"
+    ],
+    "q0028": [
+      "How does in-context retrieval-augmented language modeling (RALM) relate to retrieval-augmented generation in LLMs?",
+      "What effect do off-the-shelf retrievers like BM25 have on in-context RALM performance?"
+    ],
+    "q0030": [
+      "How do retrieval augmented language models reduce hallucinations in large language models?",
+      "Why does a retrieve-and-generate setup work well for short-form knowledge-intensive tasks like factoid question answering?"
+    ],
+    "q0033": [
+      "How did ChemCrow use the WebSearch tool in planning the synthesis of an insect repellent (DEET-like compound)?",
+      "How did ChemCrow use WebSearch and other tools to find and synthesize a thiourea organocatalyst?",
+      "How was ChemCrow connected to the RoboRXN platform to execute synthesis tasks?"
+    ],
+    "q0035": [
+      "What is the overall score of ToolAlpaca-13B on simulated tools?"
+    ],
+    "q0037": [
+      "What is AgentSims?",
+      "What is the architecture of AgentSims?",
+      "How does AgentSims support memory and tool-use systems for agents?"
+    ],
+    "q0039": [
+      "What issue is identified with the IUPAC-named molecules GPT-4 proposes in the ChemCrow comparison synthesis example?"
+    ],
+    "q0040": [
+      "Which capabilities are marked with a checkmark for the Self-Debugging baseline (Chen et al. 2024) in the baseline comparison table?"
+    ],
+    "q0042": [
+      "What are the GSM8K 0-shot scores of the Qwen chat models (e.g., Qwen1.5-Chat, Qwen2-Chat, Qwen2.5-Instruct)?",
+      "What are the HumanEval scores of the Qwen chat/instruct models?",
+      "What are the BBH, MMLU, and C-Eval scores and parameter counts of the Qwen chat/instruct models?"
+    ],
+    "q0043": [
+      "What are the three attacks described in Section III of the paper on isolation problems in LLM systems?",
+      "Does the ACE framework stop or mitigate those three attacks from Section III?",
+      "Does the ACE framework's performance depend on which specific LLM is used for the abstract planner and the concrete planner?"
+    ],
+    "q0044": [
+      "How is the WebArena environment delivered (e.g., Docker, VM) and how is it reset between tasks?"
+    ],
+    "q0045": [
+      "How does ChatGPT (GPT-3.5 Turbo) perform on technical cybersecurity knowledge assessments?"
+    ],
+    "q0047": [
+      "How does WebArena curate tasks and intents for its benchmark environment?",
+      "How does WebArena emulate or replicate websites for its benchmark environment?"
+    ],
+    "q0048": [
+      "What success rates does GPT4Tools achieve on tool selection, tool action, and tool argument prediction?",
+      "Does the GPT4Tools benchmark include reliability testing?",
+      "Does the GPT4Tools benchmark include multi-tool testing?"
+    ],
+    "q0049": [
+      "What is the Hendrycks MATH dataset and what does it contain?",
+      "What results does Qwen (math-qwen-chat) achieve on the Hendrycks MATH benchmark?",
+      "Why does ToRA fail on MATH problems involving diagrams or figures?"
+    ],
+    "q0053": [
+      "What success rates (SR) does the ToolAlpaca-13B* model achieve according to the ToolAlpaca paper from the Chinese Academy of Sciences?",
+      "What act and args scores does ToolAlpaca-13B report in the ToolAlpaca paper?"
+    ],
+    "q0055": [
+      "How does chain-of-thought prompting improve LLM performance on math reasoning tasks?"
+    ],
+    "q0056": [
+      "How does AutoTools-Learning use the ToolBench dataset tools for training an LLM?",
+      "How does the LLM help convert tool documentation in ToolBench into a uniform format in AutoTools-Learning?"
+    ],
+    "q0057": [
+      "How is the synthetic training data for the function learning task constructed in AutoTools-Learning?",
+      "What does the ablation removing the function learning task show about its contribution to producing callable functions for tool programming in AutoTools-Learning?"
+    ],
+    "q0058": [
+      "How is the synthetic training data in AutoTools-Learning constructed?",
+      "What challenges does the AutoTools-Eval benchmark include for long-term planning?",
+      "What challenges does the AutoTools-Eval benchmark include for connected reasoning?"
+    ],
+    "q0059": [
+      "What learning tasks are used in the AutoTools-Learning multi-task training framework?",
+      "How are embeddings used to construct the tool list with similar choices for tool selection evaluation in AutoTools-Learning?"
+    ],
+    "q0060": [
+      "How do LLMs use WebSearch as an external agent in Agentic Reasoning to solve problems?"
+    ],
+    "q0061": [
+      "What is the decompose on-demand task decomposition strategy in the agent-based planning pipeline with planner, executor, and controller modules?",
+      "How does Tool-Integrated Reasoning use GPT-4 to generate tool-use trajectories for each question?"
+    ],
+    "q0062": [
+      "Why did human annotators not prefer PROMETHEUS in the feedback comparison?"
+    ],
+    "q0063": [
+      "What is REALTOXICITYPROMPTS used for in LLM toxicity evaluation?"
+    ],
+    "q0064": [
+      "How should complete behavioral evaluation be incorporated into an ideal AGI evaluation framework alongside standard benchmarks?"
+    ],
+    "q0066": [
+      "Which LLM achieves the best performance on stereotype bias in the evaluation?"
+    ],
+    "q0067": [
+      "What stereotype templates are associated with the STEM category in the stereotype bias evaluation?"
+    ],
+    "q0069": [
+      "What are AgentBench scores for CodeGeeX2-6B?"
+    ],
+    "q0070": [
+      "What is AdvGLUE and who introduced it?",
+      "How was AdvGLUE constructed using textual adversarial attack methods on GLUE tasks?",
+      "Was AdvGLUE validated by human annotators for reliable annotations?"
+    ],
+    "q0072": [
+      "Which model achieves better performance on the Bard set across various capabilities - Bard or MM-ReAct-GPT-4?",
+      "How does MM-ReAct-GPT-4 perform on the Bard benchmark across capability integrations?"
+    ],
+    "q0073": [
+      "How can knowledge graphs help address the limitations of LLMs on knowledge-intensive tasks?"
+    ],
+    "q0077": [
+      "How did Google release the BigQuery dataset for code pre-training?",
+      "How does Bard perform on the MM-Vet benchmark compared to other large multimodal model systems?"
+    ],
+    "q0079": [
+      "What XSum score does Pythia (7B) report on the XSum language generation task?",
+      "What XSum scores do Vicuna (7B) and Vicuna (13B) report on the XSum language generation task?"
+    ],
+    "q0080": [
+      "Why does MMBench use GPT-4 to match VLM predictions to multiple-choice options?",
+      "How does CircularEval make MMBench evaluation more robust?",
+      "How many questions and ability dimensions does MMBench contain?"
+    ],
+    "q0084": [
+      "How is the ALFWorld eval out-of-distribution split evaluation setup for LLMs designed, including instruction format and output quantification?",
+      "How does the MME evaluation approach for multimodal large language models (MLLMs) design its instructions (e.g., yes/no questions) and quantify outputs across task categories and subtasks?",
+      "What are the key differences in instruction design and scoring metrics between the ALFWorld OOD split evaluation and the MME benchmark?"
+    ],
+    "q0085": [
+      "How do adversarial prompts affect the robustness of GPT models in in-context learning?",
+      "How do adversarial demonstrations in the context window affect GPT model performance on in-context learning tasks?"
+    ],
+    "q0087": [
+      "What performance does Llama 2 achieve on trustworthiness benchmark evaluations?",
+      "How does trustworthiness performance relate to Llama 2's helpfulness scores?",
+      "What human alignment goals guided Llama 2's fine-tuning with respect to helpfulness?"
+    ],
+    "q0088": [
+      "How does Prometheus achieve high correlation with human evaluation?",
+      "What did the analysis of rejected Prometheus feedback reveal about its fine-grained evaluation approach?"
+    ],
+    "q0089": [
+      "How does CircularEval improve the robustness of model evaluation on MMBench?",
+      "How do GPT-4V and LLaVA-1.5 perform on the MMBench benchmark?"
+    ],
+    "q0090": [
+      "How does the GSM-IC benchmark evaluate LLM performance when irrelevant distractor sentences are added to GSM8K math word problems?",
+      "What performance drops do LLMs show on GSM-IC compared to the original GSM8K benchmark due to irrelevant context?",
+      "How can low-quality reference summaries in evaluation datasets distort LLM performance comparisons in summarization tasks?"
+    ],
+    "q0091": [
+      "How is human alignment evaluated in large language models?",
+      "How vulnerable are LLMs to adversarial prompts and prompt injection attacks?",
+      "What do trustworthiness evaluations of current LLMs reveal?"
+    ],
+    "q0092": [
+      "How does MMBench use GPT-4 to evaluate object localization abilities?",
+      "How does GPT-4 handle robustness concerns with adversarial demonstrations?"
+    ],
+    "q0095": [
+      "What latency does the Standard Balanced configuration report for 7B, 13B, 30B, and 65B models?",
+      "What peak memory does the Standard Balanced configuration report for 7B, 13B, 30B, and 65B models?"
+    ],
+    "q0096": [
+      "What PiQA accuracy does the QuIP-RG method report for the OPT-6.7b model at W4 weight quantization with incoherence processing?",
+      "What PiQA accuracy does the QuIP-RG method report for the OPT-6.7b model at W3 weight quantization with incoherence processing?",
+      "What PiQA accuracy does the QuIP-RG method report for the OPT-6.7b model at W2 weight quantization with incoherence processing?"
+    ],
+    "q0097": [
+      "How does PQCache performance change as the number of tokens varies?",
+      "How does PQCache performance change as extra communication overhead varies?"
+    ],
+    "q0098": [
+      "What is PQCache used for in long-context LLM inference?"
+    ],
+    "q0099": [
+      "What is LC-Rec?",
+      "How does LC-Rec address the gap between language semantics and collaborative semantics in LLM-based recommender systems?"
+    ],
+    "q0100": [
+      "What accuracy does SmoothQuant achieve on WinoGrande at 4-bit, 8-bit, and 16-bit weight quantization?",
+      "What accuracy does LLM-QAT achieve on WinoGrande at 4-bit, 8-bit, and 16-bit weight quantization?"
+    ],
+    "q0101": [
+      "What is the average MMLU 5-shot performance of LLaMA2-7B fine-tuned with QA-LoRA?",
+      "What is the average MMLU 5-shot performance of the LLaMA2-7B baseline (without QA-LoRA)?"
+    ],
+    "q0105": [
+      "What proxy loss does LDLQ-RG achieve at 2 bits on OPT models?",
+      "What proxy loss does OPTQ achieve at 2 bits on OPT models?",
+      "What proxy loss does Greedy achieve at 2 bits on OPT models?"
+    ],
+    "q0107": [
+      "What are the W2A16 g64 perplexity results for OmniQuant on the LLaMA1 models (7B, 13B, 30B, 65B)?",
+      "What are the W2A16 g64 perplexity results for OmniQuant on the LLaMA2 models (7B, 13B, 70B)?"
+    ],
+    "q0108": [
+      "How much KV cache memory does LLaMA-30B need at 32k context with 4-bit quantization?",
+      "Is the predictor overhead in Llama2-7B significant?"
+    ],
+    "q0109": [
+      "What perplexity and average bits does OmniQuant achieve for LLaMA-1-7B quantization?",
+      "What perplexity and average bits does SpQR achieve for LLaMA-1-7B quantization?",
+      "What perplexity and average bits does SqueezeLLM achieve for LLaMA-1-7B quantization?"
+    ],
+    "q0112": [
+      "What Wiki perplexity does QuIP-RG report on OPT-350M at 4-bit and 3-bit precision?",
+      "What Wiki perplexity do the Greedy+IncP and Near+IncP incoherence processing baselines report on OPT-350M at 4-bit and 3-bit precision?",
+      "What 4-bit Wiki perplexity does SpQR report?"
+    ],
+    "q0113": [
+      "What calibration data corpus did Frantar et al. (2023) use for LLM quantization?",
+      "What is the classic OBS update in Frantar's earlier work?",
+      "How does the fast approximate reconstruction algorithm perform row-wise weight reconstruction in relation to the OBS update?"
+    ],
+    "q0115": [
+      "How does uniform quantization differ from the NF4 and NF2 quantization methods used in QLoRA?",
+      "What MMLU scores does QA-LoRA achieve on LLaMA2-7B when going from 16-bit to 4-bit quantization?",
+      "What compression ratios are reported for 2-bit and 4-bit quantization?"
+    ],
+    "q0116": [
+      "Which quantization methods are listed in the few-shot MMLU Humanities/STEM evaluation table?",
+      "What W3A16 perplexity does GPTQ report across model sizes?",
+      "What W3A16 perplexity does AWQ report across model sizes?"
+    ],
+    "q0117": [
+      "What is the SpQR model compression technique for quantizing large language models?",
+      "How does SpQR achieve near-lossless quantization compared to clipping-based methods?",
+      "What quantization approach does SqueezeLLM use for compressing large language models?"
+    ],
+    "q0118": [
+      "How does OmniQuant perform under W2A16g64 quantization settings on LLMs?",
+      "Why is the availability of calibration data important for LLM quantization compression methods?"
+    ],
+    "q0119": [
+      "What perplexity degradation does SparseGPT pruning cause on LLaMA models?",
+      "What perplexity degradation does 3-bit quantization cause on LLaMA models?",
+      "How does SparseGPT combine pruning and 3-bit quantization in terms of perplexity?"
+    ],
+    "q0122": [
+      "At what bit-width is SmoothQuant evaluated for model compression?",
+      "How does GPTQ compare to SmoothQuant on perplexity for WikiText-2?",
+      "How does GPTQ compare to SmoothQuant on perplexity for C4 and PTB?"
+    ],
+    "q0123": [
+      "What average 0-shot MMLU score does QA-LoRA achieve on LLaMA2-7B?",
+      "What average 5-shot MMLU score does QA-LoRA achieve on LLaMA2-7B?"
+    ],
+    "q0126": [
+      "How does the Bradley-Terry model loss remain invariant when the reward function r is replaced by an equivalent reward function r\u2032?"
+    ],
+    "q0127": [
+      "What is the behavior function B used for in the context of distinguishable language model distributions?"
+    ],
+    "q0128": [
+      "How does SELF-ALIGN differ from the prevailing SFT plus RLHF alignment paradigm?"
+    ],
+    "q0129": [
+      "What GPU-related difficulty do online sampling techniques face in LLM inference?"
+    ],
+    "q0130": [
+      "What reward function is used for training in the DPOK comparison experiment?",
+      "What evaluation metrics are used to assess the DPOK-trained model?"
+    ],
+    "q0133": [
+      "How is the LAION aesthetics predictor implemented?"
+    ],
+    "q0134": [
+      "How does multi-objective RLHF affect training stability?",
+      "How does multi-objective RLHF affect computational efficiency?"
+    ],
+    "q0135": [
+      "Does entropy bonus improve PPO training performance?"
+    ],
+    "q0136": [
+      "How is the Bradley-Terry model used in training reward models for safety alignment?"
+    ],
+    "q0138": [
+      "What are the main limitations of existing RLHF systems in terms of dataflow support?"
+    ],
+    "q0141": [
+      "What Elo rating and win rate against ChatGPT 3.5 does SteerLM 43B achieve?",
+      "What Elo rating and win rate against ChatGPT 3.5 does SteerLM 13B achieve?",
+      "How does the controllable humor attribute in SteerLM affect conversational engagement?"
+    ],
+    "q0143": [
+      "How does the PPO algorithm by Schulman et al. function and what role does it play in the InstructGPT training pipeline?",
+      "What memory challenges arise when implementing PPO in large language model experiments?",
+      "What alternative does RAFT offer to PPO for LLM training?"
+    ],
+    "q0144": [
+      "What role does Schuhmann's LAION aesthetics predictor play in RLHF?",
+      "How does Schulman's PPO algorithm fit into the InstructGPT training pipeline?"
+    ],
+    "q0145": [
+      "How does 3D-HybridEngine in HybridFlow/RLHFuse handle the actor model's parallel group reconfiguration between training and generation phases in RLHF iterations?",
+      "What resharding and weight-gathering coordination does 3D-HybridEngine perform between the training and inference phases, using both single-controller and multi-controller programming?",
+      "Is 3D-HybridEngine compatible with other LLM inference engines besides the one used in HybridFlow?"
+    ],
+    "q0147": [
+      "How do large language models like ChatGPT, Alpaca, and Vicuna use human preference alignment techniques such as RLHF?",
+      "How is the Dromedary model trained from scratch without relying on existing aligned LLMs?"
+    ],
+    "q0150": [
+      "How does AI alignment differ from standard SFT plus RLHF training pipelines?",
+      "Why does aligning AI systems with human values such as safety matter?"
+    ],
+    "q0151": [
+      "What resource requirements does RRHF have compared to PPO-based RLHF?",
+      "What role does the KL coefficient play in RRHF and PPO-based RLHF?"
+    ],
+    "q0152": [
+      "Why is PPO implemented with the TRL package hard to train and scale up (memory issues, multi-model pipeline)?",
+      "How does hyperparameter sensitivity of PPO (TRL) degrade its performance compared to RRHF?",
+      "What memory-related problems arise when training PPO with TRL compared to RRHF?"
+    ],
+    "q0153": [
+      "How are synthetic instructions used in reward modeling of LLMs?",
+      "How are synthetic instructions used in safety alignment of LLMs?",
+      "How does safety alignment mitigate harmful behaviors in LLMs?"
+    ],
+    "q0154": [
+      "How does the self-instruct mechanism generate synthetic instructions?",
+      "How are synthetic instructions used in reward modeling for large language models?",
+      "How does reward modeling align large language models with human values?"
+    ]
+  }
+}

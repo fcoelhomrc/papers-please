@@ -35,7 +35,14 @@ search:
   mode: hybrid            # semantic | keyword | hybrid
   corpus: eval            # documents.corpus retrieval may see (null = all)
   namespace: eval         # Pinecone namespace; must match corpus
-  keyword_weight: 0.1     # keyword's RRF weight relative to dense retrieval's 1.0
+  # Keyword's RRF weight relative to dense retrieval's fixed 1.0, so 1.0 is
+  # parity rather than keyword-only. Was 0.1, fitted on the old 12-document
+  # corpus where dense was the stronger ranker. On the current corpus the
+  # sweep is monotonic the other way - nDCG 0.608 at 0.1 against 0.671 at 1.0
+  # for hybrid, 0.599 against 0.686 for hybrid_bm25 - because at 0.1 a rank-1
+  # keyword hit scored 0.00164 against a rank-40 dense hit's 0.0100 and so
+  # could not outrank dense anywhere in the pool.
+  keyword_weight: 1.0
   rerank_candidates: 40   # pool retrieved before the cross-encoder cuts to top_k
   neighbour_window: 1     # chunks either side glued on as context after ranking (0 = off)
   min_rerank_score: -8.0  # cross-encoder logits, ms-marco-MiniLM specific
