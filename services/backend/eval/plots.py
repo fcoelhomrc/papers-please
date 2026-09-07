@@ -25,17 +25,37 @@ RESULTS = Path(__file__).parent / "results"
 # a sixth series takes slot 6, it does not wrap back to slot 1. Wrapping put
 # `hyde` and `none` in the same blue on the query-arms figure, which is the
 # one thing a categorical palette must never do.
-SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100",
-          "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
-INK = "#0b0b0b"
-SECONDARY = "#52514e"
-MUTED = "#898781"
-GRID = "#e1e0d9"
-BASELINE = "#c3c2b7"
-SURFACE = "#fcfcfb"
+# Both modes are selected, not flipped: the dark column is the same eight hues
+# stepped for the dark surface, per the reference palette.
+THEMES = {
+    "light": {
+        "series": ["#2a78d6", "#eb6834", "#1baf7a", "#eda100",
+                   "#e87ba4", "#008300", "#4a3aa7", "#e34948"],
+        "ramp": ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#104281"],
+        "ink": "#0b0b0b", "secondary": "#52514e", "muted": "#898781",
+        "grid": "#e1e0d9", "baseline": "#c3c2b7", "surface": "#fcfcfb",
+    },
+    "dark": {
+        "series": ["#3987e5", "#d95926", "#199e70", "#c98500",
+                   "#d55181", "#008300", "#9085e9", "#e66767"],
+        "ramp": ["#104281", "#184f95", "#256abf", "#2a78d6", "#5598e7", "#9ec5f4"],
+        "ink": "#ffffff", "secondary": "#c3c2b7", "muted": "#898781",
+        "grid": "#2c2c2a", "baseline": "#383835", "surface": "#1a1a19",
+    },
+}
+
+# Set by style() for the mode currently rendering.
+SERIES: list[str] = []
+RAMP: list[str] = []
+INK = SECONDARY = MUTED = GRID = BASELINE = SURFACE = ""
+THEME = "light"
 
 MODES = ["semantic", "keyword", "bm25", "hybrid", "hybrid_bm25"]
-MODE_COLOR = dict(zip(MODES, SERIES))
+
+
+def mode_color() -> dict[str, str]:
+    """Resolved per render: SERIES holds the current theme's steps."""
+    return dict(zip(MODES, SERIES))
 
 # Every label in every figure is the literal key from the ablation output or
 # from config.yaml - `ndcg`, `top_k`, `keyword_weight`, `rerank_candidates`,
@@ -51,8 +71,15 @@ BAR_W, BAR_PITCH = 0.115, 0.145
 LEGEND = {"loc": "upper center", "bbox_to_anchor": (0.5, 1.14), "columnspacing": 1.4}
 
 
-def style():
+def style(mode: str):
+    global SERIES, RAMP, INK, SECONDARY, MUTED, GRID, BASELINE, SURFACE, THEME
     import matplotlib as mpl
+
+    t = THEMES[mode]
+    THEME = mode
+    SERIES, RAMP = t["series"], t["ramp"]
+    INK, SECONDARY, MUTED = t["ink"], t["secondary"], t["muted"]
+    GRID, BASELINE, SURFACE = t["grid"], t["baseline"], t["surface"]
 
     mpl.rcParams.update({
         "figure.facecolor": SURFACE,
@@ -80,11 +107,23 @@ def style():
         "grid.linewidth": 0.6,
         "grid.linestyle": "-",
         "legend.frameon": False,
+        "legend.labelcolor": SECONDARY,
         "legend.fontsize": 8,
         "lines.linewidth": 2,
         "lines.solid_capstyle": "round",
         "figure.dpi": 200,
     })
+
+
+def facet(ax, text: str):
+    """Which slice of the data this panel holds - `top_k=10`, `mode=bm25`.
+
+    Bare key=value inside the axes. It is the panel's identity, not a caption:
+    without it a faceted figure is unreadable, and with anything more than the
+    key and its value it becomes the title this figure is not allowed to have.
+    """
+    ax.text(0.02, 0.97, text, transform=ax.transAxes, ha="left", va="top",
+            fontsize=8, color=MUTED)
 
 
 FORMATS = ("png", "svg")
@@ -94,10 +133,12 @@ def save(fig, name: str):
     """One directory per format, so a README can glob `assets/eval/png/*` and
     a print or edit workflow can take the vector copies without filtering."""
     for ext in FORMATS:
-        out = ASSETS / ext
+        out = ASSETS / ext / THEME
         out.mkdir(parents=True, exist_ok=True)
         fig.savefig(out / f"{name}.{ext}", bbox_inches="tight", pad_inches=0.15)
-    print(f"  {name}." + "/.".join(FORMATS))
+    import matplotlib.pyplot as plt
+
+    plt.close(fig)
 
 
 def by_mode(rows, metric):
@@ -132,7 +173,7 @@ def fig_recall_precision(data):
     # in the ranking-quality figure, one depth at a time.
     for ax, metric in zip(axes, ("recall", "precision")):
         for mode, (ks, ys, _) in by_mode(data["a"], metric).items():
-            ax.plot(ks, ys, color=MODE_COLOR[mode], label=mode, zorder=3)
+            ax.plot(ks, ys, color=mode_color()[mode], label=mode, zorder=3)
         ax.set_xscale("log")
         ax.set_xticks([1, 3, 5, 10, 20, 50])
         ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
@@ -167,11 +208,12 @@ def fig_ranking_quality(data, k=10):
         off = (i - (len(MODES) - 1) / 2) * pitch
         ax.bar(x + off, [s[m] for m in metrics], width,
                yerr=[s[f"{m}_ci"] for m in metrics],
-               color=MODE_COLOR[mode], label=mode, zorder=3,
+               color=mode_color()[mode], label=mode, zorder=3,
                error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
     ax.set_xticks(x)
     ax.set_xticklabels(metrics)
-    ax.set_xlabel(f"metric (top_k={k})")
+    ax.set_xlabel("metric")
+    facet(ax, f"top_k={k}")
     ax.set_ylim(0, 1)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
@@ -196,12 +238,16 @@ def fig_fusion_weight(data):
             )
             ax.plot([p["config"]["keyword_weight"] for p in pts],
                     [p["summary"]["ndcg"] for p in pts],
-                    color=MODE_COLOR[mode], label=mode, marker="o",
+                    color=mode_color()[mode], label=mode, marker="o",
                     markersize=4, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
         ax.axvline(0.1, color=MUTED, linewidth=0.8, linestyle=(0, (4, 3)), zorder=1)
         # Facet identity rides in the axis label rather than a panel title.
-        ax.set_xlabel(f"keyword_weight (top_k={k})")
+        ax.set_xlabel("keyword_weight")
+        facet(ax, f"top_k={k}")
         ax.set_xticks([0.1, 0.25, 0.5, 0.75, 1.0])
+        # Margin to the left of 0.1 so the facet marker does not sit on the
+        # line marking the shipped value.
+        ax.set_xlim(0.02, 1.08)
         ax.grid(axis="y", zorder=0)
         ax.set_axisbelow(True)
     axes[0].set_ylabel("ndcg")
@@ -239,7 +285,7 @@ def fig_latency_quality(data):
                     xytext=(-9 if right else 9, -3),
                     ha="right" if right else "left",
                     fontsize=8, color=SECONDARY)
-    ax.set_xlabel("latency_ms.total (mean)")
+    ax.set_xlabel("latency_ms")
     ax.set_ylabel("ndcg")
     ax.set_xlim(0, span * 1.08)
     ax.grid(axis="y", zorder=0)
@@ -261,7 +307,7 @@ def fig_latency_breakdown(data):
     fig, ax = plt.subplots(figsize=(W1, PANEL_H))
     left = np.zeros(len(modes))
     # Sequential ramp: these are parts of one magnitude, not five identities.
-    ramp = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#104281"]
+    ramp = RAMP
     for stage, color in zip(stages, ramp):
         vals = np.array([rows[m].get(stage, 0.0) for m in modes])
         if vals.sum() == 0:
@@ -269,7 +315,7 @@ def fig_latency_breakdown(data):
         ax.barh(modes, vals, left=left, height=0.42, color=color,
                 label=stage, edgecolor=SURFACE, linewidth=1.5, zorder=3)
         left += vals
-    ax.set_xlabel("latency_ms by stage (mean)")
+    ax.set_xlabel("latency_ms")
     ax.invert_yaxis()
     ax.grid(axis="x", zorder=0)
     ax.set_axisbelow(True)
@@ -378,7 +424,8 @@ def fig_query_arms(data):
                    error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
         ax.set_xticks(x)
         ax.set_xticklabels([str(k) for k in ks])
-        ax.set_xlabel(f"top_k (mode={mode})")
+        ax.set_xlabel("top_k")
+        facet(ax, f"mode={mode}")
         ax.grid(axis="y", zorder=0)
         ax.set_axisbelow(True)
     np.atleast_1d(axes)[0].set_ylabel("ndcg")
@@ -397,9 +444,7 @@ def main():
     args = parser.parse_args()
 
     data = load_results(args.results)
-    print(f"-> {ASSETS}")
 
-    style()
     # Each figure is skipped rather than fatal when its ablation is absent, so
     # a partial result still renders whatever it does contain.
     figures = [
@@ -411,11 +456,17 @@ def main():
         ("timings", fig_latency_breakdown),
         ("c", fig_query_arms),
     ]
-    for key, fn in figures:
-        if key not in data:
-            print(f"  (skipped {fn.__name__}: no {key!r} in results)")
-            continue
-        fn(data)
+    for mode in THEMES:
+        style(mode)
+        for key, fn in figures:
+            if key not in data:
+                continue
+            fn(data)
+        print(f"  {mode}: {sum(1 for k, _ in figures if k in data)} figures")
+    missing = sorted({k for k, _ in figures if k not in data})
+    if missing:
+        print(f"  (skipped, absent from results: {', '.join(missing)})")
+    print(f"-> {ASSETS}/<ext>/<mode>/")
 
 
 if __name__ == "__main__":
