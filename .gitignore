@@ -38,3 +38,6 @@ services/backend/eval/labelling/*.download
 # would make one reviewer's in-progress pass everybody else's starting point.
 services/backend/eval/testset/review.json
 services/backend/eval/testset/*/review.json
+
+# Worktrees Claude Code creates for isolated work - not part of the repo.
+.claude/worktrees/

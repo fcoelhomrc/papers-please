@@ -21,8 +21,12 @@ from pathlib import Path
 ASSETS = Path(__file__).resolve().parents[3] / "assets" / "eval"
 RESULTS = Path(__file__).parent / "results"
 
-# Fixed slot order from the reference palette. Never cycled, never re-ordered.
-SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
+# Fixed slot order from the reference palette. Never cycled, never re-ordered:
+# a sixth series takes slot 6, it does not wrap back to slot 1. Wrapping put
+# `hyde` and `none` in the same blue on the query-arms figure, which is the
+# one thing a categorical palette must never do.
+SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100",
+          "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
 INK = "#0b0b0b"
 SECONDARY = "#52514e"
 MUTED = "#898781"
@@ -32,6 +36,19 @@ SURFACE = "#fcfcfb"
 
 MODES = ["semantic", "keyword", "bm25", "hybrid", "hybrid_bm25"]
 MODE_COLOR = dict(zip(MODES, SERIES))
+
+# Every label in every figure is the literal key from the ablation output or
+# from config.yaml - `ndcg`, `top_k`, `keyword_weight`, `rerank_candidates`,
+# `hybrid_bm25`. Prettified names ("nDCG@10", "no rerank") were invented here
+# and matched nothing a reader could grep for in the results JSON or the
+# config, which makes a figure impossible to trace back to the run.
+#
+# One geometry for all of them, so they read as one set: same panel height,
+# same bar width and pitch, legend always above the axes.
+PANEL_H = 3.3
+W1, W2 = 7.4, 9.4        # single panel, two panels
+BAR_W, BAR_PITCH = 0.115, 0.145
+LEGEND = {"loc": "upper center", "bbox_to_anchor": (0.5, 1.14), "columnspacing": 1.4}
 
 
 def style():
@@ -109,23 +126,22 @@ def fig_recall_precision(data):
     """
     import matplotlib.pyplot as plt
 
-    fig, axes = plt.subplots(1, 2, figsize=(9, 3.2), sharex=True)
+    fig, axes = plt.subplots(1, 2, figsize=(W2, PANEL_H), sharex=True)
     # No confidence bands here. Five of them at 10% alpha stack into a wash
     # that hides the curves they belong to; the intervals are shown properly
     # in the ranking-quality figure, one depth at a time.
-    for ax, metric, label in zip(axes, ("recall", "precision"), ("recall@k", "precision@k")):
+    for ax, metric in zip(axes, ("recall", "precision")):
         for mode, (ks, ys, _) in by_mode(data["a"], metric).items():
             ax.plot(ks, ys, color=MODE_COLOR[mode], label=mode, zorder=3)
         ax.set_xscale("log")
         ax.set_xticks([1, 3, 5, 10, 20, 50])
         ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
-        ax.set_xlabel("k")
-        ax.set_ylabel(label)
+        ax.set_xlabel("top_k")
+        ax.set_ylabel(metric)
         ax.grid(axis="y", zorder=0)
         ax.set_axisbelow(True)
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, ncol=5, loc="upper center",
-               bbox_to_anchor=(0.5, 1.06), columnspacing=1.6)
+    fig.legend(handles, labels, ncol=len(labels), **LEGEND)
     fig.tight_layout()
     save(fig, "retrieval-depth")
 
@@ -136,15 +152,14 @@ def fig_ranking_quality(data, k=10):
     import numpy as np
 
     metrics = ["ndcg", "map", "mrr", "r_precision"]
-    labels = ["nDCG@10", "MAP@10", "MRR", "R-precision"]
     rows = {r["config"]["mode"]: r for r in data["a"] if r["config"]["top_k"] == k}
 
-    fig, ax = plt.subplots(figsize=(8, 3.4))
+    fig, ax = plt.subplots(figsize=(W1, PANEL_H))
     x = np.arange(len(metrics))
     # Capped rather than filling the slot: five bars across a unit slot leave
     # the remainder as air, and the pitch is wider than the bar so neighbours
     # are separated by surface rather than by a stroke.
-    width, pitch = 0.115, 0.145
+    width, pitch = BAR_W, BAR_PITCH
     for i, mode in enumerate(MODES):
         if mode not in rows:
             continue
@@ -155,12 +170,12 @@ def fig_ranking_quality(data, k=10):
                color=MODE_COLOR[mode], label=mode, zorder=3,
                error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
     ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.set_ylabel("score")
+    ax.set_xticklabels(metrics)
+    ax.set_xlabel(f"metric (top_k={k})")
     ax.set_ylim(0, 1)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
-    ax.legend(ncol=5, loc="upper center", bbox_to_anchor=(0.5, 1.14))
+    ax.legend(ncol=len(MODES), **LEGEND)
     fig.tight_layout()
     save(fig, "ranking-quality")
 
@@ -170,7 +185,7 @@ def fig_fusion_weight(data):
     import matplotlib.pyplot as plt
 
     ks = sorted({r["config"]["top_k"] for r in data["w"]})
-    fig, axes = plt.subplots(1, len(ks), figsize=(9, 3.0), sharey=True)
+    fig, axes = plt.subplots(1, len(ks), figsize=(W2, PANEL_H), sharey=True)
     for ax, k in zip(axes, ks):
         for i, mode in enumerate(("hybrid", "hybrid_bm25")):
             pts = sorted(
@@ -184,14 +199,14 @@ def fig_fusion_weight(data):
                     color=MODE_COLOR[mode], label=mode, marker="o",
                     markersize=4, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
         ax.axvline(0.1, color=MUTED, linewidth=0.8, linestyle=(0, (4, 3)), zorder=1)
-        ax.set_xlabel("keyword weight")
+        # Facet identity rides in the axis label rather than a panel title.
+        ax.set_xlabel(f"keyword_weight (top_k={k})")
         ax.set_xticks([0.1, 0.25, 0.5, 0.75, 1.0])
         ax.grid(axis="y", zorder=0)
         ax.set_axisbelow(True)
-        ax.tick_params(labelrotation=0)
-        ax.set_title(f"k={k}", fontsize=8, color=MUTED, pad=6)
-    axes[0].set_ylabel("nDCG")
-    axes[0].legend(loc="lower right")
+    axes[0].set_ylabel("ndcg")
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, ncol=len(labels), **LEGEND)
     fig.tight_layout()
     save(fig, "fusion-weight")
 
@@ -208,7 +223,7 @@ def fig_latency_quality(data):
                for t in data["timings"]
                if t["config"]["top_k"] == 10 and not t["config"]["rerank"]}
 
-    fig, ax = plt.subplots(figsize=(6.2, 3.6))
+    fig, ax = plt.subplots(figsize=(W1, PANEL_H))
     span = max(latency.values())
     for mode in MODES:
         if mode not in quality or mode not in latency:
@@ -224,8 +239,8 @@ def fig_latency_quality(data):
                     xytext=(-9 if right else 9, -3),
                     ha="right" if right else "left",
                     fontsize=8, color=SECONDARY)
-    ax.set_xlabel("mean latency per query (ms)")
-    ax.set_ylabel("nDCG@10")
+    ax.set_xlabel("latency_ms.total (mean)")
+    ax.set_ylabel("ndcg")
     ax.set_xlim(0, span * 1.08)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
@@ -243,7 +258,7 @@ def fig_latency_breakdown(data):
             if t["config"]["top_k"] == 10 and not t["config"]["rerank"]}
     modes = [m for m in MODES if m in rows]
 
-    fig, ax = plt.subplots(figsize=(7.5, 3.2))
+    fig, ax = plt.subplots(figsize=(W1, PANEL_H))
     left = np.zeros(len(modes))
     # Sequential ramp: these are parts of one magnitude, not five identities.
     ramp = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#104281"]
@@ -254,11 +269,11 @@ def fig_latency_breakdown(data):
         ax.barh(modes, vals, left=left, height=0.42, color=color,
                 label=stage, edgecolor=SURFACE, linewidth=1.5, zorder=3)
         left += vals
-    ax.set_xlabel("mean latency per query (ms)")
+    ax.set_xlabel("latency_ms by stage (mean)")
     ax.invert_yaxis()
     ax.grid(axis="x", zorder=0)
     ax.set_axisbelow(True)
-    ax.legend(ncol=6, loc="upper center", bbox_to_anchor=(0.5, 1.16))
+    ax.legend(ncol=len(stages), **LEGEND)
     fig.tight_layout()
     save(fig, "latency-breakdown")
 
@@ -278,24 +293,25 @@ def fig_rerank(data):
         best.append(top["summary"]["ndcg"])
         err.append(top["summary"]["ndcg_ci"])
 
-    fig, ax = plt.subplots(figsize=(5.6, 3.4))
+    fig, ax = plt.subplots(figsize=(W1, PANEL_H))
     x = np.arange(len(ks))
     ax.errorbar(x - 0.08, [plain[k]["ndcg"] for k in ks],
                 yerr=[plain[k]["ndcg_ci"] for k in ks], fmt="o", markersize=7,
-                color=SERIES[0], label="no rerank", elinewidth=1,
+                color=SERIES[0], label="rerank=False", elinewidth=1,
                 capsize=0, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
     ax.errorbar(x + 0.08, best, yerr=err, fmt="o", markersize=7,
-                color=SERIES[1], label="reranked", elinewidth=1,
+                color=SERIES[1], label="rerank=True", elinewidth=1,
                 capsize=0, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
     for i, k in enumerate(ks):
         ax.plot([i - 0.08, i + 0.08], [plain[k]["ndcg"], best[i]],
                 color=BASELINE, linewidth=0.8, zorder=2)
     ax.set_xticks(x)
-    ax.set_xticklabels([f"k={k}" for k in ks])
-    ax.set_ylabel("nDCG")
+    ax.set_xticklabels([str(k) for k in ks])
+    ax.set_xlabel("top_k")
+    ax.set_ylabel("ndcg")
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
-    ax.legend(ncol=2, loc="upper center", bbox_to_anchor=(0.5, 1.12))
+    ax.legend(ncol=2, **LEGEND)
     fig.tight_layout()
     save(fig, "rerank-matched")
 
@@ -324,38 +340,53 @@ def load_results(explicit: Path | None = None) -> dict:
     return data
 
 
-def fig_query_arms(data, mode="bm25"):
-    """Each query arm against the untransformed question, at one mode."""
+def fig_query_arms(data):
+    """Every arm against `none`, faceted by mode.
+
+    Faceted rather than filtered to one mode, because `hyde` only runs on
+    semantic - it embeds a passage, so it means nothing to a lexical
+    retriever. Showing a single mode dropped it from the figure entirely
+    without saying so, which is the worst way for an arm to be absent.
+    """
     import matplotlib.pyplot as plt
     import numpy as np
 
-    rows = [r for r in data["c"] if r["config"]["mode"] == mode]
-    ks = sorted({r["config"]["top_k"] for r in rows})
-    arms = [a for a in ("none", "decompose+orig", "decompose",
-                        "multi_query+orig", "multi_query")
-            if any(r["config"]["arm"] == a for r in rows)]
+    modes = sorted({r["config"]["mode"] for r in data["c"]})
+    ks = sorted({r["config"]["top_k"] for r in data["c"]})
+    # Ordered by how much each transform rewrites the question, which is the
+    # order the scores come out in. `none` first as the baseline.
+    order = ["none", "decompose+orig", "decompose",
+             "multi_query+orig", "multi_query", "hyde"]
+    arms = [a for a in order if any(r["config"]["arm"] == a for r in data["c"])]
+    color = dict(zip(arms, SERIES))
 
-    fig, ax = plt.subplots(figsize=(7.2, 3.4))
-    x = np.arange(len(ks))
-    width, pitch = 0.115, 0.145
-    for i, arm in enumerate(arms):
-        vals, errs = [], []
-        for k in ks:
-            match = [r for r in rows
+    fig, axes = plt.subplots(1, len(modes), figsize=(W2, PANEL_H), sharey=True)
+    for ax, mode in zip(np.atleast_1d(axes), modes):
+        rows = [r for r in data["c"] if r["config"]["mode"] == mode]
+        present = [a for a in arms if any(r["config"]["arm"] == a for r in rows)]
+        x = np.arange(len(ks))
+        for i, arm in enumerate(present):
+            vals, errs = [], []
+            for k in ks:
+                m = [r for r in rows
                      if r["config"]["arm"] == arm and r["config"]["top_k"] == k]
-            vals.append(match[0]["summary"]["ndcg"] if match else 0)
-            errs.append(match[0]["summary"]["ndcg_ci"] if match else 0)
-        off = (i - (len(arms) - 1) / 2) * pitch
-        ax.bar(x + off, vals, width, yerr=errs, color=SERIES[i % len(SERIES)],
-               label=arm, zorder=3,
-               error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"k={k}" for k in ks])
-    ax.set_ylabel("nDCG")
-    ax.grid(axis="y", zorder=0)
-    ax.set_axisbelow(True)
-    ax.legend(ncol=len(arms), loc="upper center", bbox_to_anchor=(0.5, 1.14),
-              columnspacing=1.0)
+                vals.append(m[0]["summary"]["ndcg"] if m else np.nan)
+                errs.append(m[0]["summary"]["ndcg_ci"] if m else 0)
+            off = (i - (len(present) - 1) / 2) * BAR_PITCH
+            ax.bar(x + off, vals, BAR_W, yerr=errs, color=color[arm],
+                   label=arm, zorder=3,
+                   error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
+        ax.set_xticks(x)
+        ax.set_xticklabels([str(k) for k in ks])
+        ax.set_xlabel(f"top_k (mode={mode})")
+        ax.grid(axis="y", zorder=0)
+        ax.set_axisbelow(True)
+    np.atleast_1d(axes)[0].set_ylabel("ndcg")
+
+    # One legend for both panels, listing every arm - including the one that
+    # only appears in a single facet.
+    handles = [plt.Rectangle((0, 0), 1, 1, color=color[a]) for a in arms]
+    fig.legend(handles, arms, ncol=len(arms), **LEGEND)
     fig.tight_layout()
     save(fig, "query-arms")
 
