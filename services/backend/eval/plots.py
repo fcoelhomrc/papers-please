@@ -50,6 +50,48 @@ RAMP: list[str] = []
 INK = SECONDARY = MUTED = GRID = BASELINE = SURFACE = ""
 THEME = "light"
 
+# Display names. Keys are what the results JSON and config.yaml hold; these
+# are what a reader sees. Spelled out, because "hybrid" and "hybrid_bm25" do
+# not say what is being fused, and that is the whole distinction between them.
+LABEL = {
+    # retrieval modes
+    "semantic": "Dense",
+    "keyword": "Keyword (TS-Rank)",
+    "bm25": "BM25",
+    "hybrid": "Hybrid (Dense + TS-Rank)",
+    "hybrid_bm25": "Hybrid (Dense + BM25)",
+    # metrics
+    "ndcg": "nDCG", "map": "MAP", "mrr": "MRR", "r_precision": "R-Precision",
+    "recall": "Recall", "precision": "Precision", "hit_rate": "Hit Rate",
+    "faithfulness": "Faithfulness",
+    "answer_relevancy": "Answer Relevancy",
+    "context_recall": "Context Recall",
+    "llm_context_precision_with_reference": "Context Precision",
+    # query arms
+    "none": "Original Query",
+    "decompose": "Decomposition",
+    "decompose+orig": "Decomposition + Original",
+    "multi_query": "Multi-Query",
+    "multi_query+orig": "Multi-Query + Original",
+    "hyde": "HyDE",
+    # latency stages
+    "embed": "Embed", "pinecone": "Pinecone", "hydrate": "SQL Hydrate",
+    "keyword_sql": "Keyword SQL", "fuse": "Fuse", "rerank": "Rerank",
+    # axes
+    "top_k": "Top-K", "keyword_weight": "Keyword Weight",
+    "latency_ms": "Latency (ms)", "metric": "Metric",
+}
+
+
+def label(key) -> str:
+    """Display name for a key, or a Title Cased fallback.
+
+    The fallback exists so a new mode or metric shows up readable rather than
+    as raw snake_case the moment it is added and before anyone names it.
+    """
+    return LABEL.get(key, str(key).replace("_", " ").title())
+
+
 MODES = ["semantic", "keyword", "bm25", "hybrid", "hybrid_bm25"]
 
 
@@ -173,12 +215,12 @@ def fig_recall_precision(data):
     # in the ranking-quality figure, one depth at a time.
     for ax, metric in zip(axes, ("recall", "precision")):
         for mode, (ks, ys, _) in by_mode(data["a"], metric).items():
-            ax.plot(ks, ys, color=mode_color()[mode], label=mode, zorder=3)
+            ax.plot(ks, ys, color=mode_color()[mode], label=label(mode), zorder=3)
         ax.set_xscale("log")
         ax.set_xticks([1, 3, 5, 10, 20, 50])
         ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
-        ax.set_xlabel("top_k")
-        ax.set_ylabel(metric)
+        ax.set_xlabel(label("top_k"))
+        ax.set_ylabel(label(metric))
         ax.grid(axis="y", zorder=0)
         ax.set_axisbelow(True)
     handles, labels = axes[0].get_legend_handles_labels()
@@ -208,12 +250,12 @@ def fig_ranking_quality(data, k=10):
         off = (i - (len(MODES) - 1) / 2) * pitch
         ax.bar(x + off, [s[m] for m in metrics], width,
                yerr=[s[f"{m}_ci"] for m in metrics],
-               color=mode_color()[mode], label=mode, zorder=3,
+               color=mode_color()[mode], label=label(mode), zorder=3,
                error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
     ax.set_xticks(x)
-    ax.set_xticklabels(metrics)
-    ax.set_xlabel("metric")
-    facet(ax, f"top_k={k}")
+    ax.set_xticklabels([label(m) for m in metrics])
+    ax.set_xlabel(label("metric"))
+    facet(ax, f"Top-K = {k}")
     ax.set_ylim(0, 1)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
@@ -238,19 +280,19 @@ def fig_fusion_weight(data):
             )
             ax.plot([p["config"]["keyword_weight"] for p in pts],
                     [p["summary"]["ndcg"] for p in pts],
-                    color=mode_color()[mode], label=mode, marker="o",
+                    color=mode_color()[mode], label=label(mode), marker="o",
                     markersize=4, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
         ax.axvline(0.1, color=MUTED, linewidth=0.8, linestyle=(0, (4, 3)), zorder=1)
         # Facet identity rides in the axis label rather than a panel title.
-        ax.set_xlabel("keyword_weight")
-        facet(ax, f"top_k={k}")
+        ax.set_xlabel(label("keyword_weight"))
+        facet(ax, f"Top-K = {k}")
         ax.set_xticks([0.1, 0.25, 0.5, 0.75, 1.0])
         # Margin to the left of 0.1 so the facet marker does not sit on the
         # line marking the shipped value.
         ax.set_xlim(0.02, 1.08)
         ax.grid(axis="y", zorder=0)
         ax.set_axisbelow(True)
-    axes[0].set_ylabel("ndcg")
+    axes[0].set_ylabel(label("ndcg"))
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, ncol=len(labels), **LEGEND)
     fig.tight_layout()
@@ -280,13 +322,13 @@ def fig_latency_quality(data):
         # dot. Measuring first rather than clipping: a cropped label is worse
         # than no label.
         right = latency[mode] > 0.72 * span
-        ax.annotate(mode, (latency[mode], quality[mode]),
+        ax.annotate(label(mode), (latency[mode], quality[mode]),
                     textcoords="offset points",
                     xytext=(-9 if right else 9, -3),
                     ha="right" if right else "left",
                     fontsize=8, color=SECONDARY)
-    ax.set_xlabel("latency_ms")
-    ax.set_ylabel("ndcg")
+    ax.set_xlabel(label("latency_ms"))
+    ax.set_ylabel(label("ndcg"))
     ax.set_xlim(0, span * 1.08)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
@@ -312,10 +354,11 @@ def fig_latency_breakdown(data):
         vals = np.array([rows[m].get(stage, 0.0) for m in modes])
         if vals.sum() == 0:
             continue
-        ax.barh(modes, vals, left=left, height=0.42, color=color,
-                label=stage, edgecolor=SURFACE, linewidth=1.5, zorder=3)
+        ax.barh([label(m) for m in modes], vals, left=left, height=0.42,
+                color=color, label=label(stage), edgecolor=SURFACE,
+                linewidth=1.5, zorder=3)
         left += vals
-    ax.set_xlabel("latency_ms")
+    ax.set_xlabel(label("latency_ms"))
     ax.invert_yaxis()
     ax.grid(axis="x", zorder=0)
     ax.set_axisbelow(True)
@@ -325,65 +368,50 @@ def fig_latency_breakdown(data):
 
 
 def fig_rerank(data):
-    """Reranked against plain, at matched output size."""
+    """Reranked against plain at matched output size, as bars from zero.
+
+    Bars rather than the dot-and-interval plot this was: on a zoomed y-axis
+    the intervals looked enormous next to every other figure, when they are
+    the ordinary +/-0.05 to +/-0.10 that 100 questions buys. From a zero
+    baseline they read at their real size, and the figure matches the rest.
+
+    The intervals are genuinely wide at Top-K = 1, where nDCG is 0 or 1 per
+    question and nothing averages out. That is the measurement, not a
+    plotting artefact.
+    """
     import matplotlib.pyplot as plt
     import numpy as np
 
     plain = {r["config"]["top_k"]: r["summary"]
              for r in data.get("a", []) if r["config"]["mode"] == "hybrid"}
-    ks = sorted({r["config"]["top_k"] for r in data["b"]})
-    best, err = [], []
+    ks = sorted({r["config"]["top_k"] for r in data["b"]} & set(plain))
+
+    best = []
     for k in ks:
         at_k = [r for r in data["b"] if r["config"]["top_k"] == k]
-        top = max(at_k, key=lambda r: r["summary"]["ndcg"])
-        best.append(top["summary"]["ndcg"])
-        err.append(top["summary"]["ndcg_ci"])
+        best.append(max(at_k, key=lambda r: r["summary"]["ndcg"])["summary"])
 
     fig, ax = plt.subplots(figsize=(W1, PANEL_H))
     x = np.arange(len(ks))
-    ax.errorbar(x - 0.08, [plain[k]["ndcg"] for k in ks],
-                yerr=[plain[k]["ndcg_ci"] for k in ks], fmt="o", markersize=7,
-                color=SERIES[0], label="rerank=False", elinewidth=1,
-                capsize=0, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
-    ax.errorbar(x + 0.08, best, yerr=err, fmt="o", markersize=7,
-                color=SERIES[1], label="rerank=True", elinewidth=1,
-                capsize=0, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
-    for i, k in enumerate(ks):
-        ax.plot([i - 0.08, i + 0.08], [plain[k]["ndcg"], best[i]],
-                color=BASELINE, linewidth=0.8, zorder=2)
+    for i, (series, name) in enumerate((
+        ([plain[k] for k in ks], "Rerank: Off"),
+        (best, "Rerank: On"),
+    )):
+        off = (i - 0.5) * BAR_PITCH
+        ax.bar(x + off, [s["ndcg"] for s in series], BAR_W,
+               yerr=[s["ndcg_ci"] for s in series], color=SERIES[i],
+               label=name, zorder=3,
+               error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
     ax.set_xticks(x)
     ax.set_xticklabels([str(k) for k in ks])
-    ax.set_xlabel("top_k")
-    ax.set_ylabel("ndcg")
+    ax.set_xlabel(label("top_k"))
+    ax.set_ylabel(label("ndcg"))
+    ax.set_ylim(0, 1)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
     ax.legend(ncol=2, **LEGEND)
     fig.tight_layout()
     save(fig, "rerank-matched")
-
-
-def load_results(explicit: Path | None = None) -> dict:
-    """The newest full run, with any newer single-ablation re-run merged over it.
-
-    Re-running one ablation writes a file carrying only that key, so globbing
-    for the newest file alone hands the figures a result with no `a` in it.
-    Merging keeps a targeted re-run from invalidating every other figure.
-    """
-    if explicit:
-        return json.loads(explicit.read_text())
-
-    full = max(RESULTS.glob("ablation-all-*.json"), key=lambda p: p.stat().st_mtime)
-    data = json.loads(full.read_text())
-    print(f"base: {full.name}")
-    for part in RESULTS.glob("ablation-*.json"):
-        if part == full or part.stat().st_mtime <= full.stat().st_mtime:
-            continue
-        blob = json.loads(part.read_text())
-        for key in ("a", "b", "c", "w", "pool", "timings"):
-            if key in blob:
-                data[key] = blob[key]
-                print(f"  merged {key!r} from {part.name}")
-    return data
 
 
 def fig_query_arms(data):
@@ -420,22 +448,145 @@ def fig_query_arms(data):
                 errs.append(m[0]["summary"]["ndcg_ci"] if m else 0)
             off = (i - (len(present) - 1) / 2) * BAR_PITCH
             ax.bar(x + off, vals, BAR_W, yerr=errs, color=color[arm],
-                   label=arm, zorder=3,
+                   label=label(arm), zorder=3,
                    error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
         ax.set_xticks(x)
         ax.set_xticklabels([str(k) for k in ks])
-        ax.set_xlabel("top_k")
-        facet(ax, f"mode={mode}")
+        ax.set_xlabel(label("top_k"))
+        facet(ax, label(mode))
         ax.grid(axis="y", zorder=0)
         ax.set_axisbelow(True)
-    np.atleast_1d(axes)[0].set_ylabel("ndcg")
+    np.atleast_1d(axes)[0].set_ylabel(label("ndcg"))
 
     # One legend for both panels, listing every arm - including the one that
     # only appears in a single facet.
     handles = [plt.Rectangle((0, 0), 1, 1, color=color[a]) for a in arms]
-    fig.legend(handles, arms, ncol=len(arms), **LEGEND)
+    fig.legend(handles, [label(a) for a in arms], ncol=3, **LEGEND)
     fig.tight_layout()
     save(fig, "query-arms")
+
+
+def load_results(explicit: Path | None = None) -> dict:
+    """The newest full run, with any newer single-ablation re-run merged over it.
+
+    Re-running one ablation writes a file carrying only that key, so globbing
+    for the newest file alone hands the figures a result with no `a` in it.
+    Merging keeps a targeted re-run from invalidating every other figure.
+    """
+    if explicit:
+        return json.loads(explicit.read_text())
+
+    full = max(RESULTS.glob("ablation-all-*.json"), key=lambda p: p.stat().st_mtime)
+    data = json.loads(full.read_text())
+    print(f"base: {full.name}")
+    for part in RESULTS.glob("ablation-*.json"):
+        if part == full or part.stat().st_mtime <= full.stat().st_mtime:
+            continue
+        blob = json.loads(part.read_text())
+        for key in ("a", "b", "c", "w", "pool", "timings"):
+            if key in blob:
+                data[key] = blob[key]
+                print(f"  merged {key!r} from {part.name}")
+    return data
+
+
+def judged_results() -> dict | None:
+    newest = sorted(RESULTS.glob("judged-*.json"), key=lambda p: p.stat().st_mtime)
+    return json.loads(newest[-1].read_text()) if newest else None
+
+
+def _mean_ci(values: list[float]) -> tuple[float, float]:
+    import math
+
+    vals = [v for v in values if v is not None and not math.isnan(v)]
+    if len(vals) < 2:
+        return (vals[0] if vals else 0.0), 0.0
+    mean = sum(vals) / len(vals)
+    var = sum((v - mean) ** 2 for v in vals) / (len(vals) - 1)
+    return mean, 1.96 * math.sqrt(var) / math.sqrt(len(vals))
+
+
+JUDGED_METRICS = [
+    "faithfulness",
+    "answer_relevancy",
+    "llm_context_precision_with_reference",
+    "context_recall",
+]
+
+
+def fig_judged(judged):
+    """The four LLM-judged metrics, with intervals from the per-question rows.
+
+    Intervals are computed here rather than read off the run, because the
+    judged output stores means; the spread across questions is what says
+    whether two of these are distinguishable.
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    rows = judged["per_question"]
+    fig, ax = plt.subplots(figsize=(W1, PANEL_H))
+    x = np.arange(len(JUDGED_METRICS))
+    means, errs = [], []
+    for m in JUDGED_METRICS:
+        mean, half = _mean_ci([r.get(m) for r in rows])
+        means.append(mean)
+        errs.append(half)
+    ax.bar(x, means, BAR_W * 2.6, yerr=errs, color=SERIES[0], zorder=3,
+           error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
+    ax.set_xticks(x)
+    ax.set_xticklabels([label(m) for m in JUDGED_METRICS])
+    ax.set_ylabel("Score")
+    ax.set_ylim(0, 1)
+    ax.grid(axis="y", zorder=0)
+    ax.set_axisbelow(True)
+    fig.tight_layout()
+    save(fig, "judged-metrics")
+
+
+def fig_judge_vs_labels(judged):
+    """The judge's view of retrieval against the chunk-id labels'.
+
+    The reason the judged branch exists. Chunk-id labels score a correct
+    retrieval of a chunk the question was not seeded from as a miss, so they
+    are a lower bound; this is how much lower.
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    free = judged["retrieval_metrics"]
+    rows = judged["per_question"]
+    pairs = [
+        ("Recall", free["recall"], free["recall_ci"], "context_recall"),
+        ("Precision", free["map"], free["map_ci"],
+         "llm_context_precision_with_reference"),
+    ]
+
+    fig, ax = plt.subplots(figsize=(W1, PANEL_H))
+    x = np.arange(len(pairs))
+    for i, (source, name) in enumerate((("free", "Chunk-ID Labels"),
+                                        ("judge", "LLM Judge"))):
+        vals, errs = [], []
+        for _, fv, fc, jkey in pairs:
+            if source == "free":
+                vals.append(fv)
+                errs.append(fc)
+            else:
+                mean, half = _mean_ci([r.get(jkey) for r in rows])
+                vals.append(mean)
+                errs.append(half)
+        ax.bar(x + (i - 0.5) * BAR_PITCH, vals, BAR_W, yerr=errs,
+               color=SERIES[i], label=name, zorder=3,
+               error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
+    ax.set_xticks(x)
+    ax.set_xticklabels([p[0] for p in pairs])
+    ax.set_ylabel("Score")
+    ax.set_ylim(0, 1)
+    ax.grid(axis="y", zorder=0)
+    ax.set_axisbelow(True)
+    ax.legend(ncol=2, **LEGEND)
+    fig.tight_layout()
+    save(fig, "judge-vs-labels")
 
 
 def main():
@@ -456,12 +607,16 @@ def main():
         ("timings", fig_latency_breakdown),
         ("c", fig_query_arms),
     ]
+    judged = judged_results()
     for mode in THEMES:
         style(mode)
         for key, fn in figures:
             if key not in data:
                 continue
             fn(data)
+        if judged:
+            fig_judged(judged)
+            fig_judge_vs_labels(judged)
         print(f"  {mode}: {sum(1 for k, _ in figures if k in data)} figures")
     missing = sorted({k for k, _ in figures if k not in data})
     if missing:
