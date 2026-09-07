@@ -28,6 +28,30 @@ MODELS: dict[str, dict] = {
         "embed_size": 1024,
         "index_name": "papers-please-bge-large",
     },
+    # Each family prescribes its own query prefix, and they are not
+    # interchangeable. A model asked for with the wrong prefix - or with none
+    # when it expects one - retrieves noticeably worse, and the failure looks
+    # exactly like the model being bad rather than like it being misconfigured.
+    # These come from each model's own card, not from a house style.
+    "arctic-m-v2": {
+        "hf_name": "Snowflake/snowflake-arctic-embed-m-v2.0",
+        "batch_size": 64,
+        "query_prompt": "query: ",
+        "embed_size": 768,
+        "index_name": "papers-please-arctic-m-v2",
+    },
+    "qwen3-0.6b": {
+        "hf_name": "Qwen/Qwen3-Embedding-0.6B",
+        "batch_size": 32,
+        # Qwen3 conditions on an instruction rather than a bare tag; the card's
+        # own retrieval template is "Instruct: <task>\nQuery: <query>".
+        "query_prompt": (
+            "Instruct: Given a web search query, retrieve relevant passages "
+            "that answer the query\nQuery: "
+        ),
+        "embed_size": 1024,
+        "index_name": "papers-please-qwen3-06b",
+    },
 }
 
 

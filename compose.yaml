@@ -112,6 +112,13 @@ services:
   worker-embed:
     image: papers-please-backend:latest
     restart: unless-stopped
+    # The GPU, now that OCR is done with it. The embedder was moved to CPU
+    # after it OOM'd competing with docling's 2.2GB of layout models during
+    # ingest; nothing competes for the card once chunking has finished, and
+    # a 335M-parameter embedder is ~10x faster here than on CPU. Falls back
+    # to CPU on its own if the card is unavailable - see config.devices.
+    devices:
+      - nvidia.com/gpu=all
     volumes:
       - papers_data:/data
       - ./services/backend:/app

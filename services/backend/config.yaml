@@ -20,11 +20,14 @@ devices:
   # chunks against hours of OCR. Same reasoning for the reranker, which also
   # runs per search request on the long-lived backend.
   chunker: cuda
-  embedder: cpu
+  # Back on the GPU for the embedder sweep: the OOM that moved it to CPU was
+  # contention with docling during ingest, and ingest is done. Set to cpu if
+  # a model does not fit the 4GB card.
+  embedder: cuda
   reranker: cpu
 
 embedder:
-  model: bge-small
+  model: bge-large
   max_tokens: 256          # small chunks embed sharper; context comes from neighbour_window
   max_chunks: 1000
 
