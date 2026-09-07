@@ -495,6 +495,65 @@ def judged_results() -> dict | None:
     return json.loads(newest[-1].read_text()) if newest else None
 
 
+def judged_by_arm() -> dict[str, dict]:
+    """The newest judged run per arm, keyed by arm.
+
+    Newest wins because an arm gets re-run when something about the harness is
+    fixed, and an older run of the same arm measured a different pipeline.
+    Only full runs count - a --sample smoke has a different n and would sit in
+    the same figure as though it were comparable.
+    """
+    out: dict[str, tuple[float, dict]] = {}
+    for path in RESULTS.glob("judged-*.json"):
+        blob = json.loads(path.read_text())
+        arm = blob.get("retrieval_config", {}).get("arm")
+        if not arm or blob.get("n_questions", 0) < 100:
+            continue
+        stamp = path.stat().st_mtime
+        if arm not in out or stamp > out[arm][0]:
+            out[arm] = (stamp, blob)
+    return {arm: blob for arm, (_, blob) in out.items()}
+
+
+ARM_ORDER = ["none", "decompose+orig", "decompose",
+             "multi_query+orig", "multi_query", "hyde"]
+
+
+def fig_judged_arms(runs: dict[str, dict]):
+    """The judged metrics per query arm.
+
+    The free branch measured every arm on chunk-id retrieval and found all of
+    them behind the untransformed question. This asks the different question:
+    whether that gap reaches the answer a reader would actually see.
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    arms = [a for a in ARM_ORDER if a in runs]
+    fig, ax = plt.subplots(figsize=(W2, PANEL_H))
+    x = np.arange(len(JUDGED_METRICS))
+    for i, arm in enumerate(arms):
+        rows = runs[arm]["per_question"]
+        means, errs = [], []
+        for m in JUDGED_METRICS:
+            mean, half = _mean_ci([r.get(m) for r in rows])
+            means.append(mean)
+            errs.append(half)
+        ax.bar(x + (i - (len(arms) - 1) / 2) * BAR_PITCH, means, BAR_W,
+               yerr=errs, color=SERIES[i], label=label(arm), zorder=3,
+               error_kw={"ecolor": MUTED, "elinewidth": 0.8, "capsize": 0})
+    ax.set_xticks(x)
+    ax.set_xticklabels([label(m) for m in JUDGED_METRICS])
+    ax.set_ylabel("Score")
+    ax.set_ylim(0, 1)
+    ax.grid(axis="y", zorder=0)
+    ax.set_axisbelow(True)
+    facet(ax, "Retriever = Dense")
+    ax.legend(ncol=3, **LEGEND)
+    fig.tight_layout()
+    save(fig, "judged-query-arms")
+
+
 def _mean_ci(values: list[float]) -> tuple[float, float]:
     import math
 
@@ -608,6 +667,7 @@ def main():
         ("c", fig_query_arms),
     ]
     judged = judged_results()
+    by_arm = judged_by_arm()
     for mode in THEMES:
         style(mode)
         for key, fn in figures:
@@ -617,6 +677,8 @@ def main():
         if judged:
             fig_judged(judged)
             fig_judge_vs_labels(judged)
+        if len(by_arm) > 1:
+            fig_judged_arms(by_arm)
         print(f"  {mode}: {sum(1 for k, _ in figures if k in data)} figures")
     missing = sorted({k for k, _ in figures if k not in data})
     if missing:
