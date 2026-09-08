@@ -72,7 +72,7 @@ from ragas.metrics import (
 from eval.pipeline import FixedPipeline, Pipeline
 from eval.retrieval import RETRIEVAL_METRICS, score_question
 
-from eval.results_store import results_dir
+from eval.results_store import encoder_for, results_dir, results_key
 JUDGE_CACHE_DIR = Path(__file__).parent / ".judge-cache"
 
 # All four, unlike the two this file used to run. The pair that was dropped -
@@ -330,6 +330,9 @@ def run_eval(
     answered = df[[not a for a in abstained]]
     means_answered = {n: float(answered[n].mean()) for n in names} if len(answered) else {}
 
+    mode = (retrieval or {}).get("mode")
+    embed_model = encoder_for(mode)
+
     output = {
         "kind": "judged",
         "run_at": datetime.now(timezone.utc).isoformat(),
@@ -339,7 +342,10 @@ def run_eval(
         "n_abstentions": sum(abstained),
         "n_failed": failed,
         "n_questions": len(rows),
-        "embed_model": __import__("config").load().embedder.model,
+        # None for a keyword-only or BM25 run: those rank on Postgres text and
+        # never call an encoder, so naming one would claim a comparison the run
+        # did not make.
+        "embed_model": embed_model,
         "answerer_model": model_name,
         "judge_model": judge_model_name,
         "judge_spend": judge_spend(eval_result, judge_model_name),
@@ -354,7 +360,7 @@ def run_eval(
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     arm = (retrieval or {}).get("arm", "none")
-    path = results_dir() / f"judged-{arm}-{stamp}.json"
+    path = results_dir(results_key(mode)) / f"judged-{arm}-{stamp}.json"
     path.write_text(json.dumps(output, indent=2, default=str))
     output["results_path"] = str(path)
     return output

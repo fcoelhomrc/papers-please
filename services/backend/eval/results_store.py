@@ -32,6 +32,35 @@ def results_dir(embed_model: str | None = None) -> Path:
 
 
 def known_models() -> list[str]:
-    """Embedding models that have results on disk."""
+    """Result directories on disk - one per encoder, plus any encoder-free
+    ranker that has been measured (see `results_key`)."""
     return sorted(p.name for p in RESULTS_ROOT.iterdir()
                   if p.is_dir() and any(p.glob("*.json")))
+
+
+def encoder_for(mode: str | None) -> str | None:
+    """The embedding model a run in `mode` actually measures, if any.
+
+    `keyword` and `bm25` rank on Postgres text alone, so their scores are the
+    same whichever encoder happens to be configured when they run. Naming one
+    would claim a comparison the run did not make - and the BM25 baseline
+    exists precisely to be compared against the encoders.
+    """
+    from search import BM25, KEYWORD
+
+    if mode in (KEYWORD, BM25):
+        return None
+    from config import load
+
+    return load().embedder.model
+
+
+def results_key(mode: str | None) -> str:
+    """The directory a run in `mode` belongs in.
+
+    The encoder it measures, or the ranker itself when it measures none. A
+    shared "no encoder" bucket would not do: the figures pick the newest run
+    per query arm within a directory, so a keyword run and a bm25 run sharing
+    one would silently replace each other.
+    """
+    return encoder_for(mode) or (mode or "unknown")
