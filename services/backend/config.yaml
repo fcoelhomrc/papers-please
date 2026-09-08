@@ -20,10 +20,13 @@ devices:
   # chunks against hours of OCR. Same reasoning for the reranker, which also
   # runs per search request on the long-lived backend.
   chunker: cuda
-  # Back on the GPU for the embedder sweep: the OOM that moved it to CPU was
-  # contention with docling during ingest, and ingest is done. Set to cpu if
-  # a model does not fit the 4GB card.
-  embedder: cuda
+  # cuda while embedding a corpus (a batch job, ~10x faster on the card, and
+  # the OOM that first moved this to CPU was contention with docling during
+  # ingest, which is done). cpu while evaluating: only the backend container
+  # answers queries and it has no GPU device, and every latency figure so far
+  # was measured with the query encoder on CPU, so switching mid-sweep would
+  # confound the model comparison with a hardware change.
+  embedder: cpu
   reranker: cpu
 
 embedder:
