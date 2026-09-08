@@ -2,6 +2,7 @@ import logging
 import os
 
 import numpy as np
+import torch
 from db.connection import PostgresInterface
 from db.models import Chunk, ChunkEmbedding, Document, EmbeddingModel, Object
 from pinecone import ServerlessSpec
@@ -39,6 +40,17 @@ MODELS: dict[str, dict] = {
         "query_prompt": "query: ",
         "embed_size": 768,
         "index_name": "papers-please-arctic-m-v2",
+        "trust_remote_code": True,
+        # The xformers in this image was built for torch 2.10 / py3.10 against
+        # the 2.11 / py3.14 actually installed, so its CUDA extensions do not
+        # load and the memory-efficient path ends up building an attention bias
+        # on a different device than the query. sdpa is a fallback the same
+        # remote code already implements, so nothing here depends on xformers.
+        "config_kwargs": {
+            "use_memory_efficient_attention": False,
+            "unpad_inputs": False,
+        },
+        "repair_gte_buffers": True,
     },
     "qwen3-0.6b": {
         "hf_name": "Qwen/Qwen3-Embedding-0.6B",
@@ -53,6 +65,71 @@ MODELS: dict[str, dict] = {
         "index_name": "papers-please-qwen3-06b",
     },
 }
+
+
+def _repair_gte_buffers(model: SentenceTransformer) -> None:
+    """Recompute the buffers transformers leaves as uninitialised memory.
+
+    transformers 5 materialises only what the checkpoint contains, and the GTE
+    remote code this family ships keeps `position_ids` and its rotary
+    `inv_freq` / `cos_cached` / `sin_cached` as non-persistent buffers — absent
+    from the checkpoint, so they survive loading as whatever was on the heap.
+    The symptoms vary with batch shape and device and none of them names the
+    cause: a CUDA device-side assert, an IndexError indexing rope by a
+    nonsense position, or embeddings that are silently all NaN.
+
+    The values come from the model's own __init__, re-run against the scalars
+    it stored, rather than from RoPE math rewritten here. A subtly wrong
+    reimplementation would not crash — it would retrieve slightly worse, which
+    in a sweep comparing encoders is indistinguishable from a worse encoder.
+    """
+    embeddings = model[0].auto_model.embeddings
+    rotary = embeddings.rotary_emb
+    type(rotary).__init__(
+        rotary,
+        dim=rotary.dim,
+        max_position_embeddings=rotary.max_position_embeddings,
+        base=rotary.base,
+        device=rotary.inv_freq.device,
+    )
+    position_ids = embeddings.position_ids
+    embeddings.register_buffer(
+        "position_ids",
+        torch.arange(position_ids.size(0), device=position_ids.device),
+        persistent=False,
+    )
+
+    # Assert rather than trust: every symptom of the original fault was a
+    # plausible-looking number somewhere else, so a repair that silently did
+    # nothing would reproduce exactly the bug it is here to fix.
+    off_unit_circle = float(
+        (rotary.cos_cached**2 + rotary.sin_cached**2 - 1).abs().max()
+    )
+    if off_unit_circle > 1e-4:
+        raise RuntimeError(
+            "rotary buffers still wrong after repair: cos²+sin² off by "
+            f"{off_unit_circle}"
+        )
+
+
+def load_encoder(model_key: str, device: str) -> SentenceTransformer:
+    """The encoder for `model_key`, loaded the one way every caller must load it.
+
+    The corpus and the queries searching it have to be encoded by an
+    identically configured model. Two construction sites drifting apart would
+    not raise anywhere — it would just retrieve badly, and read as the model
+    being bad rather than as the two halves disagreeing.
+    """
+    cfg = MODELS[model_key]
+    model = SentenceTransformer(
+        cfg["hf_name"],
+        device=device,
+        trust_remote_code=cfg.get("trust_remote_code", False),
+        config_kwargs=cfg.get("config_kwargs") or {},
+    )
+    if cfg.get("repair_gte_buffers"):
+        _repair_gte_buffers(model)
+    return model
 
 
 def chunk_metadata(**fields) -> dict:
@@ -105,8 +182,8 @@ class PdfEmbedder(PostgresInterface):
         # "eval" would produce an index that is silently always empty. Tests
         # still pass "test" explicitly.
         self._namespace = config.search.namespace if namespace is None else namespace
-        self._encoder = SentenceTransformer(
-            cfg["hf_name"], device=config.devices.embedder
+        self._encoder = load_encoder(
+            model_key or config.embedder.model, config.devices.embedder
         )
         self._pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
 

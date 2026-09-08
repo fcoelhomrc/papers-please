@@ -22,7 +22,7 @@ from pathlib import Path
 from db.connection import PostgresInterface
 from db.models import Chunk, Document, Object
 from pinecone.grpc import PineconeGRPC as Pinecone
-from process.embedder import MODELS, Reranker
+from process.embedder import MODELS, Reranker, load_encoder
 from schemas import ChunkResult, SearchResponse
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import Text, func, literal_column, select, tuple_
@@ -635,9 +635,7 @@ def get_search_engine() -> SearchEngine:
 
         cfg = load()
         model_key = cfg.embedder.model
-        encoder = SentenceTransformer(
-            MODELS[model_key]["hf_name"], device=cfg.devices.embedder
-        )
+        encoder = load_encoder(model_key, cfg.devices.embedder)
         reranker = Reranker(device=cfg.devices.reranker)
         _engine = SearchEngine(encoder=encoder, reranker=reranker, model_key=model_key)
     return _engine
