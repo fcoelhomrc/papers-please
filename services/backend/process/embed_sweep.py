@@ -29,6 +29,11 @@ logger = logging.getLogger("stage.embed_sweep")
 # loop responsive between naps; a sweep has nothing to stay responsive for.
 ALL_CHUNKS = 1_000_000
 
+# Below this a batch is not worth keeping on the card: the per-batch Postgres
+# and Pinecone round trips start to dominate, and a model that cannot fit two
+# chunks at a time is telling us something a smaller batch will not fix.
+MIN_BATCH = 2
+
 
 def _release_card() -> None:
     """Hand the card back before the next encoder allocates on it.
@@ -42,13 +47,16 @@ def _release_card() -> None:
         torch.cuda.empty_cache()
 
 
-def embed(model_key: str, device: str) -> None:
+def embed(model_key: str, device: str, batch_size: int) -> None:
     """Embed every chunk still pending under `model_key`."""
     from config import load
 
     load().devices.embedder = device
-    logger.info("embed_sweep.start", extra={"model": model_key, "device": device})
-    embedder = PdfEmbedder(model_key=model_key)
+    logger.info(
+        "embed_sweep.start",
+        extra={"model": model_key, "device": device, "batch_size": batch_size},
+    )
+    embedder = PdfEmbedder(model_key=model_key, batch_size=batch_size)
     try:
         embedder.execute(max_chunks=ALL_CHUNKS)
     finally:
@@ -56,25 +64,45 @@ def embed(model_key: str, device: str) -> None:
         _release_card()
 
 
-def embed_with_fallback(model_key: str, device: str, fallback: bool) -> str:
-    """Embed under `model_key`, retrying on the CPU if the card is too small.
+def _is_oom(exc: BaseException) -> bool:
+    return "out of memory" in str(exc).lower()
 
-    Returns the device that finished the work — the sweep is only comparable
-    across models if it is written down, and qwen3-0.6b is expected to be the
-    one that needs it.
+
+def embed_with_fallback(model_key: str, device: str, fallback: bool) -> str:
+    """Embed under `model_key`, giving up as little as possible on each OOM.
+
+    Halve the batch before surrendering the card. Measured on this corpus,
+    qwen3-0.6b ran ~1,200 chunks in four minutes on the GPU and 32 chunks in
+    four minutes on the CPU — a 21-hour job against a 30-minute one — so a
+    fallback that goes straight to the CPU turns a batch size that is slightly
+    too big into an overnight run that does not finish.
+
+    Returns what actually finished the work: the sweep is only comparable
+    across models if that is written down.
     """
-    try:
-        embed(model_key, device)
-        return device
-    except Exception as exc:
-        if not (fallback and device != "cpu" and "out of memory" in str(exc).lower()):
+    batch_size = MODELS[model_key]["batch_size"]
+    while True:
+        try:
+            embed(model_key, device, batch_size)
+            return f"{device} (batch {batch_size})"
+        except Exception as exc:
+            if not (fallback and _is_oom(exc)):
+                raise
+            # Chunks embedded before the OOM are already recorded in
+            # chunk_embeddings, so each retry resumes rather than starting over.
+            _release_card()
+            if device != "cpu" and batch_size // 2 >= MIN_BATCH:
+                batch_size //= 2
+                logger.warning(
+                    "embed_sweep.oom_smaller_batch",
+                    extra={"model": model_key, "batch_size": batch_size},
+                )
+                continue
+            if device != "cpu":
+                logger.warning("embed_sweep.oom_to_cpu", extra={"model": model_key})
+                device, batch_size = "cpu", MODELS[model_key]["batch_size"]
+                continue
             raise
-        # Chunks embedded before the OOM are already recorded in
-        # chunk_embeddings, so this resumes rather than starting over.
-        logger.warning("embed_sweep.oom_fallback", extra={"model": model_key})
-        _release_card()
-        embed(model_key, "cpu")
-        return "cpu"
 
 
 def main():
@@ -86,7 +114,7 @@ def main():
     parser.add_argument(
         "--no-cpu-fallback",
         action="store_true",
-        help="fail instead of retrying an OOM on the CPU",
+        help="fail instead of retrying an OOM on a smaller batch or the CPU",
     )
     args = parser.parse_args()
 

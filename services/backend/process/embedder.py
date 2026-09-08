@@ -170,13 +170,22 @@ class Reranker:
 
 
 class PdfEmbedder(PostgresInterface):
-    def __init__(self, model_key: str | None = None, namespace: str | None = None):
+    def __init__(
+        self,
+        model_key: str | None = None,
+        namespace: str | None = None,
+        batch_size: int | None = None,
+    ):
         from config import load
 
         super().__init__()
         config = load()
         cfg = MODELS[model_key or config.embedder.model]
         self._cfg = cfg
+        # Overridable because the registry's batch size is what the model
+        # wants, not what a particular card can hold - see embed_sweep, which
+        # walks it down rather than giving up on the GPU.
+        self._batch_size = batch_size or cfg["batch_size"]
         # Defaults to the configured namespace so the embed worker and the
         # search engine cannot drift apart - writing to "" while search reads
         # "eval" would produce an index that is silently always empty. Tests
@@ -266,7 +275,7 @@ class PdfEmbedder(PostgresInterface):
     def _embed(self, texts: list[str]) -> np.ndarray:
         return self._encoder.encode(
             texts,
-            batch_size=self._cfg["batch_size"],
+            batch_size=self._batch_size,
             show_progress_bar=False,
             normalize_embeddings=True,
             convert_to_numpy=True,
@@ -302,7 +311,7 @@ class PdfEmbedder(PostgresInterface):
             logger.info("Nothing to embed")
             return
 
-        batch_size = self._cfg["batch_size"]
+        batch_size = self._batch_size
         for i in range(0, len(pending), batch_size):
             batch = pending[i : i + batch_size]
             chunk_ids = [r[0] for r in batch]
