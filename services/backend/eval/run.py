@@ -75,6 +75,11 @@ from eval.retrieval import RETRIEVAL_METRICS, score_question
 from eval.results_store import encoder_for, results_dir, results_key
 JUDGE_CACHE_DIR = Path(__file__).parent / ".judge-cache"
 
+# The judge's own embedder, held fixed across every arm of an encoder sweep.
+# bge-small is what every judged run so far has scored with, so pinning here
+# keeps the runs already on disk comparable to the ones still to come.
+JUDGE_EMBED_MODEL = "bge-small"
+
 # All four, unlike the two this file used to run. The pair that was dropped -
 # context precision and recall - was dropped because eval/sweep.py measured
 # ranking for free against document-level labels. That reasoning no longer
@@ -440,19 +445,27 @@ def judge_llm(cfg):
 
 
 def judge_embeddings():
-    """bge-small locally - the same model search uses, and free.
+    """bge-small locally, pinned - not whatever the retriever happens to be.
 
     ResponseRelevancy needs embeddings to compare its reverse-generated
     questions against the original; paying an API for that would be the
     largest line on the bill for the least interesting part of it.
+
+    Pinned because this used to read `embedder.model`, which meant the judge
+    measured answer relevancy with a different yardstick in every arm of an
+    encoder sweep - a confound in precisely the comparison the sweep exists to
+    make, and one that moves the metric without touching answer quality. It
+    also crashed outright on an encoder needing trust_remote_code, since this
+    path does not go through load_encoder().
+
+    The judge's embedder is part of the judge, not part of what is being
+    judged, so it stays fixed while the retrieval encoder varies.
     """
     from langchain_community.embeddings import HuggingFaceEmbeddings
     from process.embedder import MODELS
 
-    from config import load
-
     return LangchainEmbeddingsWrapper(
-        HuggingFaceEmbeddings(model_name=MODELS[load().embedder.model]["hf_name"])
+        HuggingFaceEmbeddings(model_name=MODELS[JUDGE_EMBED_MODEL]["hf_name"])
     )
 
 
