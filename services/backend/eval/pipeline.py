@@ -116,29 +116,63 @@ class ArmPipeline:
 
     def answer(self, question: str) -> AnswerResult:
         from config import load
+
         from eval.query_arms import retrieve_for
+        from eval.tracing import set_input, set_output, span
 
-        qs = self._queries.get(question) or [question]
-        chunks = retrieve_for(
-            self._engine, self._arm, qs, self._top_k, load().search, self._mode
-        )
-        # `text`, not `chunk_text`: _row_to_chunk names it `text`, and the
-        # KeyError from getting this wrong is swallowed by answer_all's
-        # per-question guard, so it surfaces as every metric scoring 0 rather
-        # than as a crash.
-        contexts = [c["text"] for c in chunks]
-        context_block = "\n\n".join(f"[{i + 1}] {c}" for i, c in enumerate(contexts))
+        cfg = load()
+        # One root span per question, so the 19 runs of the sweep are separable
+        # in Phoenix by arm/mode/encoder instead of being one undifferentiated
+        # pile of LLM calls. The encoder is recorded even for BM25 (as None)
+        # because "which encoder was configured" is the question a mislabelled
+        # run makes you ask.
+        from eval.results_store import encoder_for
 
-        result = self._llm.invoke([
-            {"role": "system", "content": self._system_prompt},
-            {"role": "user", "content": f"Context:\n{context_block}\n\nQuestion: {question}"},
-        ])
-        return AnswerResult(
-            answer=result.content,
-            contexts=contexts,
-            doc_ids=[c["doc_id"] for c in chunks],
-            chunk_ids=[c["chunk_id"] for c in chunks],
-        )
+        with span(
+            f"arm[{self._arm}]",
+            kind="CHAIN",
+            **{"arm.name": self._arm,
+               "retrieval.mode": self._mode,
+               "retrieval.top_k": self._top_k,
+               "embedding.model": encoder_for(self._mode) or "none"},
+        ) as root:
+            set_input(root, question)
+
+            # The transform is read from disk, never computed here, so it would
+            # otherwise leave no trace at all. `arm.cached` says so explicitly:
+            # this is the free branch's transform replayed, not a fresh rewrite,
+            # and a reader who mistook it for one would think the judged and
+            # free branches had measured two different arms.
+            with span(
+                f"arm.transform[{self._arm}]",
+                kind="CHAIN",
+                **{"arm.name": self._arm, "arm.cached": True},
+            ) as t:
+                set_input(t, question)
+                qs = self._queries.get(question) or [question]
+                set_output(t, qs)
+
+            chunks = retrieve_for(
+                self._engine, self._arm, qs, self._top_k, cfg.search, self._mode
+            )
+            # `text`, not `chunk_text`: _row_to_chunk names it `text`, and the
+            # KeyError from getting this wrong is swallowed by answer_all's
+            # per-question guard, so it surfaces as every metric scoring 0 rather
+            # than as a crash.
+            contexts = [c["text"] for c in chunks]
+            context_block = "\n\n".join(f"[{i + 1}] {c}" for i, c in enumerate(contexts))
+
+            result = self._llm.invoke([
+                {"role": "system", "content": self._system_prompt},
+                {"role": "user", "content": f"Context:\n{context_block}\n\nQuestion: {question}"},
+            ])
+            set_output(root, result.content)
+            return AnswerResult(
+                answer=result.content,
+                contexts=contexts,
+                doc_ids=[c["doc_id"] for c in chunks],
+                chunk_ids=[c["chunk_id"] for c in chunks],
+            )
 
 
 class AgenticPipeline:

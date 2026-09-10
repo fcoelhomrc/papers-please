@@ -183,20 +183,52 @@ def retrieve_for(engine, arm: str, queries: list[str], top_k: int, cfg, mode: st
     a lexical retriever just searches for the words the model happened to
     invent, which is a different and much worse technique.
     """
+    from eval.tracing import set_documents, set_input, set_output, span
     from search import SEMANTIC, rrf_fuse
 
     if arm in DENSE_ONLY:
-        return engine._vector_candidates(queries[0], top_k)
+        # Dense regardless of `mode`, so the span says so rather than letting
+        # the reader assume the run's configured mode applied here.
+        with span("retrieve.hyde", kind="RETRIEVER", **{"arm.name": arm,
+                                                        "retrieval.mode": SEMANTIC}) as s:
+            set_input(s, queries[0])
+            chunks = engine._vector_candidates(queries[0], top_k)
+            set_documents(s, chunks)
+            return chunks
 
     if len(queries) == 1:
-        return _single(engine, queries[0], top_k, mode)
+        with span("retrieve", kind="RETRIEVER", **{"arm.name": arm,
+                                                   "retrieval.mode": mode}) as s:
+            set_input(s, queries[0])
+            chunks = _single(engine, queries[0], top_k, mode)
+            set_documents(s, chunks)
+            return chunks
 
     # One ranked list per sub-query, fused. Each list is pulled at top_k rather
     # than top_k/n: fusion should choose among full lists, not among pre-cut
     # ones, or a chunk ranked 8th by every sub-query is lost before fusion
     # can notice the agreement.
-    lists = [_single(engine, q, top_k, mode) for q in queries]
-    return rrf_fuse(lists, k=cfg.rrf_k)[:top_k]
+    #
+    # Each sub-query gets its own span: the whole point of tracing an arm is to
+    # see which paraphrase found what, which a single fused list cannot show.
+    lists = []
+    for i, q in enumerate(queries):
+        with span(f"retrieve.sub[{i}]", kind="RETRIEVER", **{"arm.name": arm,
+                                                             "retrieval.mode": mode,
+                                                             "arm.sub_query_index": i}) as s:
+            set_input(s, q)
+            ranked = _single(engine, q, top_k, mode)
+            set_documents(s, ranked)
+            lists.append(ranked)
+
+    with span("retrieve.rrf_fuse", kind="RETRIEVER", **{"arm.name": arm,
+                                                        "rrf.k": cfg.rrf_k,
+                                                        "rrf.n_lists": len(lists)}) as s:
+        set_input(s, queries)
+        fused = rrf_fuse(lists, k=cfg.rrf_k)[:top_k]
+        set_documents(s, fused)
+        set_output(s, {"n_fused": len(fused)})
+        return fused
 
 
 def _single(engine, query: str, top_k: int, mode: str) -> list[dict]:
@@ -259,6 +291,14 @@ def main():
                 for q in queries:
                     print(f"   -> {q[:160]}")
         return
+
+    # Only the generate path: `show` reads JSON off disk and would open a
+    # Phoenix project containing nothing. The judged runs replay this cache, so
+    # without tracing here the transform has no live trace anywhere - see
+    # eval/tracing.py.
+    from observability import setup_observability
+
+    setup_observability("eval-query-arms")
 
     chat, model = arm_llm()
     for arm in arms:
