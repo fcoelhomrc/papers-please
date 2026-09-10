@@ -514,6 +514,24 @@ def main():
     setup_observability("eval-judged")
 
     cfg = load()
+
+    # Before anything expensive, and well before the first judge token: an arm
+    # that cannot run in this mode must fail here rather than silently produce
+    # a run that measures something other than its filename claims. HyDE under
+    # --mode bm25 took the dense path regardless and landed in results/bm25/.
+    # Only checked on the ArmPipeline path, which is the one build_pipeline
+    # takes when either flag is given.
+    if args.arm or args.mode:
+        from eval.query_arms import modes_for, supports
+
+        arm = args.arm or "none"
+        mode = args.mode or cfg.search.mode
+        if not supports(arm, mode):
+            raise SystemExit(
+                f"arm {arm!r} cannot run in mode {mode!r}; "
+                f"it supports {', '.join(modes_for(arm))}"
+            )
+
     versions = {"fixed_rag": cfg.prompts.fixed_rag}
     for override in args.prompt_version or []:
         name, _, version = override.partition("=")

@@ -42,6 +42,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+from eval.query_arms import supports as arm_supports
 from eval.retrieval import RETRIEVAL_METRICS, score_question
 from eval.run_free import mean_ci, paired_diff_ci, summarise
 from search import BM25, HYBRID, HYBRID_BM25, KEYWORD, SEMANTIC, rrf_fuse
@@ -355,15 +356,14 @@ ARMS = ("none", "multi_query", "decompose", "hyde",
 # because the difference between them is the difference between "the
 # technique does not help here" and "my version of it dropped the original".
 WITH_ORIGINAL = ("multi_query+orig", "decompose+orig")
-# HyDE embeds a passage, so it only means anything to the dense retriever.
-# The rest produce ordinary queries and run on either single-source mode.
+# The sweep covers the two single-source modes; which of them a given arm can
+# actually run in is `query_arms.modes_for`'s call, not this module's - HyDE
+# embeds a passage and means nothing to a lexical retriever, and stating that
+# here as well as there is how the judged branch ended up able to run a
+# combination both modules already knew was invalid.
+SWEPT_MODES = (SEMANTIC, BM25)
 ARM_MODES = {
-    "none": (SEMANTIC, BM25),
-    "multi_query": (SEMANTIC, BM25),
-    "decompose": (SEMANTIC, BM25),
-    "hyde": (SEMANTIC,),
-    "multi_query+orig": (SEMANTIC, BM25),
-    "decompose+orig": (SEMANTIC, BM25),
+    arm: tuple(m for m in SWEPT_MODES if arm_supports(arm, m)) for arm in ARMS
 }
 ARM_TOP_KS = (5, 10, 20)
 

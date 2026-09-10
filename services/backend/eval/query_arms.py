@@ -174,6 +174,29 @@ def queries_for(arm: str, rows: list[dict]) -> dict[str, list[str]]:
     }
 
 
+def modes_for(arm: str) -> tuple[str, ...]:
+    """The retrieval modes `arm` can legitimately run in.
+
+    The one definition of the dense-only rule. It used to be stated twice -
+    here as `DENSE_ONLY` and in `ablations.ARM_MODES` - and the judged branch
+    consulted neither, so `--mode bm25 --arm hyde` silently produced a dense
+    run filed under `results/bm25/`.
+
+    Hybrid modes are absent on purpose: `retrieve_for` fuses one ranked list
+    per sub-query, and fusing that against a second retriever as well is a
+    different experiment from the one these arms measure.
+    """
+    from search import BM25, KEYWORD, SEMANTIC
+
+    if arm.removesuffix(ORIGINAL_SUFFIX) in DENSE_ONLY:
+        return (SEMANTIC,)
+    return (SEMANTIC, BM25, KEYWORD)
+
+
+def supports(arm: str, mode: str) -> bool:
+    return mode in modes_for(arm)
+
+
 def retrieve_for(engine, arm: str, queries: list[str], top_k: int, cfg, mode: str) -> list[dict]:
     """Ranked chunks for one question under one arm.
 

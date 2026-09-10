@@ -260,3 +260,60 @@ class TestCoverage:
             out = run_eval(pipeline, [row("q1"), row("q2")], MagicMock(), MagicMock())
 
         assert out["coverage"] == {"faithfulness": 1, "answer_relevancy": 2}
+
+
+class TestArmModeGuard:
+    """`--mode bm25 --arm hyde` used to run a dense search and file it as BM25.
+
+    The guard has to fire before the run does any work: a judged run costs
+    ~$0.19 of judge tokens, and a mislabelled result is worse than a crash
+    because it survives into the figures.
+    """
+
+    def _main(self, monkeypatch, argv, *, spent):
+        import eval.review
+        from eval import run as run_mod
+
+        monkeypatch.setattr("sys.argv", ["eval.run", *argv])
+        # Anything past the guard would begin the actual run.
+        monkeypatch.setattr(eval.review, "load_curated",
+                            lambda *a, **k: spent.append("loaded") or [])
+        monkeypatch.setattr(run_mod, "build_pipeline",
+                            lambda *a, **k: spent.append("built") or (None, "m"))
+        return run_mod.main
+
+    def test_rejects_hyde_under_bm25(self, monkeypatch):
+        spent = []
+        main = self._main(monkeypatch, ["--mode", "bm25", "--arm", "hyde"], spent=spent)
+        with pytest.raises(SystemExit) as e:
+            main()
+        assert "hyde" in str(e.value) and "bm25" in str(e.value)
+        # The supported mode is named, so the message is actionable.
+        assert "semantic" in str(e.value)
+        assert spent == []
+
+    def test_rejects_an_arm_under_a_hybrid_mode(self, monkeypatch):
+        spent = []
+        main = self._main(monkeypatch, ["--mode", "hybrid", "--arm", "multi_query"],
+                          spent=spent)
+        with pytest.raises(SystemExit):
+            main()
+        assert spent == []
+
+    def test_allows_hyde_under_semantic(self, monkeypatch):
+        """The guard must not block the 15 dense arm runs that remain."""
+        spent = []
+        main = self._main(monkeypatch, ["--mode", "semantic", "--arm", "hyde"],
+                          spent=spent)
+        with pytest.raises(Exception) as e:
+            main()
+        # It got past the guard - whatever it failed on next, it was not this.
+        assert not isinstance(e.value, SystemExit) or "cannot run in mode" not in str(e.value)
+
+    def test_allows_multi_query_under_bm25(self, monkeypatch):
+        spent = []
+        main = self._main(monkeypatch, ["--mode", "bm25", "--arm", "multi_query"],
+                          spent=spent)
+        with pytest.raises(Exception) as e:
+            main()
+        assert not isinstance(e.value, SystemExit) or "cannot run in mode" not in str(e.value)

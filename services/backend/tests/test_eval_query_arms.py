@@ -171,3 +171,53 @@ class TestRetrieveFor:
         weights."""
         with pytest.raises(ValueError, match="single-source"):
             retrieve_for(_engine([]), MULTI_QUERY, ["a"], 10, CFG, mode="hybrid")
+
+
+# --- which modes an arm may run in ---------------------------------------
+#
+# One definition, because it used to be two: `DENSE_ONLY` here and
+# `ablations.ARM_MODES` there, with the judged branch checking neither - which
+# is how `--mode bm25 --arm hyde` became a dense run filed under results/bm25/.
+
+
+def test_hyde_is_semantic_only():
+    from eval.query_arms import modes_for, supports
+
+    assert modes_for("hyde") == ("semantic",)
+    assert supports("hyde", "semantic")
+    assert not supports("hyde", "bm25")
+    assert not supports("hyde", "keyword")
+
+
+def test_ordinary_arms_run_in_any_single_source_mode():
+    from eval.query_arms import supports
+
+    for arm in ("none", "multi_query", "decompose"):
+        for mode in ("semantic", "bm25", "keyword"):
+            assert supports(arm, mode), (arm, mode)
+
+
+def test_hybrid_is_never_supported():
+    """retrieve_for fuses sub-queries; fusing a second retriever too is a
+    different experiment, and _single would raise on it anyway."""
+    from eval.query_arms import supports
+
+    for arm in ("none", "multi_query", "hyde"):
+        assert not supports(arm, "hybrid")
+
+
+def test_orig_variants_inherit_the_base_arms_modes():
+    from eval.query_arms import modes_for
+
+    assert modes_for("multi_query+orig") == modes_for("multi_query")
+    assert modes_for("hyde+orig") == ("semantic",)
+
+
+def test_ablations_table_derives_from_supports():
+    """The sweep's table must not drift from the rule it encodes."""
+    from eval.ablations import ARM_MODES, ARMS, SWEPT_MODES
+    from eval.query_arms import supports
+
+    for arm in ARMS:
+        assert ARM_MODES[arm] == tuple(m for m in SWEPT_MODES if supports(arm, m))
+    assert ARM_MODES["hyde"] == ("semantic",)
