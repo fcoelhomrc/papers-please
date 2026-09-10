@@ -17,7 +17,7 @@ All four encoders at 11,381 / 11,381 chunks.
 
 ---
 
-## 2. Free branch ablations, including reranker, on everything
+## 2. Free branch ablations, including reranker, on everything — DONE
 
 `all` = `a` (mode × top_k) + `b` (rerank) + `c` (query arms) + `w`
 (keyword_weight × rrf_k) + `pool` + `timings`.
@@ -25,9 +25,9 @@ All four encoders at 11,381 / 11,381 chunks.
 | model | status |
 |---|---|
 | bge-small | done — `ablation-all-20260907T005619Z.json` |
-| bge-large | **only `a`** — needs `all` |
-| arctic-m-v2 | **nothing** — needs `all` |
-| qwen3-0.6b | **nothing** — needs `all` |
+| bge-large | done — `ablation-all-20260910T005811Z.json` (73m) |
+| arctic-m-v2 | done — `ablation-all-20260910T021122Z.json` (83m) |
+| qwen3-0.6b | done — `ablation-all-20260910T032220Z.json` (86m) |
 
 Three runs. For each, set `embedder.model` in `config.yaml`, then:
 
@@ -37,7 +37,9 @@ podman-compose run -d -T --name papers-please_ablate-<model> \
 podman update --restart=no papers-please_ablate-<model>
 ```
 
-Cost: **$0**. Roughly 1.5–2h each, ~5h total, unattended.
+Run as `all --timed`, so every file carries a, b, c, w, pool and timings.
+Figures regenerated for all three in `c5325e0`. Cost was $0, 4h04m wall.
+Numbers and reading: [issue #49](https://github.com/fcoelhomrc/papers-please/issues/49).
 
 ---
 
