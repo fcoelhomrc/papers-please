@@ -1,7 +1,7 @@
 """Standalone matplotlib figures for the retrieval ablation.
 
-    uv run --with matplotlib python -m eval.plots
-    uv run --with matplotlib python -m eval.plots --results eval/results/ablation-....json
+    uv run python -m eval.plots
+    uv run python -m eval.plots --results eval/results/ablation-....json
 
 Writes PNG + SVG to assets/eval/. No titles, no annotations, no analysis: a
 figure shows the data and the prose around it does the arguing. Anything a
@@ -487,7 +487,18 @@ def load_results(explicit: Path | None = None) -> dict:
     if explicit:
         return json.loads(explicit.read_text())
 
-    full = max(results().glob("ablation-all-*.json"), key=lambda p: p.stat().st_mtime)
+    # A target can have judged runs and no ablation at all: BM25 is swept as a
+    # retrieval *mode*, so it has no encoder to ablate and no ablation-all-*
+    # file, but it does have every query arm judged. Returning empty here lets
+    # main() skip the ablation figures by its usual route and still draw the
+    # judged ones, which is the documented behaviour for a partial result.
+    ablations = sorted(results().glob("ablation-all-*.json"),
+                       key=lambda p: p.stat().st_mtime)
+    if not ablations:
+        print("  no ablation on disk - judged figures only")
+        return {}
+
+    full = ablations[-1]
     data = json.loads(full.read_text())
     print(f"base: {full.name}")
     for part in results().glob("ablation-*.json"):
@@ -502,6 +513,21 @@ def load_results(explicit: Path | None = None) -> dict:
 
 
 def judged_results() -> dict | None:
+    """The baseline run the single-run figures describe.
+
+    The `none` arm, not the newest file. These two figures carry no arm label,
+    and when only `none` existed "newest" and "the baseline" were the same
+    file. They stopped being the same the moment the arms were swept: the last
+    run to land is whichever arm the sweep happened to end on, so
+    judged-metrics and judge-vs-labels would have started reporting HyDE while
+    still reading as the headline number.
+
+    Falls back to newest so a results directory holding only arm runs still
+    renders something rather than nothing.
+    """
+    by_arm = judged_by_arm()
+    if "none" in by_arm:
+        return by_arm["none"]
     newest = sorted(results().glob("judged-*.json"), key=lambda p: p.stat().st_mtime)
     return json.loads(newest[-1].read_text()) if newest else None
 
@@ -528,6 +554,22 @@ def judged_by_arm() -> dict[str, dict]:
 
 ARM_ORDER = ["none", "decompose+orig", "decompose",
              "multi_query+orig", "multi_query", "hyde"]
+
+
+def retriever_facet(runs: dict[str, dict]) -> str:
+    """The facet marker naming the retriever these arms were measured on.
+
+    Read off the runs rather than asserted. Hardcoding "Dense" was correct
+    while only encoders were judged, and became a false label the moment BM25
+    was swept through the same arms - the lexical figure announced itself as
+    the dense one. Mixed modes return "" rather than picking one: an
+    unlabelled facet is recoverable, a confidently wrong one is not.
+    """
+    modes = {r.get("retrieval_config", {}).get("mode") for r in runs.values()}
+    if len(modes) != 1:
+        return ""
+    mode = modes.pop()
+    return f"Retriever = {label(mode)}" if mode else ""
 
 
 def fig_judged_arms(runs: dict[str, dict]):
@@ -559,7 +601,7 @@ def fig_judged_arms(runs: dict[str, dict]):
     ax.set_ylim(0, 1)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
-    facet(ax, "Retriever = Dense")
+    facet(ax, retriever_facet(runs))
     ax.legend(ncol=3, **LEGEND)
     fig.tight_layout()
     save(fig, "judged-query-arms")
