@@ -1,0 +1,44 @@
+# Architecture of Papers, Please.
+#
+# Render both themes (the README picks one by prefers-color-scheme):
+#   d2 --theme 0   --pad 20 assets/architecture.d2 assets/architecture.svg
+#   d2 --theme 200 --pad 20 assets/architecture.d2 assets/architecture-dark.svg
+
+vars: { d2-config: { layout-engine: elk } }
+direction: down
+
+ingest: Ingest {
+  direction: right
+  style.stroke-dash: 3
+  scholar: "Semantic Scholar" { shape: cloud }
+  download: "download\nPDF fetch"
+  pdfs: "PDFs on disk" { shape: page }
+  chunk: "chunk\nDocling + RapidOCR, GPU"
+  embed: "embed\nsentence-transformers"
+  scholar -> download: metadata
+  download -> pdfs -> chunk -> embed
+}
+
+serve: "Query path" {
+  direction: right
+  style.stroke-dash: 3
+  ui: "Frontend\nReact + Vite"
+  api: "FastAPI\n/fetch  /search  /documents  /status"
+  agent: "Chat agent\nLangGraph tools"
+  retrieval: "Retrieval\ndense / ts_rank / BM25 / RRF hybrid\ncross-encoder rerank"
+  ui -> api
+  api -> agent
+  agent -> retrieval
+  api -> retrieval
+}
+
+pg: "Postgres\ndocuments, chunks, embeddings, stage status, full-text index" { shape: cylinder }
+pinecone: "Pinecone\nchunk vectors" { shape: cylinder }
+phoenix: "Phoenix\nOTel traces" { shape: cylinder }
+
+ingest -> pg: status, chunks, embeddings
+ingest.embed -> pinecone: upsert
+serve.api -> pg
+serve.retrieval -> pg: rows, lexical search
+serve.retrieval -> pinecone: vector query
+serve -> phoenix: spans
