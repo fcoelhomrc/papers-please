@@ -44,7 +44,7 @@ can be restarted or scaled without touching the others.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/architecture-dark.svg">
-    <img alt="Ingest and query paths over Postgres, Pinecone and Phoenix" src="assets/architecture.svg" width="760">
+    <img alt="Ingest and query paths over Postgres, Pinecone and Phoenix" src="assets/architecture.svg">
   </picture>
 </p>
 
