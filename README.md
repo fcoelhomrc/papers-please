@@ -1,9 +1,5 @@
 # Papers, Please
 
-<p align="center">
-  <img src="assets/logo.jpg" width="88" alt="" />
-</p>
-
 Papers, Please pulls scientific papers from Semantic Scholar, OCRs the PDFs,
 chunks and indexes the text, and searches over it. You can run a query
 against the full contents of every paper in the library, or ask a question in
